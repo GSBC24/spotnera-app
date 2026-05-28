@@ -31,7 +31,7 @@ export function GoogleLoginButton() {
         type="button"
         onClick={signInWithGoogle}
         disabled={isLoading}
-        className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
+        className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-900 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-zinc-50 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
       >
         <span className="flex size-5 items-center justify-center rounded-full bg-white text-base font-bold text-[#4285f4]">
           G
