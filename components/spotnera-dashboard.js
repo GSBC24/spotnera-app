@@ -1,77 +1,33 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-const businesses = [
-  {
-    id: 1,
-    name: "Fjord Coffee Lab",
-    category: "Cafe",
-    distance: "240 m",
-    score: "98",
-    live: "12 locals here",
-    color: "#ff7a59",
-    longitude: 10.7522,
-    latitude: 59.9139,
-  },
-  {
-    id: 2,
-    name: "Nord Studio Market",
-    category: "Retail",
-    distance: "420 m",
-    score: "94",
-    live: "Drop just started",
-    color: "#33d6a6",
-    longitude: 10.7478,
-    latitude: 59.9161,
-  },
-  {
-    id: 3,
-    name: "Atelier Bar",
-    category: "Nightlife",
-    distance: "610 m",
-    score: "91",
-    live: "Happy hour trending",
-    color: "#8ea7ff",
-    longitude: 10.7581,
-    latitude: 59.9114,
-  },
-  {
-    id: 4,
-    name: "Sento Kitchen",
-    category: "Dining",
-    distance: "800 m",
-    score: "89",
-    live: "8 tables open",
-    color: "#ffd166",
-    longitude: 10.7449,
-    latitude: 59.9104,
-  },
-];
+const CATEGORY_COLORS = {
+  art: "#8ea7ff",
+  cafe: "#ff7a59",
+  coffee: "#ff7a59",
+  culture: "#b692ff",
+  dining: "#ffd166",
+  family: "#7dd3fc",
+  food: "#ffd166",
+  nightlife: "#8ea7ff",
+  outdoors: "#72f0cc",
+  retail: "#33d6a6",
+  sports: "#f472b6",
+  tech: "#67e8f9",
+  travel: "#fb923c",
+  wellness: "#a3e635",
+};
 
-const activity = [
-  {
-    title: "Fjord Coffee Lab",
-    detail: "Quiet corner seats opened near the window.",
-    time: "Now",
-    accent: "bg-[#ff7a59]",
-  },
-  {
-    title: "Nord Studio Market",
-    detail: "New local designer rack is getting traffic.",
-    time: "4m",
-    accent: "bg-[#33d6a6]",
-  },
-  {
-    title: "Atelier Bar",
-    detail: "Live playlist shifted into a late-night set.",
-    time: "9m",
-    accent: "bg-[#8ea7ff]",
-  },
-];
+const DEAL_STATUS_META = {
+  active: { label: "Active", color: "#33d6a6", rank: 0 },
+  scheduled: { label: "Scheduled", color: "#8ea7ff", rank: 1 },
+  paused: { label: "Paused", color: "#ffd166", rank: 2 },
+  ended: { label: "Ended", color: "#a1a1aa", rank: 3 },
+};
 
 const navItems = [
   { label: "Map", icon: "M12 3l7 4v12l-7-4-7 4V7l7-4zm0 2.2L7 8v8.8l5-2.8 5 2.8V8l-5-2.8z" },
@@ -88,10 +44,75 @@ function Icon({ path }) {
   );
 }
 
+function getCategoryColor(category) {
+  const normalized = category?.trim().toLowerCase();
+
+  if (CATEGORY_COLORS[normalized]) {
+    return CATEGORY_COLORS[normalized];
+  }
+
+  const palette = Object.values(CATEGORY_COLORS);
+  const hash = [...(normalized || "spotnera")].reduce(
+    (sum, character) => sum + character.charCodeAt(0),
+    0,
+  );
+
+  return palette[hash % palette.length];
+}
+
+function getPrimaryDeal(deals = []) {
+  return [...deals].sort((left, right) => {
+    const leftRank = DEAL_STATUS_META[left.status]?.rank ?? 9;
+    const rightRank = DEAL_STATUS_META[right.status]?.rank ?? 9;
+
+    return leftRank - rightRank;
+  })[0];
+}
+
+function getDealStatusMeta(business) {
+  const deal = getPrimaryDeal(business.deals);
+
+  if (!deal) {
+    return { label: "No deal", color: "#71717a", rank: 9 };
+  }
+
+  return DEAL_STATUS_META[deal.status] ?? DEAL_STATUS_META.paused;
+}
+
+function getBusinessSignal(business) {
+  const deal = getPrimaryDeal(business.deals);
+
+  if (deal) {
+    return deal.title;
+  }
+
+  return business.description || business.address || business.city;
+}
+
+function normalizeBusinesses(businesses) {
+  return businesses
+    .filter(
+      (business) =>
+        Number.isFinite(Number(business.longitude)) &&
+        Number.isFinite(Number(business.latitude)),
+    )
+    .map((business) => ({
+      ...business,
+      latitude: Number(business.latitude),
+      longitude: Number(business.longitude),
+      deals: business.deals ?? [],
+      color: getCategoryColor(business.category),
+    }));
+}
+
 function buildMarkerElement(business, isSelected) {
+  const status = getDealStatusMeta(business);
   const marker = document.createElement("button");
   marker.type = "button";
-  marker.setAttribute("aria-label", business.name);
+  marker.setAttribute(
+    "aria-label",
+    `${business.name}, ${business.category}, ${status.label} deal status`,
+  );
   marker.dataset.markerId = String(business.id);
   marker.className =
     "spotnera-map-marker relative grid h-11 w-11 place-items-center rounded-full border border-white/70 bg-white/20 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:scale-105";
@@ -104,24 +125,53 @@ function buildMarkerElement(business, isSelected) {
   dot.className = "relative h-4 w-4 rounded-full border-2 border-white";
   dot.style.backgroundColor = business.color;
 
-  const match = document.createElement("span");
-  match.className =
-    "spotnera-marker-match absolute -bottom-7 whitespace-nowrap rounded-full bg-zinc-950/90 px-2.5 py-1 text-[11px] font-semibold text-white";
-  match.textContent = `${business.score}% match`;
-  match.hidden = !isSelected;
+  const statusDot = document.createElement("span");
+  statusDot.className =
+    "absolute -right-0.5 -top-0.5 h-4 w-4 rounded-full border-2 border-zinc-950";
+  statusDot.style.backgroundColor = status.color;
+  statusDot.title = status.label;
 
-  marker.append(pulse, dot, match);
+  const label = document.createElement("span");
+  label.className =
+    "spotnera-marker-label absolute -bottom-7 whitespace-nowrap rounded-full bg-zinc-950/90 px-2.5 py-1 text-[11px] font-semibold text-white";
+  label.textContent = status.label;
+  label.hidden = !isSelected;
+
+  marker.append(pulse, dot, statusDot, label);
   return marker;
 }
 
-function StableMapboxMap({ token, selectedBusiness, onSelectBusiness }) {
+function buildPopupContent(business) {
+  const status = getDealStatusMeta(business);
+  const deal = getPrimaryDeal(business.deals);
+  const content = document.createElement("div");
+  content.className = "min-w-40";
+
+  const category = document.createElement("p");
+  category.className =
+    "text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500";
+  category.textContent = business.category;
+
+  const name = document.createElement("p");
+  name.className = "mt-1 text-sm font-bold text-zinc-950";
+  name.textContent = business.name;
+
+  const signal = document.createElement("p");
+  signal.className = "mt-1 text-xs text-zinc-600";
+  signal.textContent = deal ? `${status.label}: ${deal.title}` : getBusinessSignal(business);
+
+  content.append(category, name, signal);
+  return content;
+}
+
+function StableMapboxMap({ businesses, token, selectedBusiness, onSelectBusiness }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const popupRef = useRef(null);
   const markersRef = useRef(new Map());
 
   useEffect(() => {
-    if (!token || !containerRef.current || mapRef.current) {
+    if (!token || !containerRef.current || mapRef.current || !businesses.length) {
       return undefined;
     }
 
@@ -155,10 +205,7 @@ function StableMapboxMap({ token, selectedBusiness, onSelectBusiness }) {
     markersRef.current = markers;
 
     businesses.forEach((business) => {
-      const element = buildMarkerElement(
-        business,
-        business.id === businesses[0].id,
-      );
+      const element = buildMarkerElement(business, false);
       element.addEventListener("click", () => onSelectBusiness(business));
 
       const marker = new mapboxgl.Marker({
@@ -188,32 +235,26 @@ function StableMapboxMap({ token, selectedBusiness, onSelectBusiness }) {
 
       map.remove();
     };
-  }, [onSelectBusiness, token]);
+  }, [businesses, onSelectBusiness, token]);
 
   useEffect(() => {
     const map = mapRef.current;
     const popup = popupRef.current;
 
-    if (!map || !popup) {
+    if (!map || !popup || !selectedBusiness) {
       return;
     }
 
     markersRef.current.forEach(({ element }, businessId) => {
-      const match = element.querySelector(".spotnera-marker-match");
-      if (match) {
-        match.hidden = businessId !== selectedBusiness.id;
+      const label = element.querySelector(".spotnera-marker-label");
+      if (label) {
+        label.hidden = businessId !== selectedBusiness.id;
       }
     });
 
     popup
       .setLngLat([selectedBusiness.longitude, selectedBusiness.latitude])
-      .setHTML(
-        `<div class="min-w-40">
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">${selectedBusiness.category}</p>
-          <p class="mt-1 text-sm font-bold text-zinc-950">${selectedBusiness.name}</p>
-          <p class="mt-1 text-xs text-zinc-600">${selectedBusiness.live}</p>
-        </div>`,
-      )
+      .setDOMContent(buildPopupContent(selectedBusiness))
       .addTo(map);
 
     map.easeTo({
@@ -226,9 +267,36 @@ function StableMapboxMap({ token, selectedBusiness, onSelectBusiness }) {
   return <div ref={containerRef} className="h-full w-full" />;
 }
 
-export function SpotneraDashboard({ profile, userEmail }) {
-  const [selectedBusiness, setSelectedBusiness] = useState(businesses[0]);
+export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
+  const mappedBusinesses = useMemo(
+    () => normalizeBusinesses(businesses),
+    [businesses],
+  );
+  const [selectedBusinessId, setSelectedBusinessId] = useState(null);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const selectedBusiness =
+    mappedBusinesses.find((business) => business.id === selectedBusinessId) ??
+    mappedBusinesses[0] ??
+    null;
+  const handleSelectBusiness = useCallback((business) => {
+    setSelectedBusinessId(business.id);
+  }, []);
+
+  const activity = useMemo(
+    () =>
+      mappedBusinesses.slice(0, 5).map((business) => {
+        const deal = getPrimaryDeal(business.deals);
+        const status = getDealStatusMeta(business);
+
+        return {
+          title: business.name,
+          detail: deal ? deal.title : getBusinessSignal(business),
+          time: status.label,
+          color: status.color,
+        };
+      }),
+    [mappedBusinesses],
+  );
 
   const displayName = profile?.username || userEmail?.split("@")[0] || "explorer";
   const city = profile?.city || "Oslo";
@@ -236,6 +304,11 @@ export function SpotneraDashboard({ profile, userEmail }) {
     Array.isArray(profile?.interests) && profile.interests.length
       ? profile.interests.slice(0, 3)
       : ["coffee", "dining", "culture"];
+  const activeDeals = mappedBusinesses.reduce(
+    (count, business) =>
+      count + business.deals.filter((deal) => deal.status === "active").length,
+    0,
+  );
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#101217] text-white">
@@ -256,21 +329,25 @@ export function SpotneraDashboard({ profile, userEmail }) {
         </header>
 
         <div className="relative mt-4 h-[58vh] min-h-[440px] overflow-hidden rounded-[32px] border border-white/12 bg-white/8 shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
-          {token ? (
+          {token && selectedBusiness ? (
             <StableMapboxMap
+              businesses={mappedBusinesses}
               token={token}
               selectedBusiness={selectedBusiness}
-              onSelectBusiness={setSelectedBusiness}
+              onSelectBusiness={handleSelectBusiness}
             />
           ) : (
             <div className="grid h-full min-h-[58vh] place-items-center bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02)),repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_1px,transparent_1px_18px)] p-6 text-center">
               <div className="max-w-xs rounded-3xl border border-white/12 bg-black/25 p-5 backdrop-blur-xl">
                 <p className="text-sm font-semibold text-white">
-                  Add `NEXT_PUBLIC_MAPBOX_TOKEN`
+                  {!token
+                    ? "Add `NEXT_PUBLIC_MAPBOX_TOKEN`"
+                    : "No businesses found"}
                 </p>
                 <p className="mt-2 text-xs leading-5 text-white/60">
-                  The dashboard is ready for a live Mapbox map once the public
-                  token is configured.
+                  {!token
+                    ? "The dashboard is ready for a live Mapbox map once the public token is configured."
+                    : "Create active businesses in Supabase to render live markers on the map."}
                 </p>
               </div>
             </div>
@@ -288,34 +365,36 @@ export function SpotneraDashboard({ profile, userEmail }) {
             ))}
           </div>
 
-          <motion.div
-            initial={{ y: 28, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 130, damping: 18 }}
-            className="absolute bottom-4 left-4 right-4 rounded-[28px] border border-white/14 bg-zinc-950/44 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/48">
-                  Best signal
-                </p>
-                <h2 className="mt-1 text-xl font-semibold tracking-tight">
-                  {selectedBusiness.name}
-                </h2>
-                <p className="mt-1 text-sm text-white/62">
-                  {selectedBusiness.distance} away / {selectedBusiness.live}
-                </p>
+          {selectedBusiness ? (
+            <motion.div
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 130, damping: 18 }}
+              className="absolute bottom-4 left-4 right-4 rounded-[28px] border border-white/14 bg-zinc-950/44 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/48">
+                    Best signal
+                  </p>
+                  <h2 className="mt-1 truncate text-xl font-semibold tracking-tight">
+                    {selectedBusiness.name}
+                  </h2>
+                  <p className="mt-1 line-clamp-2 text-sm text-white/62">
+                    {getBusinessSignal(selectedBusiness)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white px-3 py-2 text-center text-zinc-950">
+                  <p className="text-lg font-black leading-none">
+                    {selectedBusiness.deals.length}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase text-zinc-500">
+                    Deals
+                  </p>
+                </div>
               </div>
-              <div className="rounded-2xl bg-white px-3 py-2 text-center text-zinc-950">
-                <p className="text-lg font-black leading-none">
-                  {selectedBusiness.score}
-                </p>
-                <p className="text-[10px] font-bold uppercase text-zinc-500">
-                  Match
-                </p>
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          ) : null}
         </div>
 
         <section className="mt-4">
@@ -329,34 +408,43 @@ export function SpotneraDashboard({ profile, userEmail }) {
               </h2>
             </div>
             <span className="rounded-full bg-[#33d6a6]/16 px-3 py-1 text-xs font-semibold text-[#72f0cc]">
-              24 active
+              {activeDeals} active
             </span>
           </div>
           <div className="grid gap-3">
-            {activity.map((item, index) => (
-              <motion.article
-                key={item.title}
-                initial={{ x: 24, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: index * 0.08, duration: 0.38 }}
-                className="flex items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.2)] backdrop-blur-2xl"
-              >
-                <span className={`h-11 w-1.5 rounded-full ${item.accent}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="truncate text-sm font-semibold">
-                      {item.title}
-                    </h3>
-                    <span className="text-xs font-medium text-white/42">
-                      {item.time}
-                    </span>
+            {activity.length ? (
+              activity.map((item, index) => (
+                <motion.article
+                  key={`${item.title}-${item.time}`}
+                  initial={{ x: 24, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: index * 0.08, duration: 0.38 }}
+                  className="flex items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.2)] backdrop-blur-2xl"
+                >
+                  <span
+                    className="h-11 w-1.5 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="truncate text-sm font-semibold">
+                        {item.title}
+                      </h3>
+                      <span className="text-xs font-medium text-white/42">
+                        {item.time}
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-white/58">
+                      {item.detail}
+                    </p>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm leading-5 text-white/58">
-                    {item.detail}
-                  </p>
-                </div>
-              </motion.article>
-            ))}
+                </motion.article>
+              ))
+            ) : (
+              <div className="rounded-[24px] border border-white/10 bg-white/10 p-4 text-sm text-white/58 backdrop-blur-2xl">
+                No live business activity yet.
+              </div>
+            )}
           </div>
         </section>
 

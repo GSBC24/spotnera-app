@@ -31,6 +31,7 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   let profile = null;
+  let businesses = [];
 
   if (user) {
     const { data } = await supabase
@@ -49,12 +50,43 @@ export default async function Home() {
     ) {
       redirect("/onboarding");
     }
+
+    const { data: businessRows } = await supabase
+      .from("businesses")
+      .select(
+        `
+          id,
+          name,
+          category,
+          description,
+          city,
+          address,
+          latitude,
+          longitude,
+          deals (
+            id,
+            title,
+            description,
+            status,
+            starts_at,
+            ends_at
+          )
+        `,
+      )
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+
+    businesses = businessRows ?? [];
   }
 
   return (
     <>
       {user ? (
-        <SpotneraDashboard profile={profile} userEmail={user.email} />
+        <SpotneraDashboard
+          businesses={businesses}
+          profile={profile}
+          userEmail={user.email}
+        />
       ) : (
         <main className="flex min-h-screen items-center justify-center bg-[#f7f4ef] px-5 py-8 text-zinc-950">
           <section className="w-full max-w-md rounded-[2rem] border border-white/70 bg-white/75 p-5 shadow-[0_24px_80px_rgba(39,39,42,0.14)] backdrop-blur-xl sm:p-8">
