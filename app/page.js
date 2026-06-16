@@ -69,6 +69,13 @@ export default async function Home() {
 
     profile = data;
 
+    console.log("Profile city:", profile?.city ?? null);
+    console.log("Profile data:", {
+      username: profile?.username ?? null,
+      city: profile?.city ?? null,
+      interests: profile?.interests ?? null,
+    });
+
     if (
       !profile?.username ||
       !profile?.city ||
@@ -89,13 +96,17 @@ export default async function Home() {
 
     console.log(
       "Supabase businesses query:",
-      "from businesses",
-      `select ${BUSINESS_SELECT.replace(/\s+/g, " ").trim()}`,
-      "eq is_active true",
-      "no city filter",
-      "no latitude filter",
-      "no longitude filter",
-      "order name ascending",
+      {
+        from: "businesses",
+        select: BUSINESS_SELECT.replace(/\s+/g, " ").trim(),
+        filters: {
+          is_active: true,
+          city: null,
+          latitude: null,
+          longitude: null,
+        },
+        order: "name ascending",
+      },
     );
 
     const { data: businessRows, error: businessesError } = await supabase
@@ -122,14 +133,18 @@ export default async function Home() {
 
     console.log(
       "Supabase deals query:",
-      "from deals",
-      `select ${DEAL_SELECT.replace(/\s+/g, " ").trim()}`,
-      "eq status active",
-      "eq businesses.is_active true",
-      "no city filter",
-      "no latitude filter",
-      "no longitude filter",
-      "order created_at descending",
+      {
+        from: "deals",
+        select: DEAL_SELECT.replace(/\s+/g, " ").trim(),
+        filters: {
+          status: "active",
+          businesses_is_active: true,
+          city: null,
+          latitude: null,
+          longitude: null,
+        },
+        order: "created_at descending",
+      },
     );
 
     const { data: dealRows, error: dealsError } = await supabase
@@ -162,6 +177,8 @@ export default async function Home() {
       `Supabase returned ${supabaseBusinessCount} active businesses`,
     );
     console.log(`Supabase returned ${supabaseDealCount} active deals`);
+    console.log("Supabase business rows:", businessRows ?? []);
+    console.log("Supabase deal rows:", dealRows ?? []);
     console.log(
       "Supabase active business rows:",
       (businessRows ?? []).map(({ id, name, city, latitude, longitude }) => ({
