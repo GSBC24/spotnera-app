@@ -56,6 +56,9 @@ export default async function Home() {
 
   let profile = null;
   let businesses = [];
+  let supabaseBusinessCount = 0;
+  let supabaseDealCount = 0;
+  let queryErrors = [];
 
   if (user) {
     const { data } = await supabase
@@ -75,11 +78,23 @@ export default async function Home() {
       redirect("/onboarding");
     }
 
+    console.log("Supabase client context:", {
+      urlHost: process.env.NEXT_PUBLIC_SUPABASE_URL
+        ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
+        : null,
+      userId: user.id,
+      userEmail: user.email,
+      client: "createServerClient from @supabase/ssr with anon key and auth cookies",
+    });
+
     console.log(
       "Supabase businesses query:",
       "from businesses",
       `select ${BUSINESS_SELECT.replace(/\s+/g, " ").trim()}`,
       "eq is_active true",
+      "no city filter",
+      "no latitude filter",
+      "no longitude filter",
       "order name ascending",
     );
 
@@ -90,7 +105,19 @@ export default async function Home() {
       .order("name", { ascending: true });
 
     if (businessesError) {
-      console.error("Supabase businesses query failed", businessesError);
+      queryErrors.push({
+        query: "businesses",
+        message: businessesError.message,
+        code: businessesError.code,
+        details: businessesError.details,
+        hint: businessesError.hint,
+      });
+      console.error("Supabase businesses query failed", {
+        message: businessesError.message,
+        code: businessesError.code,
+        details: businessesError.details,
+        hint: businessesError.hint,
+      });
     }
 
     console.log(
@@ -99,6 +126,9 @@ export default async function Home() {
       `select ${DEAL_SELECT.replace(/\s+/g, " ").trim()}`,
       "eq status active",
       "eq businesses.is_active true",
+      "no city filter",
+      "no latitude filter",
+      "no longitude filter",
       "order created_at descending",
     );
 
@@ -110,13 +140,28 @@ export default async function Home() {
       .order("created_at", { ascending: false });
 
     if (dealsError) {
-      console.error("Supabase deals query failed", dealsError);
+      queryErrors.push({
+        query: "deals",
+        message: dealsError.message,
+        code: dealsError.code,
+        details: dealsError.details,
+        hint: dealsError.hint,
+      });
+      console.error("Supabase deals query failed", {
+        message: dealsError.message,
+        code: dealsError.code,
+        details: dealsError.details,
+        hint: dealsError.hint,
+      });
     }
 
+    supabaseBusinessCount = businessRows?.length ?? 0;
+    supabaseDealCount = dealRows?.length ?? 0;
+
     console.log(
-      `Supabase returned ${businessRows?.length ?? 0} active businesses`,
+      `Supabase returned ${supabaseBusinessCount} active businesses`,
     );
-    console.log(`Supabase returned ${dealRows?.length ?? 0} active deals`);
+    console.log(`Supabase returned ${supabaseDealCount} active deals`);
     console.log(
       "Supabase active business rows:",
       (businessRows ?? []).map(({ id, name, city, latitude, longitude }) => ({
@@ -155,6 +200,9 @@ export default async function Home() {
           businesses={businesses}
           profile={profile}
           userEmail={user.email}
+          supabaseBusinessCount={supabaseBusinessCount}
+          supabaseDealCount={supabaseDealCount}
+          queryErrors={queryErrors}
         />
       ) : (
         <main className="flex min-h-screen items-center justify-center bg-[#f7f4ef] px-5 py-8 text-zinc-950">

@@ -285,7 +285,14 @@ function StableMapboxMap({ businesses, token, selectedBusiness, onSelectBusiness
   return <div ref={containerRef} className="h-full w-full" />;
 }
 
-export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
+export function SpotneraDashboard({
+  businesses = [],
+  profile,
+  userEmail,
+  supabaseBusinessCount = businesses.length,
+  supabaseDealCount = 0,
+  queryErrors = [],
+}) {
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(businesses),
     [businesses],
@@ -355,6 +362,20 @@ export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
         </header>
 
         <div className="relative mt-4 h-[58vh] min-h-[440px] overflow-hidden rounded-[32px] border border-white/12 bg-white/8 shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
+          <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
+              Supabase businesses: {supabaseBusinessCount}
+            </span>
+            <span className="rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
+              Supabase deals: {supabaseDealCount}
+            </span>
+            {queryErrors.length ? (
+              <span className="rounded-full border border-red-300/30 bg-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-100 backdrop-blur-xl">
+                Query errors: {queryErrors.length}
+              </span>
+            ) : null}
+          </div>
+
           {token && selectedBusiness ? (
             <StableMapboxMap
               businesses={mappedBusinesses}
@@ -381,7 +402,7 @@ export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
 
           <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/35 to-transparent" />
           {interests.length ? (
-            <div className="absolute left-4 right-4 top-4 flex items-center gap-2">
+            <div className="absolute left-4 right-4 top-14 z-10 flex items-center gap-2">
               {interests.map((interest) => (
                 <span
                   key={interest}
