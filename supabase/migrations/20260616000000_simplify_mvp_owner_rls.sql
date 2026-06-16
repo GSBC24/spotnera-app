@@ -1,58 +1,14 @@
-create extension if not exists pgcrypto;
+alter table public.businesses
+  alter column owner_id drop not null,
+  drop constraint if exists businesses_owner_id_fkey,
+  add constraint businesses_owner_id_fkey
+    foreign key (owner_id) references auth.users(id) on delete set null;
 
-do $$
-begin
-  create type public.deal_status as enum ('active', 'scheduled', 'paused', 'ended');
-exception
-  when duplicate_object then null;
-end $$;
-
-create table if not exists public.businesses (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid references auth.users(id) on delete set null,
-  name text not null,
-  category text not null,
-  description text,
-  city text not null,
-  address text,
-  latitude double precision not null,
-  longitude double precision not null,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint business_name_length check (char_length(name) between 2 and 120),
-  constraint business_category_length check (char_length(category) between 2 and 80),
-  constraint business_city_length check (char_length(city) between 2 and 120),
-  constraint business_latitude_range check (latitude between -90 and 90),
-  constraint business_longitude_range check (longitude between -180 and 180)
-);
-
-create table if not exists public.deals (
-  id uuid primary key default gen_random_uuid(),
-  business_id uuid not null references public.businesses(id) on delete cascade,
-  owner_id uuid references auth.users(id) on delete set null,
-  title text not null,
-  description text,
-  status public.deal_status not null default 'active',
-  starts_at timestamptz,
-  ends_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint deal_title_length check (char_length(title) between 2 and 140),
-  constraint deal_time_order check (
-    starts_at is null or ends_at is null or starts_at < ends_at
-  )
-);
-
-create index if not exists businesses_owner_id_idx on public.businesses(owner_id);
-create index if not exists businesses_city_idx on public.businesses(city);
-create index if not exists businesses_location_idx on public.businesses(latitude, longitude);
-create index if not exists deals_business_id_idx on public.deals(business_id);
-create index if not exists deals_owner_id_idx on public.deals(owner_id);
-create index if not exists deals_status_idx on public.deals(status);
-
-alter table public.businesses enable row level security;
-alter table public.deals enable row level security;
+alter table public.deals
+  alter column owner_id drop not null,
+  drop constraint if exists deals_owner_id_fkey,
+  add constraint deals_owner_id_fkey
+    foreign key (owner_id) references auth.users(id) on delete set null;
 
 grant select on public.businesses to anon, authenticated;
 grant select on public.deals to anon, authenticated;
