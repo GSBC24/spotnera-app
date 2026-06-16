@@ -284,26 +284,28 @@ export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
 
   const activity = useMemo(
     () =>
-      mappedBusinesses.slice(0, 5).map((business) => {
-        const deal = getPrimaryDeal(business.deals);
-        const status = getDealStatusMeta(business);
-
-        return {
-          title: business.name,
-          detail: deal ? deal.title : getBusinessSignal(business),
-          time: status.label,
-          color: status.color,
-        };
-      }),
+      mappedBusinesses
+        .flatMap((business) =>
+          business.deals
+            .filter((deal) => deal.status === "active")
+            .map((deal) => ({
+              id: deal.id,
+              title: business.name,
+              detail: deal.title,
+              time: "Active",
+              color: DEAL_STATUS_META.active.color,
+            })),
+        )
+        .slice(0, 5),
     [mappedBusinesses],
   );
 
   const displayName = profile?.username || userEmail?.split("@")[0] || "explorer";
-  const city = profile?.city || "Oslo";
+  const cityHeading = profile?.city ? `${profile.city} nearby` : "Nearby";
   const interests =
     Array.isArray(profile?.interests) && profile.interests.length
       ? profile.interests.slice(0, 3)
-      : ["coffee", "dining", "culture"];
+      : [];
   const activeDeals = mappedBusinesses.reduce(
     (count, business) =>
       count + business.deals.filter((deal) => deal.status === "active").length,
@@ -320,7 +322,7 @@ export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
               Spotnera Live
             </p>
             <h1 className="mt-1 text-[1.55rem] font-semibold leading-tight tracking-tight">
-              {city} nearby
+              {cityHeading}
             </h1>
           </div>
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)]">
@@ -354,16 +356,18 @@ export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
           )}
 
           <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/35 to-transparent" />
-          <div className="absolute left-4 right-4 top-4 flex items-center gap-2">
-            {interests.map((interest) => (
-              <span
-                key={interest}
-                className="rounded-full border border-white/14 bg-black/24 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl"
-              >
-                {interest}
-              </span>
-            ))}
-          </div>
+          {interests.length ? (
+            <div className="absolute left-4 right-4 top-4 flex items-center gap-2">
+              {interests.map((interest) => (
+                <span
+                  key={interest}
+                  className="rounded-full border border-white/14 bg-black/24 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl"
+                >
+                  {interest}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           {selectedBusiness ? (
             <motion.div
@@ -415,7 +419,7 @@ export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
             {activity.length ? (
               activity.map((item, index) => (
                 <motion.article
-                  key={`${item.title}-${item.time}`}
+                  key={item.id}
                   initial={{ x: 24, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: index * 0.08, duration: 0.38 }}

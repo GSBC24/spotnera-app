@@ -51,7 +51,7 @@ export default async function Home() {
       redirect("/onboarding");
     }
 
-    const { data: businessRows } = await supabase
+    const { data: businessRows, error: businessesError } = await supabase
       .from("businesses")
       .select(
         `
@@ -62,21 +62,63 @@ export default async function Home() {
           city,
           address,
           latitude,
-          longitude,
-          deals (
-            id,
-            title,
-            description,
-            status,
-            starts_at,
-            ends_at
-          )
+          longitude
         `,
       )
       .eq("is_active", true)
       .order("name", { ascending: true });
 
-    businesses = businessRows ?? [];
+    if (businessesError) {
+      console.error("Supabase businesses query failed", businessesError);
+    }
+
+    const { data: dealRows, error: dealsError } = await supabase
+      .from("deals")
+      .select(
+        `
+          id,
+          business_id,
+          title,
+          description,
+          status,
+          starts_at,
+          ends_at,
+          businesses!inner (
+            is_active
+          )
+        `,
+      )
+      .eq("status", "active")
+      .eq("businesses.is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (dealsError) {
+      console.error("Supabase deals query failed", dealsError);
+    }
+
+    console.log(
+      `Supabase returned ${businessRows?.length ?? 0} active businesses`,
+    );
+    console.log(`Supabase returned ${dealRows?.length ?? 0} active deals`);
+
+    const dealsByBusinessId = new Map();
+    for (const deal of dealRows ?? []) {
+      const businessDeals = dealsByBusinessId.get(deal.business_id) ?? [];
+      businessDeals.push({
+        id: deal.id,
+        title: deal.title,
+        description: deal.description,
+        status: deal.status,
+        starts_at: deal.starts_at,
+        ends_at: deal.ends_at,
+      });
+      dealsByBusinessId.set(deal.business_id, businessDeals);
+    }
+
+    businesses = (businessRows ?? []).map((business) => ({
+      ...business,
+      deals: dealsByBusinessId.get(business.id) ?? [],
+    }));
   }
 
   return (

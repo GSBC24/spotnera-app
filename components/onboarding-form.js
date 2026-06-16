@@ -75,7 +75,7 @@ export function OnboardingForm({ action, defaultValues }) {
           required
           maxLength={80}
           defaultValue={defaultValues?.city ?? ""}
-          placeholder="Oslo"
+          placeholder="Your city"
           className="h-13 rounded-2xl border border-zinc-200 bg-white/85 px-4 text-base font-medium text-zinc-950 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
         />
       </label>
