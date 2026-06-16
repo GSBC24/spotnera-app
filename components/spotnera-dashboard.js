@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -207,7 +208,7 @@ function buildPopupContent(business) {
 
   const rating = document.createElement("p");
   rating.className = "mt-2 text-xs font-semibold text-zinc-800";
-  rating.textContent = `${formatRating(business.averageRating)} rating · ${business.reviewCount} reviews`;
+  rating.textContent = `${formatRating(business.averageRating)} rating - ${business.reviewCount} reviews`;
 
   content.append(category, name, signal, rating);
   return content;
@@ -549,6 +550,12 @@ export function SpotneraDashboard({
             {displayName.slice(0, 2).toUpperCase()}
           </div>
         </header>
+        <Link
+          href="/owner"
+          className="z-20 mt-3 rounded-2xl border border-white/12 bg-white/10 px-4 py-3 text-center text-sm font-bold text-white/82 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition hover:bg-white/16"
+        >
+          Business owner dashboard
+        </Link>
 
         <div className="relative mt-4 h-[58vh] min-h-[440px] overflow-hidden rounded-[32px] border border-white/12 bg-white/8 shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
           <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
@@ -686,7 +693,7 @@ export function SpotneraDashboard({
                             : "bg-white/8 text-white/34 hover:text-white/70"
                         }`}
                       >
-                        ★
+                        <Icon path={STAR_PATH} />
                       </button>
                     ))}
                   </div>
