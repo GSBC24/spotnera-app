@@ -123,12 +123,7 @@ export default async function Home() {
         details: businessesError.details,
         hint: businessesError.hint,
       });
-      console.error("Supabase businesses query failed", {
-        message: businessesError.message,
-        code: businessesError.code,
-        details: businessesError.details,
-        hint: businessesError.hint,
-      });
+      console.error("Supabase businesses query failed", businessesError);
     }
 
     console.log(
@@ -162,12 +157,7 @@ export default async function Home() {
         details: dealsError.details,
         hint: dealsError.hint,
       });
-      console.error("Supabase deals query failed", {
-        message: dealsError.message,
-        code: dealsError.code,
-        details: dealsError.details,
-        hint: dealsError.hint,
-      });
+      console.error("Supabase deals query failed", dealsError);
     }
 
     supabaseBusinessCount = businessRows?.length ?? 0;

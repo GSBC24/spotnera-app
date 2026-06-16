@@ -369,12 +369,33 @@ export function SpotneraDashboard({
             <span className="rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
               Supabase deals: {supabaseDealCount}
             </span>
-            {queryErrors.length ? (
-              <span className="rounded-full border border-red-300/30 bg-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-100 backdrop-blur-xl">
-                Query errors: {queryErrors.length}
-              </span>
-            ) : null}
           </div>
+
+          {queryErrors.length ? (
+            <div className="absolute left-4 right-4 top-14 z-10 grid gap-2">
+              {queryErrors.map((error) => (
+                <div
+                  key={error.query}
+                  className="rounded-2xl border border-red-300/30 bg-red-500/20 px-3 py-2 text-xs font-semibold text-red-50 backdrop-blur-xl"
+                >
+                  <div className="uppercase tracking-[0.18em] text-red-100/80">
+                    {error.query === "businesses"
+                      ? "businessesError.message"
+                      : "dealsError.message"}
+                  </div>
+                  <div className="mt-1 font-medium text-red-50">
+                    {error.message}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {queryErrors.length ? (
+            <span className="absolute right-4 top-4 z-10 rounded-full border border-red-300/30 bg-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-100 backdrop-blur-xl">
+              Query errors: {queryErrors.length}
+            </span>
+          ) : null}
 
           {token && selectedBusiness ? (
             <StableMapboxMap
