@@ -14,6 +14,8 @@ const BUSINESS_FIELDS = `
   address,
   latitude,
   longitude,
+  logo_url,
+  cover_image_url,
   is_active,
   created_at,
   updated_at
@@ -140,6 +142,111 @@ function validateDeal(payload) {
   return null;
 }
 
+function getImageFile(formData, key) {
+  const file = formData.get(key);
+
+  if (!file || typeof file.size !== "number" || file.size === 0) {
+    return null;
+  }
+
+  return file;
+}
+
+function getImageExtension(file) {
+  const extension = file.name?.split(".").pop()?.toLowerCase();
+
+  if (["jpg", "jpeg", "png", "webp", "gif"].includes(extension)) {
+    return extension;
+  }
+
+  return file.type?.split("/")[1] || "jpg";
+}
+
+async function uploadBusinessImage(supabase, userId, businessId, file, slot) {
+  if (!file) {
+    return null;
+  }
+
+  if (!file.type?.startsWith("image/")) {
+    return { error: "Logo and cover uploads must be image files." };
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return { error: "Images must be 5 MB or smaller." };
+  }
+
+  const extension = getImageExtension(file);
+  const path = `${userId}/${businessId}/${slot}-${Date.now()}.${extension}`;
+  const { error } = await supabase.storage
+    .from("business-assets")
+    .upload(path, file, {
+      contentType: file.type,
+      upsert: true,
+    });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("business-assets").getPublicUrl(path);
+
+  return { url: publicUrl };
+}
+
+async function uploadBusinessImages(supabase, userId, businessId, formData) {
+  const logo = await uploadBusinessImage(
+    supabase,
+    userId,
+    businessId,
+    getImageFile(formData, "logo"),
+    "logo",
+  );
+
+  if (logo?.error) {
+    return { error: logo.error };
+  }
+
+  const cover = await uploadBusinessImage(
+    supabase,
+    userId,
+    businessId,
+    getImageFile(formData, "cover_image"),
+    "cover",
+  );
+
+  if (cover?.error) {
+    return { error: cover.error };
+  }
+
+  return {
+    urls: {
+      ...(logo?.url ? { logo_url: logo.url } : {}),
+      ...(cover?.url ? { cover_image_url: cover.url } : {}),
+    },
+  };
+}
+
+async function verifyOwnedBusiness(supabase, userId, businessId) {
+  const { data, error } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("id", businessId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (!data) {
+    return { error: "You can only manage deals for your own businesses." };
+  }
+
+  return { business: data };
+}
+
 async function getSignedInUser() {
   const supabase = await createClient();
   const {
@@ -168,10 +275,32 @@ async function createBusiness(formData) {
     redirectWithError(validationError);
   }
 
-  const { error } = await supabase.from("businesses").insert(payload);
+  const { data: business, error } = await supabase
+    .from("businesses")
+    .insert(payload)
+    .select("id")
+    .single();
 
   if (error) {
     redirectWithError(error.message);
+  }
+
+  const uploaded = await uploadBusinessImages(supabase, user.id, business.id, formData);
+
+  if (uploaded.error) {
+    redirectWithError(uploaded.error);
+  }
+
+  if (Object.keys(uploaded.urls).length) {
+    const { error: mediaError } = await supabase
+      .from("businesses")
+      .update(uploaded.urls)
+      .eq("id", business.id)
+      .eq("owner_id", user.id);
+
+    if (mediaError) {
+      redirectWithError(mediaError.message);
+    }
   }
 
   revalidatePath("/owner");
@@ -190,9 +319,18 @@ async function updateBusiness(formData) {
     redirectWithError(validationError ?? "Missing business id.");
   }
 
+  const uploaded = await uploadBusinessImages(supabase, user.id, businessId, formData);
+
+  if (uploaded.error) {
+    redirectWithError(uploaded.error);
+  }
+
   const { error } = await supabase
     .from("businesses")
-    .update(payload)
+    .update({
+      ...payload,
+      ...uploaded.urls,
+    })
     .eq("id", businessId)
     .eq("owner_id", user.id);
 
@@ -213,6 +351,16 @@ async function createDeal(formData) {
 
   if (validationError) {
     redirectWithError(validationError);
+  }
+
+  const ownedBusiness = await verifyOwnedBusiness(
+    supabase,
+    user.id,
+    payload.business_id,
+  );
+
+  if (ownedBusiness.error) {
+    redirectWithError(ownedBusiness.error);
   }
 
   const { error } = await supabase.from("deals").insert(payload);
@@ -237,9 +385,43 @@ async function updateDeal(formData) {
     redirectWithError(validationError ?? "Missing deal id.");
   }
 
+  const ownedBusiness = await verifyOwnedBusiness(
+    supabase,
+    user.id,
+    payload.business_id,
+  );
+
+  if (ownedBusiness.error) {
+    redirectWithError(ownedBusiness.error);
+  }
+
   const { error } = await supabase
     .from("deals")
     .update(payload)
+    .eq("id", dealId)
+    .eq("owner_id", user.id);
+
+  if (error) {
+    redirectWithError(error.message);
+  }
+
+  revalidatePath("/owner");
+  redirect("/owner");
+}
+
+async function deleteDeal(formData) {
+  "use server";
+
+  const { supabase, user } = await getSignedInUser();
+  const dealId = getString(formData, "deal_id");
+
+  if (!dealId) {
+    redirectWithError("Missing deal id.");
+  }
+
+  const { error } = await supabase
+    .from("deals")
+    .delete()
     .eq("id", dealId)
     .eq("owner_id", user.id);
 
@@ -267,6 +449,17 @@ function TextInput(props) {
     <input
       {...props}
       className="h-12 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+    />
+  );
+}
+
+function FileInput(props) {
+  return (
+    <input
+      {...props}
+      type="file"
+      accept="image/png,image/jpeg,image/webp,image/gif"
+      className="rounded-2xl border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm font-medium text-zinc-600 file:mr-3 file:rounded-xl file:border-0 file:bg-zinc-950 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white"
     />
   );
 }
@@ -302,8 +495,34 @@ function SubmitButton({ children }) {
 
 function BusinessForm({ action, business, submitLabel }) {
   return (
-    <form action={action} className="grid gap-3">
+    <form action={action} encType="multipart/form-data" className="grid gap-3">
       {business ? <input type="hidden" name="business_id" value={business.id} /> : null}
+      {(business?.cover_image_url || business?.logo_url) ? (
+        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-zinc-100">
+          <div
+            className="h-32 bg-cover bg-center"
+            style={{
+              backgroundImage: business?.cover_image_url
+                ? `url(${business.cover_image_url})`
+                : "linear-gradient(135deg,#e4e4e7,#fafafa)",
+            }}
+          />
+          <div className="flex items-center gap-3 p-3">
+            <div
+              className="h-14 w-14 rounded-2xl border border-white bg-cover bg-center shadow-sm"
+              style={{
+                backgroundImage: business?.logo_url
+                  ? `url(${business.logo_url})`
+                  : "linear-gradient(135deg,#18181b,#71717a)",
+              }}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold">{business.name}</p>
+              <p className="text-xs font-medium text-zinc-500">Current brand images</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <Field label="Business name">
         <TextInput name="name" required minLength={2} maxLength={120} defaultValue={business?.name ?? ""} />
       </Field>
@@ -321,6 +540,14 @@ function BusinessForm({ action, business, submitLabel }) {
       <Field label="Address">
         <TextInput name="address" defaultValue={business?.address ?? ""} />
       </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Logo">
+          <FileInput name="logo" />
+        </Field>
+        <Field label="Cover image">
+          <FileInput name="cover_image" />
+        </Field>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Latitude">
           <TextInput name="latitude" required type="number" step="any" min="-90" max="90" defaultValue={business?.latitude ?? ""} />
@@ -379,7 +606,19 @@ function DealForm({ action, deal, businesses, submitLabel }) {
       <Field label="Ends">
         <TextInput name="ends_at" type="datetime-local" defaultValue={formatDateTimeLocal(deal?.ends_at)} />
       </Field>
-      <SubmitButton>{submitLabel}</SubmitButton>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <SubmitButton>{submitLabel}</SubmitButton>
+        {deal ? (
+          <button
+            type="submit"
+            formAction={deleteDeal}
+            formNoValidate
+            className="h-12 rounded-2xl border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition hover:bg-red-100"
+          >
+            Delete deal
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }
@@ -536,12 +775,30 @@ export default async function OwnerDashboardPage({ searchParams }) {
 
                 return (
                   <article key={business.id} className="rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
+                    <div
+                      className="mb-3 h-28 rounded-2xl bg-cover bg-center"
+                      style={{
+                        backgroundImage: business.cover_image_url
+                          ? `url(${business.cover_image_url})`
+                          : "linear-gradient(135deg,#d4d4d8,#f4f4f5)",
+                      }}
+                    />
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="truncate text-base font-bold">{business.name}</h3>
-                        <p className="mt-1 text-sm text-zinc-500">
-                          {business.category} - {business.city}
-                        </p>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div
+                          className="h-12 w-12 shrink-0 rounded-2xl bg-cover bg-center"
+                          style={{
+                            backgroundImage: business.logo_url
+                              ? `url(${business.logo_url})`
+                              : "linear-gradient(135deg,#18181b,#71717a)",
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base font-bold">{business.name}</h3>
+                          <p className="mt-1 text-sm text-zinc-500">
+                            {business.category} - {business.city}
+                          </p>
+                        </div>
                       </div>
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                         business.is_active
@@ -582,9 +839,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
 
         <section className="grid gap-4">
           <details open className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm">
-            <summary className="cursor-pointer text-lg font-bold">Create business</summary>
+            <summary className="cursor-pointer text-lg font-bold">Create business profile</summary>
             <div className="mt-4">
-              <BusinessForm action={createBusiness} submitLabel="Create business" />
+              <BusinessForm action={createBusiness} submitLabel="Create profile" />
             </div>
           </details>
 
