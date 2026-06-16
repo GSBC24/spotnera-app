@@ -28,6 +28,16 @@ const DEAL_SELECT = `
   )
 `;
 
+const REVIEW_SELECT = `
+  id,
+  business_id,
+  user_id,
+  rating,
+  comment,
+  created_at,
+  updated_at
+`;
+
 export default async function Home() {
   if (!hasSupabaseEnv()) {
     return (
@@ -180,6 +190,74 @@ export default async function Home() {
       })),
     );
 
+    const businessIds = (businessRows ?? []).map((business) => business.id);
+    let reviewRows = [];
+    let favoriteRows = [];
+
+    if (businessIds.length) {
+      console.log(
+        "Supabase reviews query:",
+        {
+          from: "reviews",
+          select: REVIEW_SELECT.replace(/\s+/g, " ").trim(),
+          filters: {
+            business_id: businessIds,
+          },
+          order: "created_at descending",
+        },
+      );
+
+      const { data: reviews, error: reviewsError } = await supabase
+        .from("reviews")
+        .select(REVIEW_SELECT)
+        .in("business_id", businessIds)
+        .order("created_at", { ascending: false });
+
+      if (reviewsError) {
+        queryErrors.push({
+          query: "reviews",
+          message: reviewsError.message,
+          code: reviewsError.code,
+          details: reviewsError.details,
+          hint: reviewsError.hint,
+        });
+        console.error("Supabase reviews query failed", reviewsError);
+      }
+
+      reviewRows = reviews ?? [];
+
+      console.log(
+        "Supabase favorites query:",
+        {
+          from: "favorites",
+          select: "business_id",
+          filters: {
+            user_id: user.id,
+            business_id: businessIds,
+          },
+        },
+      );
+
+      const { data: favorites, error: favoritesError } = await supabase
+        .from("favorites")
+        .select("business_id")
+        .eq("user_id", user.id)
+        .in("business_id", businessIds);
+
+      if (favoritesError) {
+        queryErrors.push({
+          query: "favorites",
+          message: favoritesError.message,
+          code: favoritesError.code,
+          details: favoritesError.details,
+          hint: favoritesError.hint,
+        });
+        console.error("Supabase favorites query failed", favoritesError);
+      }
+
+      favoriteRows = favorites ?? [];
+    }
+
     const dealsByBusinessId = new Map();
     for (const deal of dealRows ?? []) {
       const businessDeals = dealsByBusinessId.get(deal.business_id) ?? [];
@@ -194,9 +272,29 @@ export default async function Home() {
       dealsByBusinessId.set(deal.business_id, businessDeals);
     }
 
+    const reviewsByBusinessId = new Map();
+    for (const review of reviewRows) {
+      const businessReviews = reviewsByBusinessId.get(review.business_id) ?? [];
+      businessReviews.push({
+        id: review.id,
+        user_id: review.user_id,
+        rating: review.rating,
+        comment: review.comment,
+        created_at: review.created_at,
+        updated_at: review.updated_at,
+      });
+      reviewsByBusinessId.set(review.business_id, businessReviews);
+    }
+
+    const favoriteBusinessIds = new Set(
+      favoriteRows.map((favorite) => favorite.business_id),
+    );
+
     businesses = (businessRows ?? []).map((business) => ({
       ...business,
       deals: dealsByBusinessId.get(business.id) ?? [],
+      reviews: reviewsByBusinessId.get(business.id) ?? [],
+      isFavorite: favoriteBusinessIds.has(business.id),
     }));
   }
 
@@ -206,6 +304,7 @@ export default async function Home() {
         <SpotneraDashboard
           businesses={businesses}
           profile={profile}
+          userId={user.id}
           userEmail={user.email}
           supabaseBusinessCount={supabaseBusinessCount}
           supabaseDealCount={supabaseDealCount}
