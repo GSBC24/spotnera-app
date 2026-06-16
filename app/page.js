@@ -4,6 +4,30 @@ import { SpotneraDashboard } from "@/components/spotnera-dashboard";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
+const BUSINESS_SELECT = `
+  id,
+  name,
+  category,
+  description,
+  city,
+  address,
+  latitude,
+  longitude
+`;
+
+const DEAL_SELECT = `
+  id,
+  business_id,
+  title,
+  description,
+  status,
+  starts_at,
+  ends_at,
+  businesses!inner (
+    is_active
+  )
+`;
+
 export default async function Home() {
   if (!hasSupabaseEnv()) {
     return (
@@ -51,20 +75,17 @@ export default async function Home() {
       redirect("/onboarding");
     }
 
+    console.log(
+      "Supabase businesses query:",
+      "from businesses",
+      `select ${BUSINESS_SELECT.replace(/\s+/g, " ").trim()}`,
+      "eq is_active true",
+      "order name ascending",
+    );
+
     const { data: businessRows, error: businessesError } = await supabase
       .from("businesses")
-      .select(
-        `
-          id,
-          name,
-          category,
-          description,
-          city,
-          address,
-          latitude,
-          longitude
-        `,
-      )
+      .select(BUSINESS_SELECT)
       .eq("is_active", true)
       .order("name", { ascending: true });
 
@@ -72,22 +93,18 @@ export default async function Home() {
       console.error("Supabase businesses query failed", businessesError);
     }
 
+    console.log(
+      "Supabase deals query:",
+      "from deals",
+      `select ${DEAL_SELECT.replace(/\s+/g, " ").trim()}`,
+      "eq status active",
+      "eq businesses.is_active true",
+      "order created_at descending",
+    );
+
     const { data: dealRows, error: dealsError } = await supabase
       .from("deals")
-      .select(
-        `
-          id,
-          business_id,
-          title,
-          description,
-          status,
-          starts_at,
-          ends_at,
-          businesses!inner (
-            is_active
-          )
-        `,
-      )
+      .select(DEAL_SELECT)
       .eq("status", "active")
       .eq("businesses.is_active", true)
       .order("created_at", { ascending: false });
@@ -100,6 +117,16 @@ export default async function Home() {
       `Supabase returned ${businessRows?.length ?? 0} active businesses`,
     );
     console.log(`Supabase returned ${dealRows?.length ?? 0} active deals`);
+    console.log(
+      "Supabase active business rows:",
+      (businessRows ?? []).map(({ id, name, city, latitude, longitude }) => ({
+        id,
+        name,
+        city,
+        latitude,
+        longitude,
+      })),
+    );
 
     const dealsByBusinessId = new Map();
     for (const deal of dealRows ?? []) {

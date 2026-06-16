@@ -90,6 +90,24 @@ function getBusinessSignal(business) {
 }
 
 function normalizeBusinesses(businesses) {
+  const invalidLocationBusinesses = businesses.filter(
+    (business) =>
+      !Number.isFinite(Number(business.longitude)) ||
+      !Number.isFinite(Number(business.latitude)),
+  );
+
+  if (invalidLocationBusinesses.length) {
+    console.warn(
+      "Dropping businesses with invalid map coordinates",
+      invalidLocationBusinesses.map(({ id, name, latitude, longitude }) => ({
+        id,
+        name,
+        latitude,
+        longitude,
+      })),
+    );
+  }
+
   return businesses
     .filter(
       (business) =>
@@ -272,6 +290,12 @@ export function SpotneraDashboard({ businesses = [], profile, userEmail }) {
     () => normalizeBusinesses(businesses),
     [businesses],
   );
+
+  useEffect(() => {
+    console.log(`Dashboard received ${businesses.length} businesses`);
+    console.log(`Dashboard mapped ${mappedBusinesses.length} businesses`);
+  }, [businesses, mappedBusinesses]);
+
   const [selectedBusinessId, setSelectedBusinessId] = useState(null);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const selectedBusiness =
