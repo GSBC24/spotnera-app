@@ -73,7 +73,7 @@ export default async function Home() {
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("username, city, interests")
+      .select("username, city")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -83,15 +83,9 @@ export default async function Home() {
     console.log("Profile data:", {
       username: profile?.username ?? null,
       city: profile?.city ?? null,
-      interests: profile?.interests ?? null,
     });
 
-    if (
-      !profile?.username ||
-      !profile?.city ||
-      !Array.isArray(profile?.interests) ||
-      profile.interests.length < 3
-    ) {
+    if (!profile?.username || !profile?.city) {
       redirect("/onboarding");
     }
 

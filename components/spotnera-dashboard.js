@@ -522,10 +522,6 @@ export function SpotneraDashboard({
 
   const displayName = profile?.username || userEmail?.split("@")[0] || "explorer";
   const cityHeading = profile?.city ? `${profile.city} nearby` : "Nearby";
-  const interests =
-    Array.isArray(profile?.interests) && profile.interests.length
-      ? profile.interests.slice(0, 3)
-      : [];
   const activeDeals = mappedBusinesses.reduce(
     (count, business) =>
       count + business.deals.filter((deal) => deal.status === "active").length,
@@ -622,19 +618,6 @@ export function SpotneraDashboard({
           )}
 
           <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/35 to-transparent" />
-          {interests.length ? (
-            <div className="absolute left-4 right-4 top-14 z-10 flex items-center gap-2">
-              {interests.map((interest) => (
-                <span
-                  key={interest}
-                  className="rounded-full border border-white/14 bg-black/24 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl"
-                >
-                  {interest}
-                </span>
-              ))}
-            </div>
-          ) : null}
-
           {selectedBusiness ? (
             <motion.div
               initial={{ y: 28, opacity: 0 }}

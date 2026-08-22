@@ -21,5 +21,5 @@ export async function GET(request) {
     return NextResponse.redirect(new URL("/", requestUrl.origin));
   }
 
-  return NextResponse.redirect(new URL("/onboarding", requestUrl.origin));
+  return NextResponse.redirect(new URL("/", requestUrl.origin));
 }

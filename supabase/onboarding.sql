@@ -9,8 +9,7 @@ create table if not exists public.profiles (
   onboarding_completed_at timestamptz,
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
-  constraint username_format check (username ~ '^[A-Za-z0-9_]{3,24}$'),
-  constraint minimum_interests check (array_length(interests, 1) >= 3)
+  constraint username_format check (username ~ '^[A-Za-z0-9_]{3,24}$')
 );
 
 alter table public.profiles enable row level security;

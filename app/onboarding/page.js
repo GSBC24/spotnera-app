@@ -4,12 +4,7 @@ import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
 function isCompleteProfile(profile) {
-  return Boolean(
-    profile?.username &&
-      profile?.city &&
-      Array.isArray(profile?.interests) &&
-      profile.interests.length >= 3,
-  );
+  return Boolean(profile?.username && profile?.city);
 }
 
 export default async function OnboardingPage() {
@@ -28,7 +23,7 @@ export default async function OnboardingPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, city, interests")
+    .select("username, city")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -52,10 +47,6 @@ export default async function OnboardingPage() {
       .trim()
       .replace(/^@+/, "");
     const city = String(formData.get("city") ?? "").trim();
-    const interests = formData
-      .getAll("interests")
-      .map((interest) => String(interest).trim())
-      .filter(Boolean);
 
     if (username.length < 3 || username.length > 24) {
       return { error: "Choose a username between 3 and 24 characters." };
@@ -69,16 +60,11 @@ export default async function OnboardingPage() {
       return { error: "Add your city so Spotnera can tune recommendations." };
     }
 
-    if (interests.length < 3) {
-      return { error: "Pick at least three interests." };
-    }
-
     const { error } = await supabase.from("profiles").upsert(
       {
         id: user.id,
         username,
         city,
-        interests,
         email: user.email,
         full_name: user.user_metadata?.full_name ?? null,
         avatar_url: user.user_metadata?.avatar_url ?? null,
@@ -120,11 +106,10 @@ export default async function OnboardingPage() {
               Welcome{user.user_metadata?.given_name ? `, ${user.user_metadata.given_name}` : ""}
             </p>
             <h1 className="mt-3 max-w-sm text-4xl font-semibold leading-[1.02] tracking-tight text-zinc-950">
-              Shape your local discovery feed.
+              Finish your local profile.
             </h1>
             <p className="mt-4 max-w-md text-base leading-7 text-zinc-600">
-              Set your public profile and the signals Spotnera should use for
-              places, events, and experiences near you.
+              Set the public details Spotnera uses for your local dashboard.
             </p>
           </div>
 
