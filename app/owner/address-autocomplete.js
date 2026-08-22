@@ -30,6 +30,49 @@ function getFeatureAddress(feature, fallback) {
   return [name, context].filter(Boolean).join(", ");
 }
 
+async function readMapboxError(response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const body = await response.json().catch(() => null);
+    return body?.message || body?.error || JSON.stringify(body);
+  }
+
+  return response.text().catch(() => "");
+}
+
+function getSuggestFailureHint(status) {
+  if (status === 400) {
+    return "Check Search Box request parameters.";
+  }
+
+  if (status === 401) {
+    return "Check that NEXT_PUBLIC_MAPBOX_TOKEN is valid.";
+  }
+
+  if (status === 403) {
+    return "Check token URL restrictions, account access, and Search Box API permission.";
+  }
+
+  return "Check Mapbox service availability and token configuration.";
+}
+
+function createSuggestError(response, apiMessage) {
+  const detail = [
+    `Mapbox /suggest failed with HTTP ${response.status} ${response.statusText || ""}`.trim(),
+    apiMessage ? `API message: ${apiMessage}` : null,
+    getSuggestFailureHint(response.status),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const error = new Error(detail);
+  error.status = response.status;
+  error.statusText = response.statusText;
+  error.apiMessage = apiMessage;
+  return error;
+}
+
 export default function AddressAutocomplete({
   defaultAddress = "",
   defaultLatitude = "",
@@ -104,7 +147,8 @@ export default function AddressAutocomplete({
         );
 
         if (!response.ok) {
-          throw new Error("Address search is temporarily unavailable.");
+          const apiMessage = await readMapboxError(response);
+          throw createSuggestError(response, apiMessage);
         }
 
         const data = await response.json();
@@ -112,7 +156,30 @@ export default function AddressAutocomplete({
       } catch (fetchError) {
         if (fetchError.name !== "AbortError") {
           setSuggestions([]);
-          setError("Address search is temporarily unavailable. Try again in a moment.");
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Mapbox address autocomplete /suggest failed", {
+              status: fetchError.status,
+              statusText: fetchError.statusText,
+              apiMessage: fetchError.apiMessage,
+              hint: fetchError.status ? getSuggestFailureHint(fetchError.status) : undefined,
+              endpoint: "https://api.mapbox.com/search/searchbox/v1/suggest",
+              params: {
+                q: trimmedQuery,
+                session_token: sessionToken,
+                language: "en",
+                limit: "5",
+                proximity: "ip",
+                types: "address,poi,street,place,locality,neighborhood,postcode",
+              },
+            });
+          }
+
+          setError(
+            process.env.NODE_ENV === "production"
+              ? "Address search is temporarily unavailable. Try again in a moment."
+              : fetchError.message ||
+                  "Address search is temporarily unavailable. Try again in a moment.",
+          );
         }
       } finally {
         setIsLoading(false);
