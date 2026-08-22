@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import AddressAutocomplete from "./address-autocomplete";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
@@ -54,7 +55,13 @@ function getNullableString(formData, key) {
 }
 
 function getNumber(formData, key) {
-  const value = Number(formData.get(key));
+  const rawValue = getString(formData, key);
+
+  if (!rawValue) {
+    return null;
+  }
+
+  const value = Number(rawValue);
   return Number.isFinite(value) ? value : null;
 }
 
@@ -89,13 +96,16 @@ function formatRating(rating) {
 }
 
 function buildBusinessPayload(formData, userId) {
+  const address = getNullableString(formData, "address");
+
   return {
     owner_id: userId,
     name: getString(formData, "name"),
     category: getString(formData, "category"),
     description: getNullableString(formData, "description"),
     city: getString(formData, "city"),
-    address: getNullableString(formData, "address"),
+    address,
+    selected_address: getNullableString(formData, "selected_address"),
     latitude: getNumber(formData, "latitude"),
     longitude: getNumber(formData, "longitude"),
     is_active: formData.get("is_active") === "on",
@@ -123,11 +133,21 @@ function validateBusiness(payload) {
     return "Name, category, and city are required.";
   }
 
+  if (!payload.address || payload.address !== payload.selected_address) {
+    return "Choose an address from the Mapbox suggestions before saving.";
+  }
+
   if (payload.latitude === null || payload.longitude === null) {
-    return "Latitude and longitude are required.";
+    return "Choose an address from the Mapbox suggestions so map coordinates can be saved.";
   }
 
   return null;
+}
+
+function getBusinessSavePayload(payload) {
+  const savePayload = { ...payload };
+  delete savePayload.selected_address;
+  return savePayload;
 }
 
 function validateDeal(payload) {
@@ -277,7 +297,7 @@ async function createBusiness(formData) {
 
   const { data: business, error } = await supabase
     .from("businesses")
-    .insert(payload)
+    .insert(getBusinessSavePayload(payload))
     .select("id")
     .single();
 
@@ -328,7 +348,7 @@ async function updateBusiness(formData) {
   const { error } = await supabase
     .from("businesses")
     .update({
-      ...payload,
+      ...getBusinessSavePayload(payload),
       ...uploaded.urls,
     })
     .eq("id", businessId)
@@ -537,23 +557,17 @@ function BusinessForm({ action, business, submitLabel }) {
       <Field label="Description">
         <TextArea name="description" maxLength={1000} defaultValue={business?.description ?? ""} />
       </Field>
-      <Field label="Address">
-        <TextInput name="address" defaultValue={business?.address ?? ""} />
-      </Field>
+      <AddressAutocomplete
+        defaultAddress={business?.address ?? ""}
+        defaultLatitude={business?.latitude ?? ""}
+        defaultLongitude={business?.longitude ?? ""}
+      />
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Logo">
           <FileInput name="logo" />
         </Field>
         <Field label="Cover image">
           <FileInput name="cover_image" />
-        </Field>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Latitude">
-          <TextInput name="latitude" required type="number" step="any" min="-90" max="90" defaultValue={business?.latitude ?? ""} />
-        </Field>
-        <Field label="Longitude">
-          <TextInput name="longitude" required type="number" step="any" min="-180" max="180" defaultValue={business?.longitude ?? ""} />
         </Field>
       </div>
       <label className="flex h-12 items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-800">
