@@ -2,6 +2,10 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+const SEARCHBOX_SUGGEST_ENDPOINT = "https://api.mapbox.com/search/searchbox/v1/suggest";
+const SEARCHBOX_RETRIEVE_ENDPOINT = "https://api.mapbox.com/search/searchbox/v1/retrieve";
+const SEARCHBOX_TYPES = "address,poi,street,place,locality,neighborhood,postcode";
+
 function createSessionToken() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -41,6 +45,26 @@ async function readMapboxError(response) {
   return response.text().catch(() => "");
 }
 
+function getMapboxToken() {
+  return process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() ?? "";
+}
+
+function getTokenConfigurationError(token) {
+  if (!token) {
+    return "Address search is unavailable because Mapbox is not configured.";
+  }
+
+  if (!token.startsWith("pk.")) {
+    return "Address search is unavailable because the Mapbox public token is not configured correctly.";
+  }
+
+  if (/\s/.test(token)) {
+    return "Address search is unavailable because the Mapbox token contains whitespace.";
+  }
+
+  return "";
+}
+
 function getSuggestFailureHint(status) {
   if (status === 400) {
     return "Check Search Box request parameters.";
@@ -57,9 +81,9 @@ function getSuggestFailureHint(status) {
   return "Check Mapbox service availability and token configuration.";
 }
 
-function createSuggestError(response, apiMessage) {
+function createMapboxError(endpointName, response, apiMessage) {
   const detail = [
-    `Mapbox /suggest failed with HTTP ${response.status} ${response.statusText || ""}`.trim(),
+    `Mapbox ${endpointName} failed with HTTP ${response.status} ${response.statusText || ""}`.trim(),
     apiMessage ? `API message: ${apiMessage}` : null,
     getSuggestFailureHint(response.status),
   ]
@@ -73,12 +97,44 @@ function createSuggestError(response, apiMessage) {
   return error;
 }
 
+function getUserFacingError(error, fallback) {
+  if (error.status === 401) {
+    return "Address search is unavailable because the Mapbox token was rejected.";
+  }
+
+  if (error.status === 403) {
+    return "Address search is unavailable because Mapbox access is restricted for this site.";
+  }
+
+  if (error.status >= 400) {
+    return fallback;
+  }
+
+  return "Address search is temporarily unavailable. Check your connection and try again.";
+}
+
+function logMapboxError(endpointName, endpoint, error, params) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.error(`Mapbox address autocomplete ${endpointName} failed`, {
+    status: error.status,
+    statusText: error.statusText,
+    apiMessage: error.apiMessage,
+    hint: error.status ? getSuggestFailureHint(error.status) : undefined,
+    endpoint,
+    params,
+  });
+}
+
 export default function AddressAutocomplete({
   defaultAddress = "",
   defaultLatitude = "",
   defaultLongitude = "",
 }) {
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const token = getMapboxToken();
+  const tokenConfigurationError = getTokenConfigurationError(token);
   const listboxId = useId();
   const searchAbortRef = useRef(null);
   const [query, setQuery] = useState(defaultAddress);
@@ -97,8 +153,8 @@ export default function AddressAutocomplete({
     longitude !== "";
 
   const statusText = useMemo(() => {
-    if (!token) {
-      return "Address search is unavailable because Mapbox is not configured.";
+    if (tokenConfigurationError) {
+      return tokenConfigurationError;
     }
 
     if (hasSelectedAddress) {
@@ -110,10 +166,10 @@ export default function AddressAutocomplete({
     }
 
     return "Start typing, then choose a suggestion.";
-  }, [hasSelectedAddress, query, token]);
+  }, [hasSelectedAddress, query, tokenConfigurationError]);
 
   useEffect(() => {
-    if (!token) {
+    if (tokenConfigurationError) {
       return undefined;
     }
 
@@ -137,48 +193,45 @@ export default function AddressAutocomplete({
         language: "en",
         limit: "5",
         proximity: "ip",
-        types: "address,poi,street,place,locality,neighborhood,postcode",
+        types: SEARCHBOX_TYPES,
       });
 
+      const loggedParams = {
+        q: trimmedQuery,
+        session_token: sessionToken,
+        language: "en",
+        limit: "5",
+        proximity: "ip",
+        types: SEARCHBOX_TYPES,
+      };
+
       try {
-        const response = await fetch(
-          `https://api.mapbox.com/search/searchbox/v1/suggest?${params}`,
-          { signal: controller.signal },
-        );
+        const response = await fetch(`${SEARCHBOX_SUGGEST_ENDPOINT}?${params}`, {
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           const apiMessage = await readMapboxError(response);
-          throw createSuggestError(response, apiMessage);
+          throw createMapboxError("/suggest", response, apiMessage);
         }
 
         const data = await response.json();
-        setSuggestions(data.suggestions ?? []);
+        const nextSuggestions = data.suggestions ?? [];
+        setSuggestions(nextSuggestions);
+
+        if (!nextSuggestions.length) {
+          setError("No address results found. Try a more specific address.");
+        }
       } catch (fetchError) {
         if (fetchError.name !== "AbortError") {
           setSuggestions([]);
-          if (process.env.NODE_ENV !== "production") {
-            console.error("Mapbox address autocomplete /suggest failed", {
-              status: fetchError.status,
-              statusText: fetchError.statusText,
-              apiMessage: fetchError.apiMessage,
-              hint: fetchError.status ? getSuggestFailureHint(fetchError.status) : undefined,
-              endpoint: "https://api.mapbox.com/search/searchbox/v1/suggest",
-              params: {
-                q: trimmedQuery,
-                session_token: sessionToken,
-                language: "en",
-                limit: "5",
-                proximity: "ip",
-                types: "address,poi,street,place,locality,neighborhood,postcode",
-              },
-            });
-          }
+          logMapboxError("/suggest", SEARCHBOX_SUGGEST_ENDPOINT, fetchError, loggedParams);
 
           setError(
-            process.env.NODE_ENV === "production"
-              ? "Address search is temporarily unavailable. Try again in a moment."
-              : fetchError.message ||
-                  "Address search is temporarily unavailable. Try again in a moment.",
+            getUserFacingError(
+              fetchError,
+              "Address search is temporarily unavailable. Try again in a moment.",
+            ),
           );
         }
       } finally {
@@ -189,7 +242,7 @@ export default function AddressAutocomplete({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [query, selectedAddress, sessionToken, token]);
+  }, [query, selectedAddress, sessionToken, token, tokenConfigurationError]);
 
   function handleAddressChange(event) {
     setQuery(event.target.value);
@@ -202,6 +255,11 @@ export default function AddressAutocomplete({
   }
 
   async function handleSelectSuggestion(suggestion) {
+    if (tokenConfigurationError) {
+      setError(tokenConfigurationError);
+      return;
+    }
+
     if (!suggestion.mapbox_id) {
       setError("Choose a complete Mapbox address suggestion.");
       return;
@@ -216,15 +274,20 @@ export default function AddressAutocomplete({
       language: "en",
     });
 
+    const loggedParams = {
+      session_token: sessionToken,
+      language: "en",
+    };
+    const retrieveUrl = `${SEARCHBOX_RETRIEVE_ENDPOINT}/${encodeURIComponent(
+      suggestion.mapbox_id,
+    )}`;
+
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/search/searchbox/v1/retrieve/${encodeURIComponent(
-          suggestion.mapbox_id,
-        )}?${params}`,
-      );
+      const response = await fetch(`${retrieveUrl}?${params}`);
 
       if (!response.ok) {
-        throw new Error("Address details are temporarily unavailable.");
+        const apiMessage = await readMapboxError(response);
+        throw createMapboxError("/retrieve", response, apiMessage);
       }
 
       const data = await response.json();
@@ -245,9 +308,12 @@ export default function AddressAutocomplete({
       setSuggestions([]);
       setSessionToken(createSessionToken());
     } catch (retrieveError) {
+      logMapboxError("/retrieve", retrieveUrl, retrieveError, loggedParams);
       setError(
-        retrieveError.message ||
+        getUserFacingError(
+          retrieveError,
           "Address details are temporarily unavailable. Try another suggestion.",
+        ),
       );
     } finally {
       setIsLoading(false);
