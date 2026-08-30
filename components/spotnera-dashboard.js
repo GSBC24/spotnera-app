@@ -32,6 +32,37 @@ const STAR_PATH =
 const LOCATION_PATH =
   "M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z";
 
+const SOCIAL_PROFILES = [
+  {
+    field: "instagram_url",
+    label: "Instagram",
+    hosts: ["instagram.com", "www.instagram.com"],
+    buildUrl: (handle) => `https://www.instagram.com/${handle}`,
+    handlePattern: /^[A-Za-z0-9._]{1,30}$/,
+  },
+  {
+    field: "facebook_url",
+    label: "Facebook",
+    hosts: ["facebook.com", "www.facebook.com", "fb.com", "www.fb.com"],
+    buildUrl: (handle) => `https://www.facebook.com/${handle}`,
+    handlePattern: /^[A-Za-z0-9.]{3,80}$/,
+  },
+  {
+    field: "tiktok_url",
+    label: "TikTok",
+    hosts: ["tiktok.com", "www.tiktok.com"],
+    buildUrl: (handle) => `https://www.tiktok.com/@${handle}`,
+    handlePattern: /^[A-Za-z0-9._]{2,24}$/,
+  },
+  {
+    field: "snapchat_url",
+    label: "Snapchat",
+    hosts: ["snapchat.com", "www.snapchat.com"],
+    buildUrl: (handle) => `https://www.snapchat.com/add/${handle}`,
+    handlePattern: /^[A-Za-z0-9._-]{3,30}$/,
+  },
+];
+
 function Icon({ path }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
@@ -124,6 +155,113 @@ function getBusinessAddressLines(business) {
   const locality = [city, country].filter(Boolean).join(", ");
 
   return [address, locality].filter(Boolean);
+}
+
+function getBusinessPhone(business) {
+  return getDisplayValue(business.phone);
+}
+
+function getBusinessEmail(business) {
+  const email = getDisplayValue(business.email);
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return null;
+  }
+
+  return email;
+}
+
+function getPhoneHref(phone) {
+  const normalizedPhone = phone.replace(/[^\d+]/g, "");
+  return normalizedPhone ? `tel:${normalizedPhone}` : null;
+}
+
+function getEmailHref(email) {
+  return `mailto:${email}`;
+}
+
+function getWebsiteUrl(value) {
+  const rawValue = getDisplayValue(value);
+
+  if (!rawValue) {
+    return null;
+  }
+
+  const urlCandidate = /^[a-z][a-z\d+.-]*:/i.test(rawValue)
+    ? rawValue
+    : `https://${rawValue}`;
+
+  try {
+    const url = new URL(urlCandidate);
+
+    if (!["http:", "https:"].includes(url.protocol) || !url.hostname.includes(".")) {
+      return null;
+    }
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function getWebsiteDisplayLabel(websiteUrl) {
+  try {
+    const url = new URL(websiteUrl);
+    const path = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
+    return `${url.hostname}${path}`;
+  } catch {
+    return websiteUrl;
+  }
+}
+
+function getSocialUrl(value, profile) {
+  const rawValue = getDisplayValue(value);
+
+  if (!rawValue) {
+    return null;
+  }
+
+  const lowerRawValue = rawValue.toLowerCase();
+  const schemelessUrl = profile.hosts.some(
+    (host) => lowerRawValue === host || lowerRawValue.startsWith(`${host}/`),
+  );
+  const urlCandidate = schemelessUrl ? `https://${rawValue}` : rawValue;
+
+  try {
+    const url = new URL(urlCandidate);
+
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      !profile.hosts.includes(url.hostname.toLowerCase())
+    ) {
+      return null;
+    }
+
+    if (!url.pathname.split("/").filter(Boolean).length) {
+      return null;
+    }
+
+    return url.toString();
+  } catch {
+    const handle = rawValue
+      .replace(/^@+/, "")
+      .replace(/^\/+/, "")
+      .split("/")
+      .filter(Boolean)[0];
+
+    if (!handle || !profile.handlePattern.test(handle)) {
+      return null;
+    }
+
+    return profile.buildUrl(handle);
+  }
+}
+
+function getBusinessSocialLinks(business) {
+  return SOCIAL_PROFILES.map((profile) => ({
+    label: profile.label,
+    href: getSocialUrl(business[profile.field], profile),
+  })).filter((profile) => profile.href);
 }
 
 function getReviewLabel(reviewCount) {
@@ -364,6 +502,76 @@ function BusinessAddress({ business, compact = false }) {
           </p>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ContactActions({ business, compact = false }) {
+  const phone = getBusinessPhone(business);
+  const email = getBusinessEmail(business);
+  const websiteUrl = getWebsiteUrl(business.website_url);
+  const phoneHref = phone ? getPhoneHref(phone) : null;
+  const actions = [
+    phone && phoneHref
+      ? { label: compact ? "Call" : `Phone: ${phone}`, href: phoneHref, external: false }
+      : null,
+    email
+      ? { label: compact ? "Email" : `Email: ${email}`, href: getEmailHref(email), external: false }
+      : null,
+    websiteUrl
+      ? {
+          label: compact ? "Website" : `Website: ${getWebsiteDisplayLabel(websiteUrl)}`,
+          href: websiteUrl,
+          external: true,
+        }
+      : null,
+  ].filter(Boolean);
+
+  if (!actions.length) {
+    return null;
+  }
+
+  return (
+    <div className={`flex flex-wrap gap-2 ${compact ? "mt-3" : "mt-2"}`}>
+      {actions.map((action) => (
+        <a
+          key={action.href}
+          href={action.href}
+          target={action.external ? "_blank" : undefined}
+          rel={action.external ? "noopener noreferrer" : undefined}
+          className={`rounded-full border border-white/10 bg-white/10 font-bold text-white/76 transition hover:bg-white/16 hover:text-white ${
+            compact ? "px-3 py-1.5 text-xs" : "px-3 py-2 text-sm"
+          }`}
+        >
+          {action.label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function SocialLinks({ business, compact = false }) {
+  const links = getBusinessSocialLinks(business);
+
+  if (!links.length) {
+    return null;
+  }
+
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${compact ? "mt-2" : "mt-2"}`}>
+      {links.map((link) => (
+        <a
+          key={link.label}
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`rounded-full border border-white/10 bg-white/8 font-bold text-white/64 transition hover:bg-white/14 hover:text-white ${
+            compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-2 text-sm"
+          }`}
+        >
+          {link.label}
+        </a>
+      ))}
     </div>
   );
 }
@@ -1082,6 +1290,8 @@ export function SpotneraDashboard({
                     />
                   </div>
                   <BusinessAddress business={selectedBusiness} compact />
+                  <ContactActions business={selectedBusiness} compact />
+                  <SocialLinks business={selectedBusiness} compact />
                 </div>
                 <button
                   type="button"
@@ -1180,19 +1390,44 @@ export function SpotneraDashboard({
                 </span>
               </div>
 
+              {selectedBusiness.description ? (
+                <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                    About
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-white/62">
+                    {selectedBusiness.description}
+                  </p>
+                </div>
+              ) : null}
+
               {getBusinessAddressLines(selectedBusiness).length ? (
                 <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
-                    Address
+                    Location
                   </p>
                   <BusinessAddress business={selectedBusiness} />
                 </div>
               ) : null}
 
-              {selectedBusiness.description ? (
-                <p className="mt-3 text-sm leading-6 text-white/62">
-                  {selectedBusiness.description}
-                </p>
+              {getBusinessPhone(selectedBusiness) ||
+              getBusinessEmail(selectedBusiness) ||
+              getWebsiteUrl(selectedBusiness.website_url) ? (
+                <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                    Contact
+                  </p>
+                  <ContactActions business={selectedBusiness} />
+                </div>
+              ) : null}
+
+              {getBusinessSocialLinks(selectedBusiness).length ? (
+                <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                    Social media
+                  </p>
+                  <SocialLinks business={selectedBusiness} />
+                </div>
               ) : null}
 
               <div className="mt-4 flex items-center gap-3">

@@ -15,6 +15,13 @@ const BUSINESS_FIELDS = `
   description,
   city,
   address,
+  phone,
+  email,
+  website_url,
+  facebook_url,
+  instagram_url,
+  tiktok_url,
+  snapchat_url,
   latitude,
   longitude,
   logo_url,
@@ -104,6 +111,128 @@ function getNullableTimestamp(formData, key) {
   return value ? new Date(value).toISOString() : null;
 }
 
+function normalizeBusinessEmail(value) {
+  const email = String(value ?? "").trim();
+
+  if (!email) {
+    return { value: null };
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Enter a valid public business email address." };
+  }
+
+  return { value: email };
+}
+
+function normalizeBusinessPhone(value) {
+  const phone = String(value ?? "").trim().replace(/\s+/g, " ");
+
+  if (!phone) {
+    return { value: null };
+  }
+
+  if (!/^\+?[0-9][0-9\s().-]{5,24}$/.test(phone)) {
+    return { error: "Enter a valid public business phone number." };
+  }
+
+  return { value: phone };
+}
+
+function normalizeWebsiteUrl(value) {
+  const rawValue = String(value ?? "").trim();
+
+  if (!rawValue) {
+    return { value: null };
+  }
+
+  const urlCandidate = /^[a-z][a-z\d+.-]*:/i.test(rawValue)
+    ? rawValue
+    : `https://${rawValue}`;
+
+  try {
+    const url = new URL(urlCandidate);
+
+    if (!["http:", "https:"].includes(url.protocol) || !url.hostname.includes(".")) {
+      return { error: "Enter a valid business website." };
+    }
+
+    return { value: url.toString() };
+  } catch {
+    return { error: "Enter a valid business website." };
+  }
+}
+
+function normalizeSocialProfile(value, platform) {
+  const rawValue = String(value ?? "").trim();
+
+  if (!rawValue) {
+    return { value: null };
+  }
+
+  const platformConfig = {
+    facebook: {
+      label: "Facebook",
+      hosts: ["facebook.com", "www.facebook.com", "fb.com", "www.fb.com"],
+      buildUrl: (handle) => `https://www.facebook.com/${handle}`,
+      handlePattern: /^[A-Za-z0-9.]{3,80}$/,
+    },
+    instagram: {
+      label: "Instagram",
+      hosts: ["instagram.com", "www.instagram.com"],
+      buildUrl: (handle) => `https://www.instagram.com/${handle}`,
+      handlePattern: /^[A-Za-z0-9._]{1,30}$/,
+    },
+    tiktok: {
+      label: "TikTok",
+      hosts: ["tiktok.com", "www.tiktok.com"],
+      buildUrl: (handle) => `https://www.tiktok.com/@${handle}`,
+      handlePattern: /^[A-Za-z0-9._]{2,24}$/,
+    },
+    snapchat: {
+      label: "Snapchat",
+      hosts: ["snapchat.com", "www.snapchat.com"],
+      buildUrl: (handle) => `https://www.snapchat.com/add/${handle}`,
+      handlePattern: /^[A-Za-z0-9._-]{3,30}$/,
+    },
+  }[platform];
+
+  const lowerRawValue = rawValue.toLowerCase();
+  const schemelessUrl = platformConfig.hosts.some(
+    (host) => lowerRawValue === host || lowerRawValue.startsWith(`${host}/`),
+  );
+  const urlCandidate = schemelessUrl ? `https://${rawValue}` : rawValue;
+
+  try {
+    const url = new URL(urlCandidate);
+    const host = url.hostname.toLowerCase();
+
+    if (!["http:", "https:"].includes(url.protocol) || !platformConfig.hosts.includes(host)) {
+      return { error: `Enter a valid ${platformConfig.label} profile link.` };
+    }
+
+    if (!url.pathname.split("/").filter(Boolean).length) {
+      return { error: `Enter a valid ${platformConfig.label} profile link.` };
+    }
+
+    return { value: url.toString() };
+  } catch {
+    const handle = rawValue
+      .replace(/^@+/, "")
+      .replace(/^\/+/, "")
+      .split("/")
+      .filter(Boolean)[0];
+
+    if (!handle || !platformConfig.handlePattern.test(handle)) {
+      return {
+        error: `Enter a valid ${platformConfig.label} username or profile link.`,
+      };
+    }
+
+    return { value: platformConfig.buildUrl(handle) };
+  }
+}
+
 function normalizeComparable(value) {
   return String(value ?? "")
     .trim()
@@ -139,6 +268,13 @@ function formatRating(rating) {
 
 function buildBusinessPayload(formData, userId) {
   const address = getNullableString(formData, "address");
+  const phone = normalizeBusinessPhone(formData.get("phone"));
+  const email = normalizeBusinessEmail(formData.get("email"));
+  const website = normalizeWebsiteUrl(formData.get("website_url"));
+  const facebook = normalizeSocialProfile(formData.get("facebook_url"), "facebook");
+  const instagram = normalizeSocialProfile(formData.get("instagram_url"), "instagram");
+  const tiktok = normalizeSocialProfile(formData.get("tiktok_url"), "tiktok");
+  const snapchat = normalizeSocialProfile(formData.get("snapchat_url"), "snapchat");
 
   return {
     owner_id: userId,
@@ -148,6 +284,22 @@ function buildBusinessPayload(formData, userId) {
     description: getNullableString(formData, "description"),
     city: getString(formData, "city"),
     address,
+    phone: phone.value,
+    email: email.value,
+    website_url: website.value,
+    facebook_url: facebook.value,
+    instagram_url: instagram.value,
+    tiktok_url: tiktok.value,
+    snapchat_url: snapchat.value,
+    fieldErrors: [
+      phone.error,
+      email.error,
+      website.error,
+      facebook.error,
+      instagram.error,
+      tiktok.error,
+      snapchat.error,
+    ].filter(Boolean),
     selected_address: getNullableString(formData, "selected_address"),
     selected_country: getNullableString(formData, "selected_country"),
     selected_city: getNullableString(formData, "selected_city"),
@@ -174,6 +326,10 @@ function buildDealPayload(formData, userId) {
 }
 
 function validateBusiness(payload) {
+  if (payload.fieldErrors.length) {
+    return payload.fieldErrors[0];
+  }
+
   if (!payload.name || !payload.category || !payload.country || !payload.city) {
     return "Name, category, country, and city are required.";
   }
@@ -216,6 +372,7 @@ function getBusinessSavePayload(payload) {
   delete savePayload.selected_address;
   delete savePayload.selected_country;
   delete savePayload.selected_city;
+  delete savePayload.fieldErrors;
   return savePayload;
 }
 
@@ -661,6 +818,84 @@ function BusinessForm({ action, business, submitLabel }) {
         defaultLatitude={business?.latitude ?? ""}
         defaultLongitude={business?.longitude ?? ""}
       />
+      <section className="grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
+            Contact information
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Phone number">
+            <TextInput
+              type="tel"
+              name="phone"
+              maxLength={32}
+              placeholder="+47 123 45 678"
+              defaultValue={business?.phone ?? ""}
+            />
+          </Field>
+          <Field label="Email">
+            <TextInput
+              type="email"
+              name="email"
+              maxLength={254}
+              placeholder="contact@business.com"
+              defaultValue={business?.email ?? ""}
+            />
+          </Field>
+          <Field label="Website">
+            <TextInput
+              type="text"
+              inputMode="url"
+              name="website_url"
+              maxLength={300}
+              placeholder="spotnera.com"
+              defaultValue={business?.website_url ?? ""}
+            />
+          </Field>
+        </div>
+      </section>
+      <section className="grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
+            Social media
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Facebook">
+            <TextInput
+              name="facebook_url"
+              maxLength={300}
+              placeholder="facebook.com/spotnera"
+              defaultValue={business?.facebook_url ?? ""}
+            />
+          </Field>
+          <Field label="Instagram">
+            <TextInput
+              name="instagram_url"
+              maxLength={300}
+              placeholder="@spotnera"
+              defaultValue={business?.instagram_url ?? ""}
+            />
+          </Field>
+          <Field label="TikTok">
+            <TextInput
+              name="tiktok_url"
+              maxLength={300}
+              placeholder="@spotnera"
+              defaultValue={business?.tiktok_url ?? ""}
+            />
+          </Field>
+          <Field label="Snapchat">
+            <TextInput
+              name="snapchat_url"
+              maxLength={300}
+              placeholder="spotnera"
+              defaultValue={business?.snapchat_url ?? ""}
+            />
+          </Field>
+        </div>
+      </section>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Logo">
           <FileInput name="logo" />

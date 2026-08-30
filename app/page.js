@@ -13,6 +13,13 @@ const BUSINESS_SELECT = `
   description,
   city,
   address,
+  phone,
+  email,
+  website_url,
+  facebook_url,
+  instagram_url,
+  tiktok_url,
+  snapchat_url,
   latitude,
   longitude,
   is_active
