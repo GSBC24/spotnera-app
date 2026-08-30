@@ -5,6 +5,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { trackPageView } from "@/lib/analytics";
 
+const GA_MEASUREMENT_ID = "G-ZM6VRS3E8M";
+
 function RouteChangeTracker({ isReady, measurementId }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -28,11 +30,7 @@ function RouteChangeTracker({ isReady, measurementId }) {
 
 export function GoogleAnalytics() {
   const [isReady, setIsReady] = useState(false);
-  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
-
-  if (!measurementId) {
-    return null;
-  }
+  const measurementId = GA_MEASUREMENT_ID;
 
   return (
     <>
