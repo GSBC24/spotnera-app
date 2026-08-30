@@ -95,6 +95,28 @@ function getDisplayValue(value) {
   return normalizedValue || null;
 }
 
+function getUniqueDisplayValues(values) {
+  const uniqueValues = new Map();
+
+  for (const value of values) {
+    const displayValue = getDisplayValue(value);
+
+    if (!displayValue) {
+      continue;
+    }
+
+    const normalizedValue = normalizeSearchValue(displayValue);
+
+    if (!uniqueValues.has(normalizedValue)) {
+      uniqueValues.set(normalizedValue, displayValue);
+    }
+  }
+
+  return [...uniqueValues.values()].sort((left, right) =>
+    left.localeCompare(right, undefined, { sensitivity: "base" }),
+  );
+}
+
 function getBusinessAddressLines(business) {
   const address = getDisplayValue(business.address);
   const city = getDisplayValue(business.city);
@@ -108,8 +130,49 @@ function getReviewLabel(reviewCount) {
   return `${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`;
 }
 
+function getCountLabel(count, singularLabel, pluralLabel = `${singularLabel}s`) {
+  return `${count} ${count === 1 ? singularLabel : pluralLabel}`;
+}
+
+function getQueryErrorMessage(query) {
+  if (query === "businesses") {
+    return "Unable to load businesses.";
+  }
+
+  if (query === "deals") {
+    return "Unable to load active deals.";
+  }
+
+  if (query === "reviews") {
+    return "Unable to load reviews.";
+  }
+
+  if (query === "favorites") {
+    return "Unable to load saved businesses.";
+  }
+
+  return "Unable to load the latest business information.";
+}
+
 function normalizeSearchValue(value) {
   return String(value ?? "").trim().toLocaleLowerCase("en");
+}
+
+function businessMatchesFilters(business, filters) {
+  const normalizedSearch = normalizeSearchValue(filters.searchQuery);
+  const businessCountry = getDisplayValue(business.country);
+  const businessCity = getDisplayValue(business.city);
+  const matchesCategory =
+    filters.selectedCategories.length === 0 ||
+    filters.selectedCategories.includes(business.category);
+  const matchesSearch =
+    !normalizedSearch ||
+    normalizeSearchValue(business.name).includes(normalizedSearch);
+  const matchesCountry =
+    !filters.selectedCountry || businessCountry === filters.selectedCountry;
+  const matchesCity = !filters.selectedCity || businessCity === filters.selectedCity;
+
+  return matchesCategory && matchesSearch && matchesCountry && matchesCity;
 }
 
 function normalizeBusinesses(businesses) {
@@ -510,6 +573,8 @@ export function SpotneraDashboard({
   const [isSavingReview, setIsSavingReview] = useState(false);
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -517,20 +582,33 @@ export function SpotneraDashboard({
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
   );
+  const countryOptions = useMemo(
+    () => getUniqueDisplayValues(mappedBusinesses.map((business) => business.country)),
+    [mappedBusinesses],
+  );
+  const cityOptions = useMemo(() => {
+    const countryFilteredBusinesses = selectedCountry
+      ? mappedBusinesses.filter(
+          (business) => getDisplayValue(business.country) === selectedCountry,
+        )
+      : mappedBusinesses;
+
+    return getUniqueDisplayValues(
+      countryFilteredBusinesses.map((business) => business.city),
+    );
+  }, [mappedBusinesses, selectedCountry]);
   const filteredBusinesses = useMemo(() => {
-    const normalizedSearch = normalizeSearchValue(searchQuery);
+    const filters = {
+      searchQuery,
+      selectedCategories,
+      selectedCountry,
+      selectedCity,
+    };
 
-    return mappedBusinesses.filter((business) => {
-      const matchesCategory =
-        selectedCategories.length === 0 ||
-        selectedCategories.includes(business.category);
-      const matchesSearch =
-        !normalizedSearch ||
-        normalizeSearchValue(business.name).includes(normalizedSearch);
-
-      return matchesCategory && matchesSearch;
-    });
-  }, [mappedBusinesses, searchQuery, selectedCategories]);
+    return mappedBusinesses.filter((business) =>
+      businessMatchesFilters(business, filters),
+    );
+  }, [mappedBusinesses, searchQuery, selectedCategories, selectedCity, selectedCountry]);
 
   useEffect(() => {
     console.log(`Dashboard received ${localBusinesses.length} businesses`);
@@ -541,6 +619,15 @@ export function SpotneraDashboard({
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim();
   const selectedBusiness =
     filteredBusinesses.find((business) => business.id === selectedBusinessId) ?? null;
+  const selectedCategoryCount = selectedCategories.length;
+  const activeFilterCount =
+    selectedCategoryCount + (selectedCountry ? 1 : 0) + (selectedCity ? 1 : 0);
+  const totalBusinessLabel = getCountLabel(supabaseBusinessCount, "Business", "Businesses");
+  const totalActiveDealLabel = getCountLabel(
+    supabaseDealCount,
+    "Active deal",
+    "Active deals",
+  );
   const recommendedBusiness = useMemo(
     () =>
       filteredBusinesses.find((business) =>
@@ -550,20 +637,125 @@ export function SpotneraDashboard({
       null,
     [filteredBusinesses],
   );
+  const clearSelectedBusinessIfExcluded = useCallback(
+    (filters) => {
+      if (
+        selectedBusinessId &&
+        !mappedBusinesses.some(
+          (business) =>
+            business.id === selectedBusinessId &&
+            businessMatchesFilters(business, filters),
+        )
+      ) {
+        setSelectedBusinessId(null);
+        setIsDetailOpen(false);
+      }
+    },
+    [mappedBusinesses, selectedBusinessId],
+  );
+  const handleSearchChange = useCallback(
+    (event) => {
+      const nextSearchQuery = event.target.value;
+
+      setSearchQuery(nextSearchQuery);
+      clearSelectedBusinessIfExcluded({
+        searchQuery: nextSearchQuery,
+        selectedCategories,
+        selectedCountry,
+        selectedCity,
+      });
+    },
+    [
+      clearSelectedBusinessIfExcluded,
+      selectedCategories,
+      selectedCity,
+      selectedCountry,
+    ],
+  );
   const handleSelectBusiness = useCallback((business) => {
     setSelectedBusinessId(business.id);
     setIsDetailOpen(false);
   }, []);
-  const handleToggleCategory = useCallback((category) => {
-    setSelectedCategories((currentCategories) =>
-      currentCategories.includes(category)
-        ? currentCategories.filter((item) => item !== category)
-        : [...currentCategories, category],
-    );
-  }, []);
+  const handleToggleCategory = useCallback(
+    (category) => {
+      const nextCategories = selectedCategories.includes(category)
+        ? selectedCategories.filter((item) => item !== category)
+        : [...selectedCategories, category];
+
+      setSelectedCategories(nextCategories);
+      clearSelectedBusinessIfExcluded({
+        searchQuery,
+        selectedCategories: nextCategories,
+        selectedCountry,
+        selectedCity,
+      });
+    },
+    [
+      clearSelectedBusinessIfExcluded,
+      searchQuery,
+      selectedCategories,
+      selectedCity,
+      selectedCountry,
+    ],
+  );
   const handleSelectAllCategories = useCallback(() => {
     setSelectedCategories([]);
-  }, []);
+    clearSelectedBusinessIfExcluded({
+      searchQuery,
+      selectedCategories: [],
+      selectedCountry,
+      selectedCity,
+    });
+  }, [clearSelectedBusinessIfExcluded, searchQuery, selectedCity, selectedCountry]);
+  const handleSelectCountry = useCallback(
+    (event) => {
+      const nextCountry = event.target.value;
+      const nextCity =
+        selectedCity &&
+        mappedBusinesses.some(
+          (business) =>
+            (!nextCountry || getDisplayValue(business.country) === nextCountry) &&
+            getDisplayValue(business.city) === selectedCity,
+        )
+          ? selectedCity
+          : "";
+
+      setSelectedCountry(nextCountry);
+      setSelectedCity(nextCity);
+      clearSelectedBusinessIfExcluded({
+        searchQuery,
+        selectedCategories,
+        selectedCountry: nextCountry,
+        selectedCity: nextCity,
+      });
+    },
+    [
+      clearSelectedBusinessIfExcluded,
+      mappedBusinesses,
+      searchQuery,
+      selectedCategories,
+      selectedCity,
+    ],
+  );
+  const handleSelectCity = useCallback(
+    (event) => {
+      const nextCity = event.target.value;
+
+      setSelectedCity(nextCity);
+      clearSelectedBusinessIfExcluded({
+        searchQuery,
+        selectedCategories,
+        selectedCountry,
+        selectedCity: nextCity,
+      });
+    },
+    [
+      clearSelectedBusinessIfExcluded,
+      searchQuery,
+      selectedCategories,
+      selectedCountry,
+    ],
+  );
 
   const currentUserReview = selectedBusiness?.reviews.find(
     (review) => review.user_id === userId,
@@ -609,11 +801,12 @@ export function SpotneraDashboard({
             .eq("user_id", userId);
 
       if (error) {
+        console.error("Favorite update failed", error);
         updateBusiness(business.id, (item) => ({
           ...item,
           isFavorite: !nextFavoriteState,
         }));
-        setDashboardError(error.message);
+        setDashboardError("Unable to update saved businesses.");
       }
 
       setPendingFavoriteId(null);
@@ -647,7 +840,8 @@ export function SpotneraDashboard({
         .single();
 
       if (error) {
-        setDashboardError(error.message);
+        console.error("Review save failed", error);
+        setDashboardError("Unable to save review.");
         setIsSavingReview(false);
         return;
       }
@@ -738,17 +932,49 @@ export function SpotneraDashboard({
             <input
               type="search"
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={handleSearchChange}
               placeholder="Search businesses..."
               className="h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/38 focus:border-white/30"
             />
+          </div>
+          <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-2">
+            <label className="min-w-0">
+              <span className="sr-only">Country</span>
+              <select
+                value={selectedCountry}
+                onChange={handleSelectCountry}
+                className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
+              >
+                <option value="">All countries</option>
+                {countryOptions.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="min-w-0">
+              <span className="sr-only">City</span>
+              <select
+                value={selectedCity}
+                onChange={handleSelectCity}
+                className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
+              >
+                <option value="">All cities</option>
+                {cityOptions.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               onClick={() => setAreFiltersOpen((isOpen) => !isOpen)}
               aria-expanded={areFiltersOpen}
-              className="h-12 rounded-2xl border border-white/10 bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90"
+              className="h-11 rounded-2xl border border-white/10 bg-white px-4 text-xs font-bold text-zinc-950 transition hover:bg-white/90"
             >
-              Filters {selectedCategories.length ? `(${selectedCategories.length})` : ""}
+              Filters {activeFilterCount ? `(${activeFilterCount})` : ""}
             </button>
           </div>
           {areFiltersOpen ? (
@@ -765,10 +991,10 @@ export function SpotneraDashboard({
         <div className="relative mt-4 h-[58vh] min-h-[440px] overflow-hidden rounded-[32px] border border-white/12 bg-white/8 shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
           <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
-              Supabase businesses: {supabaseBusinessCount}
+              {totalBusinessLabel}
             </span>
             <span className="rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
-              Supabase deals: {supabaseDealCount}
+              {totalActiveDealLabel}
             </span>
           </div>
 
@@ -779,12 +1005,7 @@ export function SpotneraDashboard({
                   key={error.query}
                   className="rounded-2xl border border-red-300/30 bg-red-500/20 px-3 py-2 text-xs font-semibold text-red-50 backdrop-blur-xl"
                 >
-                  <div className="uppercase tracking-[0.18em] text-red-100/80">
-                    {error.query}Error.message
-                  </div>
-                  <div className="mt-1 font-medium text-red-50">
-                    {error.message}
-                  </div>
+                  {getQueryErrorMessage(error.query)}
                 </div>
               ))}
             </div>
@@ -798,7 +1019,7 @@ export function SpotneraDashboard({
 
           {queryErrors.length ? (
             <span className="absolute right-4 top-4 z-10 rounded-full border border-red-300/30 bg-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-100 backdrop-blur-xl">
-              Query errors: {queryErrors.length}
+              Load issue
             </span>
           ) : null}
 
@@ -820,7 +1041,7 @@ export function SpotneraDashboard({
                 <p className="mt-2 text-xs leading-5 text-white/60">
                   {!token
                     ? "The dashboard is ready for a live Mapbox map once the public token is configured."
-                    : "Create active businesses in Supabase to render live markers on the map."}
+                    : "Create active businesses to render live markers on the map."}
                 </p>
               </div>
             </div>
