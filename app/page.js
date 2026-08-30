@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthPanel } from "@/components/auth-panel";
 import { SpotneraDashboard } from "@/components/spotnera-dashboard";
+import { getLiveDeals } from "@/lib/deals";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
@@ -31,6 +32,7 @@ const DEAL_SELECT = `
   title,
   description,
   status,
+  is_active,
   starts_at,
   ends_at,
   businesses!inner (
@@ -152,7 +154,8 @@ export default async function Home() {
         from: "deals",
         select: DEAL_SELECT.replace(/\s+/g, " ").trim(),
         filters: {
-          status: "active",
+          is_active: true,
+          live_window: true,
           businesses_is_active: true,
           city: null,
           latitude: null,
@@ -162,10 +165,13 @@ export default async function Home() {
       },
     );
 
+    const now = new Date();
     const { data: dealRows, error: dealsError } = await supabase
       .from("deals")
       .select(DEAL_SELECT)
-      .eq("status", "active")
+      .eq("is_active", true)
+      .or(`starts_at.is.null,starts_at.lte.${now.toISOString()}`)
+      .or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`)
       .eq("businesses.is_active", true)
       .order("created_at", { ascending: false });
 
@@ -181,14 +187,16 @@ export default async function Home() {
     }
 
     supabaseBusinessCount = businessRows?.length ?? 0;
-    supabaseDealCount = dealRows?.length ?? 0;
+    const liveDealRows = getLiveDeals(dealRows ?? [], now);
+
+    supabaseDealCount = liveDealRows.length;
 
     console.log(
       `Supabase returned ${supabaseBusinessCount} active businesses`,
     );
     console.log(`Supabase returned ${supabaseDealCount} active deals`);
     console.log("Supabase business rows:", businessRows ?? []);
-    console.log("Supabase deal rows:", dealRows ?? []);
+    console.log("Supabase deal rows:", liveDealRows);
     console.log(
       "Supabase active business rows:",
       (businessRows ?? []).map(({ id, name, city, latitude, longitude }) => ({
@@ -269,13 +277,14 @@ export default async function Home() {
     }
 
     const dealsByBusinessId = new Map();
-    for (const deal of dealRows ?? []) {
+    for (const deal of liveDealRows) {
       const businessDeals = dealsByBusinessId.get(deal.business_id) ?? [];
       businessDeals.push({
         id: deal.id,
         title: deal.title,
         description: deal.description,
         status: deal.status,
+        is_active: deal.is_active,
         starts_at: deal.starts_at,
         ends_at: deal.ends_at,
       });

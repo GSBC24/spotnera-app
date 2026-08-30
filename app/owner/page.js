@@ -3,9 +3,20 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
 import { CopyProfileLinkButton } from "@/components/copy-profile-link-button";
+import {
+  DealDateTimeInput,
+} from "@/components/deal-date-time-input";
+import { DealTimeLabel } from "@/components/deal-time-label";
 import { LogoutButton } from "@/components/logout-button";
 import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS } from "@/lib/business-categories";
+import {
+  DEAL_STATUS,
+  DEAL_STATUS_META,
+  getDealStatus,
+  getLiveDeals,
+  sortDealsByComputedStatus,
+} from "@/lib/deals";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
@@ -41,6 +52,7 @@ const DEAL_FIELDS = `
   title,
   description,
   status,
+  is_active,
   starts_at,
   ends_at,
   created_at,
@@ -55,7 +67,6 @@ const REVIEW_FIELDS = `
   created_at
 `;
 
-const DEAL_STATUSES = ["active", "scheduled", "paused", "ended"];
 const BUSINESS_COUNTRIES = [
   "Norway",
   "Sweden",
@@ -111,7 +122,18 @@ function getNumber(formData, key) {
 
 function getNullableTimestamp(formData, key) {
   const value = getString(formData, key);
-  return value ? new Date(value).toISOString() : null;
+
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return { error: "Enter a valid date and time." };
+  }
+
+  return { value: date.toISOString() };
 }
 
 function normalizeBusinessEmail(value) {
@@ -244,14 +266,6 @@ function normalizeComparable(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function formatDateTimeLocal(value) {
-  if (!value) {
-    return "";
-  }
-
-  return new Date(value).toISOString().slice(0, 16);
-}
-
 function getAverageRating(reviews) {
   if (!reviews.length) {
     return 0;
@@ -314,17 +328,32 @@ function buildBusinessPayload(formData, userId) {
 }
 
 function buildDealPayload(formData, userId) {
-  const status = getString(formData, "status");
-
-  return {
+  const startsAt = getNullableTimestamp(formData, "starts_at");
+  const endsAt = getNullableTimestamp(formData, "ends_at");
+  const isActive = formData.get("is_active") === "on";
+  const payload = {
     business_id: getString(formData, "business_id"),
     owner_id: userId,
     title: getString(formData, "title"),
     description: getNullableString(formData, "description"),
-    status: DEAL_STATUSES.includes(status) ? status : "active",
-    starts_at: getNullableTimestamp(formData, "starts_at"),
-    ends_at: getNullableTimestamp(formData, "ends_at"),
+    is_active: isActive,
+    starts_at: startsAt?.value ?? null,
+    ends_at: endsAt?.value ?? null,
     updated_at: new Date().toISOString(),
+    fieldErrors: [startsAt?.error, endsAt?.error].filter(Boolean),
+  };
+  const computedStatus = getDealStatus(payload);
+
+  return {
+    ...payload,
+    status:
+      computedStatus === DEAL_STATUS.DISABLED
+        ? "paused"
+        : computedStatus === DEAL_STATUS.SCHEDULED
+          ? "scheduled"
+          : computedStatus === DEAL_STATUS.EXPIRED
+            ? "ended"
+            : "active",
   };
 }
 
@@ -380,6 +409,10 @@ function getBusinessSavePayload(payload) {
 }
 
 function validateDeal(payload) {
+  if (payload.fieldErrors.length) {
+    return payload.fieldErrors[0];
+  }
+
   if (!payload.business_id || !payload.title) {
     return "Choose a business and add a deal title.";
   }
@@ -389,6 +422,12 @@ function validateDeal(payload) {
   }
 
   return null;
+}
+
+function getDealSavePayload(payload) {
+  const savePayload = { ...payload };
+  delete savePayload.fieldErrors;
+  return savePayload;
 }
 
 function getImageFile(formData, key) {
@@ -587,6 +626,7 @@ async function updateBusiness(formData) {
     redirectWithError(error.message);
   }
 
+  revalidatePath(`/business/${businessId}`);
   revalidatePath("/owner");
   redirect("/owner");
 }
@@ -612,12 +652,13 @@ async function createDeal(formData) {
     redirectWithError(ownedBusiness.error);
   }
 
-  const { error } = await supabase.from("deals").insert(payload);
+  const { error } = await supabase.from("deals").insert(getDealSavePayload(payload));
 
   if (error) {
     redirectWithError(error.message);
   }
 
+  revalidatePath(`/business/${payload.business_id}`);
   revalidatePath("/owner");
   redirect("/owner");
 }
@@ -646,7 +687,7 @@ async function updateDeal(formData) {
 
   const { error } = await supabase
     .from("deals")
-    .update(payload)
+    .update(getDealSavePayload(payload))
     .eq("id", dealId)
     .eq("owner_id", user.id);
 
@@ -654,6 +695,7 @@ async function updateDeal(formData) {
     redirectWithError(error.message);
   }
 
+  revalidatePath(`/business/${payload.business_id}`);
   revalidatePath("/owner");
   redirect("/owner");
 }
@@ -663,6 +705,7 @@ async function deleteDeal(formData) {
 
   const { supabase, user } = await getSignedInUser();
   const dealId = getString(formData, "deal_id");
+  const businessId = getString(formData, "business_id");
 
   if (!dealId) {
     redirectWithError("Missing deal id.");
@@ -678,6 +721,9 @@ async function deleteDeal(formData) {
     redirectWithError(error.message);
   }
 
+  if (businessId) {
+    revalidatePath(`/business/${businessId}`);
+  }
   revalidatePath("/owner");
   redirect("/owner");
 }
@@ -740,6 +786,27 @@ function SubmitButton({ children }) {
     >
       {children}
     </button>
+  );
+}
+
+function DealStatusSummary({ deal }) {
+  const status = getDealStatus(deal);
+  const meta = DEAL_STATUS_META[status];
+
+  return (
+    <div className="mb-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-black ${meta.background} ${meta.text}`}
+        >
+          <span aria-hidden="true" className="mr-1.5">●</span>
+          {meta.label}
+        </span>
+        <span className="text-xs font-semibold text-zinc-500">
+          <DealTimeLabel deal={deal} fallback="Promotion timing" />
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -937,6 +1004,7 @@ function DealForm({ action, deal, businesses, submitLabel }) {
       className="grid gap-3"
     >
       {deal ? <input type="hidden" name="deal_id" value={deal.id} /> : null}
+      {deal ? <DealStatusSummary deal={deal} /> : null}
       <Field label="Business">
         <Select name="business_id" required defaultValue={deal?.business_id ?? businesses[0]?.id ?? ""}>
           {businesses.map((business) => (
@@ -952,23 +1020,23 @@ function DealForm({ action, deal, businesses, submitLabel }) {
       <Field label="Description">
         <TextArea name="description" defaultValue={deal?.description ?? ""} />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Status">
-          <Select name="status" defaultValue={deal?.status ?? "active"}>
-            {DEAL_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </Select>
-        </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Starts">
-          <TextInput name="starts_at" type="datetime-local" defaultValue={formatDateTimeLocal(deal?.starts_at)} />
+          <DealDateTimeInput name="starts_at" defaultValue={deal?.starts_at} />
+        </Field>
+        <Field label="Ends">
+          <DealDateTimeInput name="ends_at" defaultValue={deal?.ends_at} />
         </Field>
       </div>
-      <Field label="Ends">
-        <TextInput name="ends_at" type="datetime-local" defaultValue={formatDateTimeLocal(deal?.ends_at)} />
-      </Field>
+      <label className="flex min-h-12 items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-800">
+        Promotion enabled
+        <input
+          type="checkbox"
+          name="is_active"
+          defaultChecked={deal?.is_active ?? (deal?.status !== "paused" && deal?.status !== "ended")}
+          className="h-5 w-5 accent-zinc-950"
+        />
+      </label>
       <div className="grid gap-2 sm:grid-cols-2">
         <SubmitButton>{submitLabel}</SubmitButton>
         {deal ? (
@@ -1073,8 +1141,10 @@ export default async function OwnerDashboardPage({ searchParams }) {
     );
   }
 
+  const now = new Date();
+  const sortedDeals = sortDealsByComputedStatus(deals, now);
   const totalFavorites = favorites.length;
-  const activeDealCount = deals.filter((deal) => deal.status === "active").length;
+  const activeDealCount = getLiveDeals(deals, now).length;
   const averageRating = getAverageRating(reviews);
 
   return (
@@ -1260,9 +1330,14 @@ export default async function OwnerDashboardPage({ searchParams }) {
             </div>
           </details>
 
-          {deals.map((deal) => (
+          {sortedDeals.map((deal) => (
             <details key={deal.id} className="spotnera-card rounded-[30px] p-4">
-              <summary className="cursor-pointer text-lg font-bold">Edit {deal.title}</summary>
+              <summary className="cursor-pointer text-lg font-bold">
+                Edit {deal.title}
+                <span className={`ml-2 rounded-full px-2 py-1 text-[10px] font-black ${DEAL_STATUS_META[getDealStatus(deal, now)].background} ${DEAL_STATUS_META[getDealStatus(deal, now)].text}`}>
+                  {DEAL_STATUS_META[getDealStatus(deal, now)].label}
+                </span>
+              </summary>
               <div className="mt-4">
                 <DealForm action={updateDeal} deal={deal} businesses={businesses} submitLabel="Save deal" />
               </div>

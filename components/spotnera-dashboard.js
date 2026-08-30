@@ -11,14 +11,13 @@ import {
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
 import { trackEvent } from "@/lib/analytics";
+import {
+  DEAL_STATUS_META,
+  getLiveDeals,
+  getPrimaryLiveDeal,
+  isLiveDeal,
+} from "@/lib/deals";
 import { createClient } from "@/utils/supabase/browser";
-
-const DEAL_STATUS_META = {
-  active: { label: "Active", color: "#33d6a6", rank: 0 },
-  scheduled: { label: "Scheduled", color: "#8ea7ff", rank: 1 },
-  paused: { label: "Paused", color: "#ffd166", rank: 2 },
-  ended: { label: "Ended", color: "#a1a1aa", rank: 3 },
-};
 
 const navItems = [
   { label: "Map", icon: "M12 3l7 4v12l-7-4-7 4V7l7-4zm0 2.2L7 8v8.8l5-2.8 5 2.8V8l-5-2.8z" },
@@ -132,16 +131,11 @@ function formatRating(rating) {
 }
 
 function getPrimaryDeal(deals = []) {
-  return [...deals].sort((left, right) => {
-    const leftRank = DEAL_STATUS_META[left.status]?.rank ?? 9;
-    const rightRank = DEAL_STATUS_META[right.status]?.rank ?? 9;
-
-    return leftRank - rightRank;
-  })[0];
+  return getPrimaryLiveDeal(deals);
 }
 
 function getActiveDeal(deals = []) {
-  return deals.find((deal) => deal.status === "active");
+  return getPrimaryLiveDeal(deals);
 }
 
 function getDealStatusMeta(business) {
@@ -151,7 +145,7 @@ function getDealStatusMeta(business) {
     return { label: "No deal", color: "#71717a", rank: 9 };
   }
 
-  return DEAL_STATUS_META[deal.status] ?? DEAL_STATUS_META.paused;
+  return DEAL_STATUS_META.LIVE;
 }
 
 function getBusinessSignal(business) {
@@ -455,7 +449,7 @@ function buildMarkerElement(business, isSelected) {
   label.textContent = status.label;
   label.hidden = !isSelected;
 
-  if (status.label === "Active") {
+  if (status.label === "LIVE") {
     marker.style.boxShadow = `0 18px 45px rgba(0,0,0,0.28), 0 0 0 6px ${business.color}40`;
   }
 
@@ -978,7 +972,7 @@ export function SpotneraDashboard({
   const recommendedBusiness = useMemo(
     () =>
       filteredBusinesses.find((business) =>
-        business.deals.some((deal) => deal.status === "active"),
+        business.deals.some((deal) => isLiveDeal(deal)),
       ) ??
       filteredBusinesses[0] ??
       null,
@@ -1314,13 +1308,13 @@ export function SpotneraDashboard({
       filteredBusinesses
         .flatMap((business) =>
           business.deals
-            .filter((deal) => deal.status === "active")
+            .filter((deal) => isLiveDeal(deal))
             .map((deal) => ({
               id: deal.id,
               title: business.name,
               detail: deal.title,
               time: "Active",
-              color: DEAL_STATUS_META.active.color,
+              color: DEAL_STATUS_META.LIVE.color,
             })),
         )
         .slice(0, 5),
@@ -1338,7 +1332,7 @@ export function SpotneraDashboard({
   const cityHeading = locationHeading ? `${locationHeading} nearby` : "Nearby";
   const activeDeals = filteredBusinesses.reduce(
     (count, business) =>
-      count + business.deals.filter((deal) => deal.status === "active").length,
+      count + getLiveDeals(business.deals).length,
     0,
   );
   const favoriteCount = filteredBusinesses.filter((business) => business.isFavorite).length;

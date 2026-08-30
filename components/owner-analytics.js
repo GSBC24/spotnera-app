@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { DEAL_STATUS, getDealStatus } from "@/lib/deals";
 
 export function OwnerDashboardAnalytics({
   businessCount = 0,
@@ -36,10 +37,16 @@ export function AnalyticsForm({
     }
 
     if (eventName === "deal_create" || eventName === "deal_update") {
+      const dealStatus = getDealStatus({
+        is_active: formData.get("is_active") === "on",
+        starts_at: String(formData.get("starts_at") ?? "") || null,
+        ends_at: String(formData.get("ends_at") ?? "") || null,
+      });
+
       return {
         deal_id: analyticsContext.dealId,
         business_id: String(formData.get("business_id") ?? "").trim(),
-        deal_status: String(formData.get("status") ?? "").trim(),
+        deal_status: dealStatus.toLowerCase(),
       };
     }
 
@@ -59,7 +66,15 @@ export function AnalyticsForm({
         }
 
         const formData = new FormData(event.currentTarget);
-        trackEvent(eventName, getEventParameters(formData));
+        const eventParameters = getEventParameters(formData);
+        trackEvent(eventName, eventParameters);
+
+        if (
+          eventName === "deal_create" &&
+          eventParameters.deal_status === DEAL_STATUS.SCHEDULED.toLowerCase()
+        ) {
+          trackEvent("deal_schedule", eventParameters);
+        }
       }}
     >
       {children}

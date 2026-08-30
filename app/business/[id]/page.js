@@ -5,6 +5,8 @@ import { BusinessProfileAnalytics } from "@/components/business-profile-analytic
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
 import { BusinessProfileMap } from "@/components/business-profile-map";
 import { BusinessShareActions } from "@/components/business-share-actions";
+import { LocalDealDateTime } from "@/components/deal-time-label";
+import { getPrimaryLiveDeal } from "@/lib/deals";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
@@ -41,6 +43,7 @@ const DEAL_SELECT = `
   title,
   description,
   status,
+  is_active,
   starts_at,
   ends_at
 `;
@@ -113,33 +116,6 @@ function formatRating(rating) {
 
 function getReviewLabel(reviewCount) {
   return `${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`;
-}
-
-function formatDate(value) {
-  if (!value) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function getActiveDeal(deals = []) {
-  const now = Date.now();
-
-  return deals.find((deal) => {
-    if (deal.status !== "active") {
-      return false;
-    }
-
-    const startsAt = deal.starts_at ? new Date(deal.starts_at).getTime() : null;
-    const endsAt = deal.ends_at ? new Date(deal.ends_at).getTime() : null;
-
-    return (!startsAt || startsAt <= now) && (!endsAt || endsAt >= now);
-  });
 }
 
 function getWebsiteUrl(value) {
@@ -290,13 +266,16 @@ async function getPublicBusiness(id) {
     return { business: null, error: null };
   }
 
+  const now = new Date();
   const [{ data: deals, error: dealsError }, { data: reviews, error: reviewsError }] =
     await Promise.all([
       supabase
         .from("deals")
         .select(DEAL_SELECT)
         .eq("business_id", id)
-        .eq("status", "active")
+        .eq("is_active", true)
+        .or(`starts_at.is.null,starts_at.lte.${now.toISOString()}`)
+        .or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`)
         .order("created_at", { ascending: false }),
       supabase
         .from("reviews")
@@ -448,7 +427,7 @@ export default async function BusinessProfilePage({ params }) {
   }
 
   const reviews = business.reviews ?? [];
-  const activeDeal = getActiveDeal(business.deals);
+  const activeDeal = getPrimaryLiveDeal(business.deals);
   const averageRating = getAverageRating(reviews);
   const contactActions = getContactActions(business);
   const socialLinks = getSocialLinks(business);
@@ -565,7 +544,7 @@ export default async function BusinessProfilePage({ params }) {
                 ) : null}
                 {activeDeal.ends_at ? (
                   <p className="mt-4 text-xs font-bold uppercase text-white/48">
-                    Valid until {formatDate(activeDeal.ends_at)}
+                    <LocalDealDateTime prefix="Valid until " value={activeDeal.ends_at} />
                   </p>
                 ) : null}
                 <a
