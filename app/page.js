@@ -6,13 +6,16 @@ import { createClient } from "@/utils/supabase/server";
 
 const BUSINESS_SELECT = `
   id,
+  owner_id,
   name,
   category,
+  country,
   description,
   city,
   address,
   latitude,
-  longitude
+  longitude,
+  is_active
 `;
 
 const DEAL_SELECT = `

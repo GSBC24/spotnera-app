@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
+import { BUSINESS_CATEGORY_LABELS } from "@/lib/business-categories";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
@@ -45,28 +46,6 @@ const REVIEW_FIELDS = `
 `;
 
 const DEAL_STATUSES = ["active", "scheduled", "paused", "ended"];
-const BUSINESS_CATEGORIES = [
-  "Restaurant",
-  "Cafe",
-  "Bar",
-  "Bakery",
-  "Grocery",
-  "Clothing",
-  "Beauty & Spa",
-  "Fitness & Gym",
-  "Health",
-  "Hotel",
-  "Automotive",
-  "Electronics",
-  "Home & Furniture",
-  "Professional Services",
-  "Education",
-  "Entertainment",
-  "Events",
-  "Nightlife",
-  "Shopping",
-  "Other",
-];
 const BUSINESS_COUNTRIES = [
   "Norway",
   "Sweden",
@@ -199,7 +178,7 @@ function validateBusiness(payload) {
     return "Name, category, country, and city are required.";
   }
 
-  if (!BUSINESS_CATEGORIES.includes(payload.category)) {
+  if (!BUSINESS_CATEGORY_LABELS.includes(payload.category)) {
     return "Choose a valid business category.";
   }
 
@@ -607,7 +586,7 @@ function BusinessForm({ action, business, submitLabel }) {
   const selectedCategory = business?.category ?? "";
   const selectedCountry = business?.country ?? "";
   const hasLegacyCategory =
-    selectedCategory && !BUSINESS_CATEGORIES.includes(selectedCategory);
+    selectedCategory && !BUSINESS_CATEGORY_LABELS.includes(selectedCategory);
   const hasLegacyCountry =
     selectedCountry && !BUSINESS_COUNTRIES.includes(selectedCountry);
 
@@ -649,7 +628,7 @@ function BusinessForm({ action, business, submitLabel }) {
           {hasLegacyCategory ? (
             <option value={selectedCategory}>{selectedCategory}</option>
           ) : null}
-          {BUSINESS_CATEGORIES.map((category) => (
+          {BUSINESS_CATEGORY_LABELS.map((category) => (
             <option key={category} value={category}>
               {category}
             </option>
