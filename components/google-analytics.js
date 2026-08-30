@@ -3,9 +3,9 @@
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { GA_MEASUREMENT_ID, trackPageView } from "@/lib/analytics";
+import { trackPageView } from "@/lib/analytics";
 
-function RouteChangeTracker({ isReady }) {
+function RouteChangeTracker({ isReady, measurementId }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const lastTrackedPath = useRef(null);
@@ -15,28 +15,29 @@ function RouteChangeTracker({ isReady }) {
   }, [pathname, searchParams]);
 
   useEffect(() => {
-    if (!isReady || !GA_MEASUREMENT_ID || !path || lastTrackedPath.current === path) {
+    if (!isReady || !measurementId || !path || lastTrackedPath.current === path) {
       return;
     }
 
     lastTrackedPath.current = path;
     trackPageView(path);
-  }, [isReady, path]);
+  }, [isReady, measurementId, path]);
 
   return null;
 }
 
 export function GoogleAnalytics() {
   const [isReady, setIsReady] = useState(false);
+  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
 
-  if (!GA_MEASUREMENT_ID) {
+  if (!measurementId) {
     return null;
   }
 
   return (
     <>
       <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
         strategy="afterInteractive"
       />
       <Script
@@ -46,14 +47,15 @@ export function GoogleAnalytics() {
       >
         {`
           window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          window.gtag = window.gtag || gtag;
-          gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });
+          window.gtag = function gtag() {
+            window.dataLayer.push(arguments);
+          };
+          window.gtag('js', new Date());
+          window.gtag('config', '${measurementId}', { send_page_view: false });
         `}
       </Script>
       <Suspense fallback={null}>
-        <RouteChangeTracker isReady={isReady} />
+        <RouteChangeTracker isReady={isReady} measurementId={measurementId} />
       </Suspense>
     </>
   );
