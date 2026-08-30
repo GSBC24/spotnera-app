@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { GoogleLoginButton } from "@/components/google-login-button";
+import { AuthPanel } from "@/components/auth-panel";
 import { SpotneraDashboard } from "@/components/spotnera-dashboard";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
@@ -83,7 +83,7 @@ export default async function Home() {
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("username, city")
+      .select("username, first_name, last_name, city, country, phone, date_of_birth, gender, address, onboarding_completed, onboarding_completed_at")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -95,7 +95,7 @@ export default async function Home() {
       city: profile?.city ?? null,
     });
 
-    if (!profile?.username || !profile?.city) {
+    if (!profile?.onboarding_completed || !profile?.city || !profile?.country) {
       redirect("/onboarding");
     }
 
@@ -324,11 +324,10 @@ export default async function Home() {
                 Sign in to continue
               </h1>
               <p className="mt-3 text-sm leading-6 text-zinc-600">
-                Use Google to create your profile and personalize local
-                recommendations.
+                Create your profile and personalize nearby business discovery.
               </p>
             </div>
-            <GoogleLoginButton />
+            <AuthPanel />
           </div>
           </section>
         </main>
