@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Spotnera">
+  <defs>
+    <radialGradient id="coral" cx="25%" cy="20%" r="70%">
+      <stop offset="0%" stop-color="#ff7a59" />
+      <stop offset="62%" stop-color="#191d24" />
+      <stop offset="100%" stop-color="#101217" />
+    </radialGradient>
+    <linearGradient id="pin" x1="112" y1="104" x2="400" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="55%" stop-color="#f4f6fb" />
+      <stop offset="100%" stop-color="#33d6a6" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#coral)" />
+  <circle cx="366" cy="126" r="76" fill="#33d6a6" opacity="0.88" />
+  <path
+    fill="url(#pin)"
+    d="M256 76c-86 0-156 67-156 150 0 111 156 220 156 220s156-109 156-220c0-83-70-150-156-150Zm0 220a70 70 0 1 1 0-140 70 70 0 0 1 0 140Z"
+  />
+  <path
+    fill="#101217"
+    d="M280 224c0-13-11-21-35-28-39-11-66-29-66-67 0-41 33-68 83-68 31 0 58 9 77 24l-28 45c-15-11-31-17-50-17-18 0-28 7-28 18 0 13 12 20 39 29 42 13 62 32 62 67 0 42-32 70-89 70-35 0-68-11-89-30l30-45c17 15 39 24 61 24 21 0 33-8 33-22Z"
+    opacity="0.92"
+  />
+</svg>
