@@ -694,7 +694,7 @@ function TextInput(props) {
   return (
     <input
       {...props}
-      className="h-12 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+      className="spotnera-input w-full text-sm font-medium placeholder:text-zinc-400"
     />
   );
 }
@@ -705,7 +705,7 @@ function FileInput(props) {
       {...props}
       type="file"
       accept="image/png,image/jpeg,image/webp,image/gif"
-      className="rounded-2xl border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm font-medium text-zinc-600 file:mr-3 file:rounded-xl file:border-0 file:bg-zinc-950 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white"
+      className="rounded-2xl border border-dashed border-zinc-300 bg-white/86 px-3 py-3 text-sm font-medium text-zinc-600 file:mr-3 file:rounded-xl file:border-0 file:bg-zinc-950 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white"
     />
   );
 }
@@ -714,7 +714,7 @@ function TextArea(props) {
   return (
     <textarea
       {...props}
-      className="min-h-20 resize-none rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+      className="min-h-24 resize-none rounded-2xl border border-zinc-200 bg-white/86 px-3 py-2.5 text-sm font-medium text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
     />
   );
 }
@@ -723,7 +723,7 @@ function Select(props) {
   return (
     <select
       {...props}
-      className="h-12 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-950 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+      className="spotnera-input w-full text-sm font-bold"
     />
   );
 }
@@ -732,7 +732,7 @@ function SubmitButton({ children }) {
   return (
     <button
       type="submit"
-      className="h-12 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(24,24,27,0.2)] transition hover:bg-zinc-800"
+      className="spotnera-primary-action px-4 text-sm"
     >
       {children}
     </button>
@@ -973,7 +973,7 @@ function DealForm({ action, deal, businesses, submitLabel }) {
 
 function StatTile({ label, value }) {
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="spotnera-card rounded-[24px] p-4">
       <p className="text-2xl font-black tracking-tight text-zinc-950">{value}</p>
       <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
         {label}
@@ -1063,21 +1063,24 @@ export default async function OwnerDashboardPage({ searchParams }) {
   const averageRating = getAverageRating(reviews);
 
   return (
-    <main className="min-h-screen bg-[#f4f6f8] text-zinc-950">
-      <section className="mx-auto flex min-h-screen w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-4 sm:px-6">
-        <header className="rounded-[2rem] border border-white bg-white/86 p-4 shadow-sm backdrop-blur">
+    <main className="spotnera-owner-shell">
+      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+        <header className="spotnera-card rounded-[30px] p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-zinc-500">
-                Owner dashboard
-              </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                {profile?.username ? `${profile.username}'s businesses` : "Your businesses"}
-              </h1>
+            <div className="flex min-w-0 items-center gap-3">
+              <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-cover" />
+              <div className="min-w-0">
+                <p className="spotnera-kicker text-zinc-500">
+                  Owner dashboard
+                </p>
+                <h1 className="mt-1 text-2xl font-semibold leading-tight sm:text-3xl">
+                  {profile?.username ? `${profile.username}'s businesses` : "Your businesses"}
+                </h1>
+              </div>
             </div>
             <Link
               href="/"
-              className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700"
+              className="spotnera-secondary-action inline-flex min-h-10 shrink-0 items-center px-4 text-xs"
             >
               Explore
             </Link>
@@ -1094,14 +1097,14 @@ export default async function OwnerDashboardPage({ searchParams }) {
           ) : null}
         </header>
 
-        <section className="grid grid-cols-2 gap-3">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatTile label="Businesses" value={businesses.length} />
           <StatTile label="Active deals" value={activeDealCount} />
           <StatTile label="Reviews" value={reviews.length} />
           <StatTile label="Favorites" value={totalFavorites} />
         </section>
 
-        <section className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="spotnera-card rounded-[30px] p-4">
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
@@ -1122,7 +1125,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 const favoriteCount = favoriteCountsByBusinessId.get(business.id) ?? 0;
 
                 return (
-                  <article key={business.id} className="rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
+                  <article key={business.id} className="rounded-[24px] border border-zinc-200 bg-white/72 p-3">
                     <div
                       className="mb-3 h-28 rounded-2xl bg-cover bg-center"
                       style={{
@@ -1187,8 +1190,8 @@ export default async function OwnerDashboardPage({ searchParams }) {
           </div>
         </section>
 
-        <section className="grid gap-4">
-          <details open className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="grid gap-4 lg:grid-cols-2">
+          <details open className="spotnera-card rounded-[30px] p-4">
             <summary className="cursor-pointer text-lg font-bold">Create business profile</summary>
             <div className="mt-4">
               <BusinessForm action={createBusiness} submitLabel="Create profile" />
@@ -1196,7 +1199,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
           </details>
 
           {businesses.map((business) => (
-            <details key={business.id} className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm">
+            <details key={business.id} className="spotnera-card rounded-[30px] p-4">
               <summary className="cursor-pointer text-lg font-bold">Edit {business.name}</summary>
               <div className="mt-4">
                 <BusinessForm action={updateBusiness} business={business} submitLabel="Save business" />
@@ -1205,8 +1208,8 @@ export default async function OwnerDashboardPage({ searchParams }) {
           ))}
         </section>
 
-        <section className="grid gap-4">
-          <details open={Boolean(businesses.length)} className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="grid gap-4 lg:grid-cols-2">
+          <details open={Boolean(businesses.length)} className="spotnera-card rounded-[30px] p-4">
             <summary className="cursor-pointer text-lg font-bold">Create deal</summary>
             <div className="mt-4">
               {businesses.length ? (
@@ -1218,7 +1221,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
           </details>
 
           {deals.map((deal) => (
-            <details key={deal.id} className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm">
+            <details key={deal.id} className="spotnera-card rounded-[30px] p-4">
               <summary className="cursor-pointer text-lg font-bold">Edit {deal.title}</summary>
               <div className="mt-4">
                 <DealForm action={updateDeal} deal={deal} businesses={businesses} submitLabel="Save deal" />
@@ -1227,7 +1230,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
           ))}
         </section>
 
-        <section className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="spotnera-card rounded-[30px] p-4">
           <div className="mb-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
               Customer feedback

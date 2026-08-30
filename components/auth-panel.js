@@ -156,7 +156,7 @@ export function AuthPanel() {
             type="button"
             onClick={() => signInWithProvider(button.provider)}
             disabled={Boolean(loadingProvider) || isSubmitting}
-            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-900 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-zinc-50 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+            className="spotnera-secondary-action inline-flex w-full items-center justify-center gap-3 px-4 text-sm disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <span className="flex min-w-5 items-center justify-center rounded-full text-sm font-black">
               {button.mark}
@@ -166,7 +166,7 @@ export function AuthPanel() {
         ))}
       </div>
 
-      <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
+      <div className="flex items-center gap-3 text-xs font-bold uppercase text-zinc-400">
         <span className="h-px flex-1 bg-zinc-200" />
         Email
         <span className="h-px flex-1 bg-zinc-200" />
@@ -179,7 +179,7 @@ export function AuthPanel() {
           onChange={(event) => setEmail(event.target.value)}
           placeholder="Email"
           autoComplete="email"
-          className="h-12 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 outline-none focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+          className="spotnera-input w-full text-sm font-medium"
         />
         <input
           type="password"
@@ -187,7 +187,7 @@ export function AuthPanel() {
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Password"
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
-          className="h-12 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 outline-none focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+          className="spotnera-input w-full text-sm font-medium"
         />
         {mode === "signup" ? (
           <input
@@ -196,13 +196,13 @@ export function AuthPanel() {
             onChange={(event) => setConfirmPassword(event.target.value)}
             placeholder="Confirm password"
             autoComplete="new-password"
-            className="h-12 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 outline-none focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+            className="spotnera-input w-full text-sm font-medium"
           />
         ) : null}
         <button
           type="submit"
           disabled={isSubmitting || Boolean(loadingProvider)}
-          className="h-12 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(24,24,27,0.2)] transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+          className="spotnera-primary-action w-full px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isSubmitting ? "Please wait..." : mode === "signup" ? "Sign up" : "Log in"}
         </button>

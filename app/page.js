@@ -51,10 +51,16 @@ const REVIEW_SELECT = `
 export default async function Home() {
   if (!hasSupabaseEnv()) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12 text-zinc-950">
-        <section className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-8 shadow-sm">
-          <p className="text-sm font-medium text-zinc-500">Spotnera</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+      <main className="spotnera-auth-shell flex min-h-screen items-center justify-center px-6 py-12">
+        <section className="spotnera-card w-full max-w-md rounded-[28px] p-8">
+          <div className="flex items-center gap-3">
+            <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark object-cover" />
+            <div>
+              <p className="spotnera-kicker text-zinc-500">Spotnera</p>
+              <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
+            </div>
+          </div>
+          <h1 className="mt-6 text-2xl font-semibold">
             Configure Supabase
           </h1>
           <p className="mt-3 text-sm leading-6 text-zinc-600">
@@ -315,20 +321,56 @@ export default async function Home() {
           queryErrors={queryErrors}
         />
       ) : (
-        <main className="flex min-h-screen items-center justify-center bg-[#f7f4ef] px-5 py-8 text-zinc-950">
-          <section className="w-full max-w-md rounded-[2rem] border border-white/70 bg-white/75 p-5 shadow-[0_24px_80px_rgba(39,39,42,0.14)] backdrop-blur-xl sm:p-8">
-          <div className="flex flex-col gap-6">
-            <div>
-              <p className="text-sm font-semibold text-zinc-500">Spotnera</p>
-              <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight">
-                Sign in to continue
-              </h1>
-              <p className="mt-3 text-sm leading-6 text-zinc-600">
-                Create your profile and personalize nearby business discovery.
-              </p>
+        <main className="spotnera-auth-shell px-5 py-6 sm:px-8">
+          <section className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="hidden lg:block">
+              <div className="max-w-xl">
+                <div className="flex items-center gap-3">
+                  <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark object-cover" />
+                  <div>
+                    <p className="spotnera-kicker text-zinc-500">Spotnera</p>
+                    <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
+                  </div>
+                </div>
+                <h1 className="mt-8 max-w-lg text-6xl font-semibold leading-[0.98]">
+                  Discover what is happening around you.
+                </h1>
+                <p className="mt-5 max-w-md text-lg leading-8 text-zinc-600">
+                  Live deals, local businesses, restaurants and cafes in one premium map-first experience.
+                </p>
+                <div className="mt-8 grid max-w-md grid-cols-3 gap-3">
+                  {["Live deals", "Local maps", "Business profiles"].map((item) => (
+                    <div
+                      key={item}
+                      className="spotnera-card rounded-[22px] px-4 py-3 text-sm font-bold text-zinc-800"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <AuthPanel />
-          </div>
+            <div className="spotnera-card mx-auto w-full max-w-md rounded-[30px] p-5 sm:p-7">
+              <div className="mb-6 lg:hidden">
+                <div className="flex items-center gap-3">
+                  <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark object-cover" />
+                  <div>
+                    <p className="spotnera-kicker text-zinc-500">Spotnera</p>
+                    <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
+                  </div>
+                </div>
+              </div>
+              <p className="spotnera-kicker text-zinc-500">Live local discovery</p>
+              <h2 className="mt-3 text-3xl font-semibold leading-tight">
+                Sign in to Spotnera
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-zinc-600">
+                Discover live deals around you and keep your local profile in sync.
+              </p>
+              <div className="mt-6">
+                <AuthPanel />
+              </div>
+            </div>
           </section>
         </main>
       )}

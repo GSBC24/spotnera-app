@@ -183,17 +183,23 @@ export default async function OnboardingPage() {
   };
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f7f4ef] text-zinc-950">
-      <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-5 pb-6 pt-8 sm:px-8">
+    <main className="spotnera-auth-shell overflow-hidden">
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 pb-6 pt-8 sm:px-8">
         <header className="flex items-center justify-between">
-          <p className="text-sm font-bold tracking-tight">Spotnera</p>
+          <div className="flex items-center gap-3">
+            <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark object-cover" />
+            <div>
+              <p className="spotnera-kicker text-zinc-500">Spotnera</p>
+              <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
+            </div>
+          </div>
           <div className="rounded-full border border-zinc-200/80 bg-white/70 px-3 py-1 text-xs font-semibold text-zinc-600 shadow-sm backdrop-blur">
             Step 1 of 1
           </div>
         </header>
 
-        <section className="flex flex-1 flex-col justify-end py-8">
-          <div className="mb-8">
+        <section className="grid flex-1 items-end gap-8 py-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+          <div className="mb-2 lg:mb-0">
             <div className="mb-5 flex gap-2">
               <span className="h-1.5 flex-1 rounded-full bg-zinc-950" />
               <span className="h-1.5 flex-1 rounded-full bg-zinc-300" />
@@ -202,7 +208,7 @@ export default async function OnboardingPage() {
             <p className="text-sm font-semibold text-zinc-500">
               Welcome{providerNames.firstName ? `, ${providerNames.firstName}` : ""}
             </p>
-            <h1 className="mt-3 max-w-sm text-4xl font-semibold leading-[1.02] tracking-tight text-zinc-950">
+            <h1 className="mt-3 max-w-sm text-4xl font-semibold leading-[1.02] text-zinc-950 sm:text-5xl">
               Finish your local profile.
             </h1>
             <p className="mt-4 max-w-md text-base leading-7 text-zinc-600">
@@ -210,7 +216,7 @@ export default async function OnboardingPage() {
             </p>
           </div>
 
-          <div className="rounded-[2rem] border border-white/70 bg-white/72 p-4 shadow-[0_24px_80px_rgba(39,39,42,0.14)] backdrop-blur-xl sm:p-5">
+          <div className="spotnera-card rounded-[30px] p-4 sm:p-5">
             <OnboardingForm
               action={saveProfile}
               defaultValues={defaultValues}

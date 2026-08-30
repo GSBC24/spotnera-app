@@ -18,7 +18,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="mt-2 h-13 w-full rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(24,24,27,0.28)] transition hover:-translate-y-0.5 hover:bg-zinc-800 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+      className="spotnera-primary-action mt-2 w-full px-5 text-sm disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? "Saving..." : "Start exploring"}
     </button>
@@ -28,7 +28,7 @@ function SubmitButton() {
 function Field({ label, optional = false, children }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+      <span className="text-xs font-semibold uppercase text-zinc-500">
         {label}
         {optional ? (
           <span className="normal-case tracking-normal text-zinc-400"> optional</span>
@@ -43,7 +43,7 @@ function Input(props) {
   return (
     <input
       {...props}
-      className="h-13 rounded-2xl border border-zinc-200 bg-white/85 px-4 text-base font-medium text-zinc-950 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+      className="spotnera-input w-full text-base font-medium placeholder:text-zinc-400"
     />
   );
 }
@@ -52,7 +52,7 @@ function Select(props) {
   return (
     <select
       {...props}
-      className="h-13 rounded-2xl border border-zinc-200 bg-white/85 px-4 text-base font-semibold text-zinc-950 shadow-sm outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+      className="spotnera-input w-full text-base font-semibold"
     />
   );
 }

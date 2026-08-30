@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #101217;
+  --foreground: #ffffff;
+  --spotnera-ink: #101217;
+  --spotnera-panel: rgba(255, 255, 255, 0.1);
+  --spotnera-panel-strong: rgba(255, 255, 255, 0.16);
+  --spotnera-border: rgba(255, 255, 255, 0.14);
+  --spotnera-muted: rgba(255, 255, 255, 0.62);
+  --spotnera-soft: #f7f4ef;
+  --spotnera-coral: #ff7a59;
+  --spotnera-live: #33d6a6;
+  --spotnera-gold: #ffd166;
+  --spotnera-error: #ef4444;
+  --font-geist-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --spotnera-radius-lg: 28px;
+  --spotnera-radius-md: 22px;
+  --spotnera-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+  --spotnera-shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.18);
 }
 
 @theme inline {
@@ -22,7 +38,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
 html,
@@ -32,6 +48,123 @@ body {
 
 button {
   font: inherit;
+}
+
+.spotnera-app-shell {
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 122, 89, 0.28), transparent 28%),
+    radial-gradient(circle at 82% 0%, rgba(51, 214, 166, 0.2), transparent 30%),
+    linear-gradient(180deg, #191d24 0%, #101217 46%, #0c0d11 100%);
+  color: #ffffff;
+}
+
+.spotnera-auth-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 122, 89, 0.22), transparent 30%),
+    radial-gradient(circle at 88% 12%, rgba(51, 214, 166, 0.18), transparent 34%),
+    linear-gradient(135deg, #f7f4ef 0%, #ffffff 46%, #edf7f3 100%);
+  color: #101217;
+}
+
+.spotnera-surface {
+  border: 1px solid var(--spotnera-border);
+  background: var(--spotnera-panel);
+  box-shadow: var(--spotnera-shadow-soft);
+  backdrop-filter: blur(24px);
+}
+
+.spotnera-card {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 24px 80px rgba(39, 39, 42, 0.14);
+  backdrop-filter: blur(24px);
+}
+
+.spotnera-brand-mark {
+  display: inline-grid;
+  height: 40px;
+  width: 40px;
+  place-items: center;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(16, 18, 23, 0.28);
+}
+
+.spotnera-kicker {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.spotnera-input {
+  min-height: 48px;
+  border-radius: 18px;
+  border: 1px solid rgba(24, 24, 27, 0.12);
+  background: rgba(255, 255, 255, 0.86);
+  padding: 0 1rem;
+  color: #101217;
+  outline: none;
+}
+
+.spotnera-input:focus {
+  border-color: rgba(16, 18, 23, 0.7);
+  box-shadow: 0 0 0 4px rgba(16, 18, 23, 0.1);
+}
+
+.spotnera-primary-action {
+  min-height: 48px;
+  border-radius: 18px;
+  background: #101217;
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 18px 40px rgba(24, 24, 27, 0.2);
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    opacity 160ms ease;
+}
+
+.spotnera-primary-action:hover {
+  transform: translateY(-1px);
+  background: #20242d;
+}
+
+.spotnera-primary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
+.spotnera-secondary-action {
+  min-height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(24, 24, 27, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  color: #101217;
+  font-weight: 800;
+  box-shadow: 0 10px 30px rgba(24, 24, 27, 0.08);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.spotnera-secondary-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(24, 24, 27, 0.24);
+  background: #ffffff;
+}
+
+.spotnera-owner-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(255, 122, 89, 0.16), transparent 32%),
+    radial-gradient(circle at 92% 8%, rgba(51, 214, 166, 0.16), transparent 30%),
+    linear-gradient(180deg, #f7f4ef 0%, #eef2f3 100%);
+  color: #101217;
 }
 
 .spotnera-popup .mapboxgl-popup-content {

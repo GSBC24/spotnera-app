@@ -1283,30 +1283,32 @@ export function SpotneraDashboard({
   const favoriteCount = filteredBusinesses.filter((business) => business.isFavorite).length;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#101217] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(255,122,89,0.28),transparent_28%),radial-gradient(circle_at_80%_0%,rgba(51,214,166,0.2),transparent_30%),linear-gradient(180deg,#191d24_0%,#101217_46%,#0c0d11_100%)]" />
-      <section className="relative mx-auto flex min-h-screen w-full max-w-[480px] flex-col px-4 pb-28 pt-4">
-        <header className="z-20 flex items-center justify-between gap-3 rounded-[28px] border border-white/12 bg-white/10 px-4 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-white/55">
-              Spotnera Live
-            </p>
-            <h1 className="mt-1 text-[1.55rem] font-semibold leading-tight tracking-tight">
-              {cityHeading}
-            </h1>
+    <main className="spotnera-app-shell">
+      <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-28 pt-4 sm:px-6 lg:px-8">
+        <header className="spotnera-surface z-20 flex items-center justify-between gap-3 rounded-[28px] px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-cover" />
+            <div className="min-w-0">
+              <p className="spotnera-kicker text-white/55">
+                Spotnera Live
+              </p>
+              <h1 className="mt-1 truncate text-[1.35rem] font-semibold leading-tight sm:text-2xl">
+                {cityHeading}
+              </h1>
+            </div>
           </div>
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)]">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)]">
             {displayName.slice(0, 2).toUpperCase()}
           </div>
         </header>
         <Link
           href="/owner"
-          className="z-20 mt-3 rounded-2xl border border-white/12 bg-white/10 px-4 py-3 text-center text-sm font-bold text-white/82 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition hover:bg-white/16"
+          className="spotnera-surface z-20 mt-3 rounded-2xl px-4 py-3 text-center text-sm font-bold text-white/82 transition hover:bg-white/16 sm:ml-auto sm:w-fit"
         >
           Business owner dashboard
         </Link>
 
-        <section className="z-20 mt-4 rounded-[28px] border border-white/12 bg-white/10 p-3 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+        <section className="spotnera-surface z-20 mt-4 rounded-[28px] p-3">
           <div className="flex items-center gap-2">
             <input
               type="search"
@@ -1316,7 +1318,7 @@ export function SpotneraDashboard({
               className="h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/38 focus:border-white/30"
             />
           </div>
-          <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-2">
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto]">
             <label className="min-w-0">
               <span className="sr-only">Country</span>
               <select
@@ -1351,7 +1353,7 @@ export function SpotneraDashboard({
               type="button"
               onClick={() => setAreFiltersOpen((isOpen) => !isOpen)}
               aria-expanded={areFiltersOpen}
-              className="h-11 rounded-2xl border border-white/10 bg-white px-4 text-xs font-bold text-zinc-950 transition hover:bg-white/90"
+              className="col-span-2 h-11 rounded-2xl border border-white/10 bg-white px-4 text-xs font-bold text-zinc-950 transition hover:bg-white/90 sm:col-span-1"
             >
               Filters {activeFilterCount ? `(${activeFilterCount})` : ""}
             </button>
@@ -1367,7 +1369,7 @@ export function SpotneraDashboard({
           ) : null}
         </section>
 
-        <div className="relative mt-4 h-[58vh] min-h-[440px] overflow-hidden rounded-[32px] border border-white/12 bg-white/8 shadow-[0_28px_90px_rgba(0,0,0,0.38)]">
+        <div className="relative mt-4 h-[58vh] min-h-[440px] overflow-hidden rounded-[32px] border border-white/12 bg-white/8 shadow-[0_28px_90px_rgba(0,0,0,0.38)] lg:h-[64vh]">
           <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
               {totalBusinessLabel}
@@ -1438,9 +1440,9 @@ export function SpotneraDashboard({
               initial={{ y: 28, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 130, damping: 18 }}
-              className="absolute bottom-4 left-4 right-4 z-10 rounded-[28px] border border-white/14 bg-zinc-950/62 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl"
+              className="absolute bottom-4 left-4 right-4 z-10 rounded-[28px] border border-white/14 bg-zinc-950/68 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:left-auto sm:max-w-md"
             >
-              <div className="flex items-end justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <CategoryDot category={selectedBusiness.category} />

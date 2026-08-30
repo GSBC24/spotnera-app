@@ -48,7 +48,7 @@ export function ResetPasswordForm() {
         onChange={(event) => setPassword(event.target.value)}
         placeholder="New password"
         autoComplete="new-password"
-        className="h-12 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 outline-none focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+        className="spotnera-input w-full text-sm font-medium"
       />
       <input
         type="password"
@@ -56,12 +56,12 @@ export function ResetPasswordForm() {
         onChange={(event) => setConfirmPassword(event.target.value)}
         placeholder="Confirm password"
         autoComplete="new-password"
-        className="h-12 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 outline-none focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+        className="spotnera-input w-full text-sm font-medium"
       />
       <button
         type="submit"
         disabled={isSubmitting}
-        className="h-12 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(24,24,27,0.2)] transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+        className="spotnera-primary-action w-full px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70"
       >
         {isSubmitting ? "Saving..." : "Save new password"}
       </button>
