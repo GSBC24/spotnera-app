@@ -29,6 +29,8 @@ const HEART_PATH =
   "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
 const STAR_PATH =
   "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z";
+const LOCATION_PATH =
+  "M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z";
 
 function Icon({ path }) {
   return (
@@ -86,6 +88,24 @@ function getBusinessSignal(business) {
   }
 
   return business.description || business.address || business.city;
+}
+
+function getDisplayValue(value) {
+  const normalizedValue = String(value ?? "").trim();
+  return normalizedValue || null;
+}
+
+function getBusinessAddressLines(business) {
+  const address = getDisplayValue(business.address);
+  const city = getDisplayValue(business.city);
+  const country = getDisplayValue(business.country);
+  const locality = [city, country].filter(Boolean).join(", ");
+
+  return [address, locality].filter(Boolean);
+}
+
+function getReviewLabel(reviewCount) {
+  return `${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`;
 }
 
 function normalizeSearchValue(value) {
@@ -179,6 +199,7 @@ function buildMarkerElement(business, isSelected) {
 function buildPopupContent(business) {
   const status = getDealStatusMeta(business);
   const deal = getPrimaryDeal(business.deals);
+  const addressLines = getBusinessAddressLines(business);
   const content = document.createElement("div");
   content.className = "min-w-40";
 
@@ -197,9 +218,18 @@ function buildPopupContent(business) {
 
   const rating = document.createElement("p");
   rating.className = "mt-2 text-xs font-semibold text-zinc-800";
-  rating.textContent = `${formatRating(business.averageRating)} rating - ${business.reviewCount} reviews`;
+  rating.textContent = `${formatRating(business.averageRating)} rating - ${getReviewLabel(business.reviewCount)}`;
 
   content.append(category, name, signal, rating);
+
+  if (addressLines.length) {
+    const address = document.createElement("p");
+    address.className = "mt-2 text-xs leading-4 text-zinc-500";
+    address.textContent = addressLines.join("\n");
+    address.style.whiteSpace = "pre-line";
+    content.append(address);
+  }
+
   return content;
 }
 
@@ -233,6 +263,45 @@ function RatingPill({ averageRating, reviewCount }) {
       <span>{formatRating(averageRating)}</span>
       <span className="text-white/38">({reviewCount})</span>
     </span>
+  );
+}
+
+function RatingLine({ averageRating, reviewCount }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/76">
+      <span className="text-[#ffd166]">
+        <Icon path={STAR_PATH} />
+      </span>
+      <span>{formatRating(averageRating)}</span>
+      <span className="text-white/42">({getReviewLabel(reviewCount)})</span>
+    </span>
+  );
+}
+
+function BusinessAddress({ business, compact = false }) {
+  const addressLines = getBusinessAddressLines(business);
+
+  if (!addressLines.length) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`flex min-w-0 items-start gap-2 ${
+        compact ? "mt-3 text-xs leading-4 text-white/54" : "mt-1 text-sm leading-5 text-white/70"
+      }`}
+    >
+      <span className={`shrink-0 text-white/36 ${compact ? "mt-0.5" : "mt-0.5"}`}>
+        <Icon path={LOCATION_PATH} />
+      </span>
+      <div className="min-w-0">
+        {addressLines.map((line, index) => (
+          <p key={`${line}-${index}`} className={compact ? "truncate" : ""}>
+            {line}
+          </p>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -771,20 +840,27 @@ export function SpotneraDashboard({
               transition={{ type: "spring", stiffness: 130, damping: 18 }}
               className="absolute bottom-4 left-4 right-4 z-10 rounded-[28px] border border-white/14 bg-zinc-950/62 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <CategoryDot category={selectedBusiness.category} />
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/48">
-                      Selected
+                    <p className="truncate text-xs font-semibold text-white/56">
+                      {selectedBusiness.category}
                     </p>
                   </div>
                   <h2 className="mt-2 truncate text-xl font-semibold tracking-tight">
                     {selectedBusiness.name}
                   </h2>
-                  <p className="mt-1 line-clamp-2 text-sm text-white/62">
-                    {getBusinessSignal(selectedBusiness)}
+                  <p className="mt-1 truncate text-sm font-semibold text-white/72">
+                    {getActiveDeal(selectedBusiness.deals)?.title ?? "No active deal"}
                   </p>
+                  <div className="mt-2">
+                    <RatingLine
+                      averageRating={selectedBusiness.averageRating}
+                      reviewCount={selectedBusiness.reviewCount}
+                    />
+                  </div>
+                  <BusinessAddress business={selectedBusiness} compact />
                 </div>
                 <button
                   type="button"
@@ -850,9 +926,6 @@ export function SpotneraDashboard({
                   >
                     {selectedBusiness.name}
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-white/62">
-                    {selectedBusiness.description || getBusinessSignal(selectedBusiness)}
-                  </p>
                 </div>
                 <button
                   type="button"
@@ -864,8 +937,17 @@ export function SpotneraDashboard({
                 </button>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <RatingPill
+              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                  Active deal
+                </p>
+                <p className="mt-1 text-base font-semibold text-white">
+                  {getActiveDeal(selectedBusiness.deals)?.title ?? "No active deal"}
+                </p>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <RatingLine
                   averageRating={selectedBusiness.averageRating}
                   reviewCount={selectedBusiness.reviewCount}
                 />
@@ -877,24 +959,19 @@ export function SpotneraDashboard({
                 </span>
               </div>
 
-              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
-                  Active deal
-                </p>
-                <p className="mt-1 text-base font-semibold text-white">
-                  {getActiveDeal(selectedBusiness.deals)?.title ?? "No active deal"}
-                </p>
-              </div>
-
-              {selectedBusiness.address ? (
+              {getBusinessAddressLines(selectedBusiness).length ? (
                 <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
                     Address
                   </p>
-                  <p className="mt-1 text-sm leading-5 text-white/70">
-                    {selectedBusiness.address}
-                  </p>
+                  <BusinessAddress business={selectedBusiness} />
                 </div>
+              ) : null}
+
+              {selectedBusiness.description ? (
+                <p className="mt-3 text-sm leading-6 text-white/62">
+                  {selectedBusiness.description}
+                </p>
               ) : null}
 
               <div className="mt-4 flex items-center gap-3">
