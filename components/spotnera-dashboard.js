@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { LogoutButton } from "@/components/logout-button";
 import {
   BUSINESS_CATEGORIES,
   getBusinessCategoryConfig,
@@ -1308,19 +1309,6 @@ export function SpotneraDashboard({
     },
     [localProfile, supabase, userId],
   );
-  const handleLogout = useCallback(async () => {
-    trackEvent("logout");
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error("Logout failed", error);
-      setDashboardError("Unable to log out.");
-      return;
-    }
-
-    window.location.assign("/");
-  }, [supabase]);
-
   const activity = useMemo(
     () =>
       filteredBusinesses
@@ -1370,8 +1358,20 @@ export function SpotneraDashboard({
               </h1>
             </div>
           </div>
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)]">
-            {displayName.slice(0, 2).toUpperCase()}
+          <div className="flex shrink-0 items-center gap-2">
+            <LogoutButton
+              onError={setDashboardError}
+              className="min-h-11 rounded-2xl border border-white/10 bg-white/10 px-3 text-xs font-bold text-white/78 transition hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-60"
+              loadingChildren={
+                <>
+                  <span className="sm:hidden">Logging...</span>
+                  <span className="hidden sm:inline">Logging out...</span>
+                </>
+              }
+            />
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)]">
+              {displayName.slice(0, 2).toUpperCase()}
+            </div>
           </div>
         </header>
         <Link
@@ -1559,6 +1559,12 @@ export function SpotneraDashboard({
                 >
                   View details
                 </button>
+                <Link
+                  href={`/business/${selectedBusiness.id}`}
+                  className="shrink-0 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-center text-xs font-bold text-white/78 transition hover:bg-white/16"
+                >
+                  Full profile
+                </Link>
               </div>
             </motion.div>
           ) : recommendedBusiness ? (
@@ -1747,6 +1753,12 @@ export function SpotneraDashboard({
                         : "Review"}
                   </button>
                 </div>
+                <Link
+                  href={`/business/${selectedBusiness.id}`}
+                  className="mt-3 inline-flex min-h-10 items-center rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/78 transition hover:bg-white/14"
+                >
+                  View public profile
+                </Link>
                 <textarea
                   value={activeReviewComment}
                   onChange={(event) =>
@@ -1904,13 +1916,10 @@ export function SpotneraDashboard({
                 Profile
               </h2>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-xs font-bold text-white/78 transition hover:bg-white/14"
-            >
-              Log out
-            </button>
+            <LogoutButton
+              onError={setDashboardError}
+              className="rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-xs font-bold text-white/78 transition hover:bg-white/14 disabled:cursor-not-allowed disabled:opacity-60"
+            />
           </div>
           <form onSubmit={handleSaveProfile} className="grid gap-3">
             <div className="grid grid-cols-2 gap-3">

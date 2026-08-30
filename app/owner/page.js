@@ -2,6 +2,8 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
+import { CopyProfileLinkButton } from "@/components/copy-profile-link-button";
+import { LogoutButton } from "@/components/logout-button";
 import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS } from "@/lib/business-categories";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
@@ -1095,12 +1097,19 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 </h1>
               </div>
             </div>
-            <Link
-              href="/"
-              className="spotnera-secondary-action inline-flex min-h-10 shrink-0 items-center px-4 text-xs"
-            >
-              Explore
-            </Link>
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <Link
+                href="/"
+                className="spotnera-secondary-action inline-flex min-h-10 items-center px-4 text-xs"
+              >
+                Explore
+              </Link>
+              <LogoutButton
+                className="spotnera-secondary-action inline-flex min-h-10 items-center px-4 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                errorClassName="basis-full text-right text-xs font-semibold text-red-600"
+                loadingChildren="Logging out..."
+              />
+            </div>
           </div>
           {resolvedSearchParams?.error ? (
             <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
@@ -1195,6 +1204,20 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         <p className="font-black">{favoriteCount}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Saved</p>
                       </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Link
+                        href={`/business/${business.id}`}
+                        className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
+                      >
+                        View public profile
+                      </Link>
+                      <CopyProfileLinkButton
+                        businessId={business.id}
+                        businessCategory={business.category}
+                        city={business.city}
+                        country={business.country}
+                      />
                     </div>
                   </article>
                 );
