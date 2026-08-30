@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/utils/supabase/browser";
 
 function getFriendlyAuthError(error) {
@@ -56,6 +57,8 @@ export function AuthPanel() {
       console.error(`${provider} sign-in failed`, signInError);
       setError(getFriendlyAuthError(signInError));
       setLoadingProvider(null);
+    } else {
+      trackEvent("login", { auth_method: provider });
     }
   }
 
@@ -105,11 +108,15 @@ export function AuthPanel() {
     }
 
     if (mode === "signup" && !data.session) {
+      trackEvent("sign_up", { auth_method: "email" });
       setMessage("Check your email to verify your Spotnera account.");
       setIsSubmitting(false);
       return;
     }
 
+    trackEvent(mode === "signup" ? "sign_up" : "login", {
+      auth_method: "email",
+    });
     window.location.assign("/");
   }
 

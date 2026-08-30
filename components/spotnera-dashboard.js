@@ -9,6 +9,7 @@ import {
   BUSINESS_CATEGORIES,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
+import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/utils/supabase/browser";
 
 const DEAL_STATUS_META = {
@@ -327,6 +328,15 @@ function getCountLabel(count, singularLabel, pluralLabel = `${singularLabel}s`) 
   return `${count} ${count === 1 ? singularLabel : pluralLabel}`;
 }
 
+function getBusinessEventParameters(business) {
+  return {
+    business_id: business.id,
+    business_category: business.category,
+    country: business.country ?? "",
+    city: business.city ?? "",
+  };
+}
+
 function getQueryErrorMessage(query) {
   if (query === "businesses") {
     return "Unable to load businesses.";
@@ -568,16 +578,27 @@ function ContactActions({ business, compact = false }) {
   const phoneHref = phone ? getPhoneHref(phone) : null;
   const actions = [
     phone && phoneHref
-      ? { label: compact ? "Call" : `Phone: ${phone}`, href: phoneHref, external: false }
+      ? {
+          label: compact ? "Call" : `Phone: ${phone}`,
+          href: phoneHref,
+          external: false,
+          method: "call",
+        }
       : null,
     email
-      ? { label: compact ? "Email" : `Email: ${email}`, href: getEmailHref(email), external: false }
+      ? {
+          label: compact ? "Email" : `Email: ${email}`,
+          href: getEmailHref(email),
+          external: false,
+          method: "email",
+        }
       : null,
     websiteUrl
       ? {
           label: compact ? "Website" : `Website: ${getWebsiteDisplayLabel(websiteUrl)}`,
           href: websiteUrl,
           external: true,
+          method: "website",
         }
       : null,
   ].filter(Boolean);
@@ -594,6 +615,12 @@ function ContactActions({ business, compact = false }) {
           href={action.href}
           target={action.external ? "_blank" : undefined}
           rel={action.external ? "noopener noreferrer" : undefined}
+          onClick={() =>
+            trackEvent(`contact_${action.method}`, {
+              ...getBusinessEventParameters(business),
+              contact_method: action.method,
+            })
+          }
           className={`rounded-full border border-white/10 bg-white/10 font-bold text-white/76 transition hover:bg-white/16 hover:text-white ${
             compact ? "px-3 py-1.5 text-xs" : "px-3 py-2 text-sm"
           }`}
@@ -620,6 +647,12 @@ function SocialLinks({ business, compact = false }) {
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() =>
+            trackEvent("social_click", {
+              ...getBusinessEventParameters(business),
+              social_platform: link.label.toLowerCase(),
+            })
+          }
           className={`rounded-full border border-white/10 bg-white/8 font-bold text-white/64 transition hover:bg-white/14 hover:text-white ${
             compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-2 text-sm"
           }`}
@@ -912,6 +945,22 @@ export function SpotneraDashboard({
     console.log(`Dashboard mapped ${mappedBusinesses.length} businesses`);
   }, [localBusinesses.length, mappedBusinesses.length]);
 
+  useEffect(() => {
+    const normalizedSearch = searchQuery.trim();
+
+    if (!normalizedSearch) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      trackEvent("business_search", {
+        result_count: filteredBusinesses.length,
+      });
+    }, 800);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filteredBusinesses.length, searchQuery]);
+
   const [selectedBusinessId, setSelectedBusinessId] = useState(null);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim();
   const selectedBusiness =
@@ -972,6 +1021,7 @@ export function SpotneraDashboard({
   const handleSelectBusiness = useCallback((business) => {
     setSelectedBusinessId(business.id);
     setIsDetailOpen(false);
+    trackEvent("business_select", getBusinessEventParameters(business));
   }, []);
   const handleToggleCategory = useCallback(
     (category) => {
@@ -980,6 +1030,10 @@ export function SpotneraDashboard({
         : [...selectedCategories, category];
 
       setSelectedCategories(nextCategories);
+      trackEvent("filter_category", {
+        filter_category: category,
+        selected: !selectedCategories.includes(category),
+      });
       clearSelectedBusinessIfExcluded({
         searchQuery,
         selectedCategories: nextCategories,
@@ -997,6 +1051,10 @@ export function SpotneraDashboard({
   );
   const handleSelectAllCategories = useCallback(() => {
     setSelectedCategories([]);
+    trackEvent("filter_category", {
+      filter_category: "all",
+      selected: true,
+    });
     clearSelectedBusinessIfExcluded({
       searchQuery,
       selectedCategories: [],
@@ -1019,6 +1077,9 @@ export function SpotneraDashboard({
 
       setSelectedCountry(nextCountry);
       setSelectedCity(nextCity);
+      trackEvent("filter_country", {
+        country: nextCountry,
+      });
       clearSelectedBusinessIfExcluded({
         searchQuery,
         selectedCategories,
@@ -1039,6 +1100,10 @@ export function SpotneraDashboard({
       const nextCity = event.target.value;
 
       setSelectedCity(nextCity);
+      trackEvent("filter_city", {
+        city: nextCity,
+        country: selectedCountry,
+      });
       clearSelectedBusinessIfExcluded({
         searchQuery,
         selectedCategories,
@@ -1079,6 +1144,9 @@ export function SpotneraDashboard({
       }
 
       const nextFavoriteState = !business.isFavorite;
+      trackEvent(nextFavoriteState ? "favorite_add" : "favorite_remove", {
+        ...getBusinessEventParameters(business),
+      });
       setDashboardError(null);
       setPendingFavoriteId(business.id);
       updateBusiness(business.id, (item) => ({
@@ -1153,6 +1221,10 @@ export function SpotneraDashboard({
           ...business,
           reviews: nextReviews,
         };
+      });
+      trackEvent("review_submit", {
+        ...getBusinessEventParameters(selectedBusiness),
+        rating: activeReviewRating,
       });
       setReviewDrafts((currentDrafts) => {
         const nextDrafts = { ...currentDrafts };
@@ -1237,6 +1309,7 @@ export function SpotneraDashboard({
     [localProfile, supabase, userId],
   );
   const handleLogout = useCallback(async () => {
+    trackEvent("logout");
     const { error } = await supabase.auth.signOut();
 
     if (error) {
@@ -1468,7 +1541,20 @@ export function SpotneraDashboard({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsDetailOpen(true)}
+                  onClick={() => {
+                    setIsDetailOpen(true);
+                    trackEvent("view_business", {
+                      ...getBusinessEventParameters(selectedBusiness),
+                    });
+                    const activeDeal = getActiveDeal(selectedBusiness.deals);
+
+                    if (activeDeal) {
+                      trackEvent("deal_view", {
+                        ...getBusinessEventParameters(selectedBusiness),
+                        deal_id: activeDeal.id,
+                      });
+                    }
+                  }}
                   className="shrink-0 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-zinc-950 transition hover:bg-white/90"
                 >
                   View details

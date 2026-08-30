@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
+import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS } from "@/lib/business-categories";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
@@ -732,6 +733,7 @@ function SubmitButton({ children }) {
   return (
     <button
       type="submit"
+      data-analytics-submit="true"
       className="spotnera-primary-action px-4 text-sm"
     >
       {children}
@@ -748,7 +750,13 @@ function BusinessForm({ action, business, submitLabel }) {
     selectedCountry && !BUSINESS_COUNTRIES.includes(selectedCountry);
 
   return (
-    <form action={action} encType="multipart/form-data" className="grid gap-3">
+    <AnalyticsForm
+      action={action}
+      encType="multipart/form-data"
+      eventName={business ? "business_update" : "business_create"}
+      analyticsContext={{ businessId: business?.id }}
+      className="grid gap-3"
+    >
       {business ? <input type="hidden" name="business_id" value={business.id} /> : null}
       {(business?.cover_image_url || business?.logo_url) ? (
         <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-zinc-100">
@@ -914,13 +922,18 @@ function BusinessForm({ action, business, submitLabel }) {
         />
       </label>
       <SubmitButton>{submitLabel}</SubmitButton>
-    </form>
+    </AnalyticsForm>
   );
 }
 
 function DealForm({ action, deal, businesses, submitLabel }) {
   return (
-    <form action={action} className="grid gap-3">
+    <AnalyticsForm
+      action={action}
+      eventName={deal ? "deal_update" : "deal_create"}
+      analyticsContext={{ dealId: deal?.id }}
+      className="grid gap-3"
+    >
       {deal ? <input type="hidden" name="deal_id" value={deal.id} /> : null}
       <Field label="Business">
         <Select name="business_id" required defaultValue={deal?.business_id ?? businesses[0]?.id ?? ""}>
@@ -967,7 +980,7 @@ function DealForm({ action, deal, businesses, submitLabel }) {
           </button>
         ) : null}
       </div>
-    </form>
+    </AnalyticsForm>
   );
 }
 
@@ -1064,6 +1077,10 @@ export default async function OwnerDashboardPage({ searchParams }) {
 
   return (
     <main className="spotnera-owner-shell">
+      <OwnerDashboardAnalytics
+        businessCount={businesses.length}
+        activeDealCount={activeDealCount}
+      />
       <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
         <header className="spotnera-card rounded-[30px] p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">

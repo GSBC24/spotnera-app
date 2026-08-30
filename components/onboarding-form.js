@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { trackEvent } from "@/lib/analytics";
 
 const GENDER_OPTIONS = [
   "Prefer not to say",
@@ -61,7 +62,21 @@ export function OnboardingForm({ action, defaultValues, countries }) {
   const [state, formAction] = useActionState(action, null);
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (!event.currentTarget.checkValidity()) {
+          return;
+        }
+
+        const formData = new FormData(event.currentTarget);
+        trackEvent("onboarding_complete", {
+          country: String(formData.get("country") ?? "").trim(),
+          city: String(formData.get("city") ?? "").trim(),
+        });
+      }}
+      className="flex flex-col gap-5"
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="First name">
           <Input
