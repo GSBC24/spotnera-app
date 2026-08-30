@@ -34,6 +34,37 @@ function getFeatureAddress(feature, fallback) {
   return [name, context].filter(Boolean).join(", ");
 }
 
+function getContextName(context, key) {
+  const value = context?.[key];
+
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return value.name || "";
+}
+
+function getFeatureCity(feature, fallback) {
+  const context = feature?.properties?.context ?? fallback?.context;
+
+  return (
+    getContextName(context, "place") ||
+    getContextName(context, "locality") ||
+    getContextName(context, "district") ||
+    ""
+  );
+}
+
+function getFeatureCountry(feature, fallback) {
+  const context = feature?.properties?.context ?? fallback?.context;
+
+  return getContextName(context, "country");
+}
+
 async function readMapboxError(response) {
   const contentType = response.headers.get("content-type") ?? "";
 
@@ -141,6 +172,8 @@ export default function AddressAutocomplete({
   const [selectedAddress, setSelectedAddress] = useState(defaultAddress);
   const [latitude, setLatitude] = useState(defaultLatitude ?? "");
   const [longitude, setLongitude] = useState(defaultLongitude ?? "");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -249,6 +282,8 @@ export default function AddressAutocomplete({
     setSelectedAddress("");
     setLatitude("");
     setLongitude("");
+    setSelectedCity("");
+    setSelectedCountry("");
     setSuggestions([]);
     setIsLoading(false);
     setError("");
@@ -299,12 +334,16 @@ export default function AddressAutocomplete({
       }
 
       const formattedAddress = getFeatureAddress(feature, suggestion);
+      const featureCity = getFeatureCity(feature, suggestion);
+      const featureCountry = getFeatureCountry(feature, suggestion);
       const [nextLongitude, nextLatitude] = coordinates;
 
       setQuery(formattedAddress);
       setSelectedAddress(formattedAddress);
       setLatitude(String(nextLatitude));
       setLongitude(String(nextLongitude));
+      setSelectedCity(featureCity);
+      setSelectedCountry(featureCountry);
       setSuggestions([]);
       setSessionToken(createSessionToken());
     } catch (retrieveError) {
@@ -373,8 +412,16 @@ export default function AddressAutocomplete({
       </label>
 
       <input type="hidden" name="selected_address" value={selectedAddress} />
+      <input type="hidden" name="selected_city" value={selectedCity} />
+      <input type="hidden" name="selected_country" value={selectedCountry} />
       <input type="hidden" name="latitude" value={latitude} />
       <input type="hidden" name="longitude" value={longitude} />
+
+      {hasSelectedAddress && (selectedCity || selectedCountry) ? (
+        <p className="text-xs font-medium text-zinc-500">
+          Mapbox matched {[selectedCity, selectedCountry].filter(Boolean).join(", ")}
+        </p>
+      ) : null}
 
       <p
         className={`text-xs font-semibold ${

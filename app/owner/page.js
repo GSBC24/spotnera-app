@@ -10,6 +10,7 @@ const BUSINESS_FIELDS = `
   owner_id,
   name,
   category,
+  country,
   description,
   city,
   address,
@@ -44,6 +45,60 @@ const REVIEW_FIELDS = `
 `;
 
 const DEAL_STATUSES = ["active", "scheduled", "paused", "ended"];
+const BUSINESS_CATEGORIES = [
+  "Restaurant",
+  "Cafe",
+  "Bar",
+  "Bakery",
+  "Grocery",
+  "Clothing",
+  "Beauty & Spa",
+  "Fitness & Gym",
+  "Health",
+  "Hotel",
+  "Automotive",
+  "Electronics",
+  "Home & Furniture",
+  "Professional Services",
+  "Education",
+  "Entertainment",
+  "Events",
+  "Nightlife",
+  "Shopping",
+  "Other",
+];
+const BUSINESS_COUNTRIES = [
+  "Norway",
+  "Sweden",
+  "Denmark",
+  "Finland",
+  "Iceland",
+  "United Kingdom",
+  "Ireland",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Netherlands",
+  "Belgium",
+  "Switzerland",
+  "Austria",
+  "Poland",
+  "Portugal",
+  "Greece",
+  "United States",
+  "Canada",
+  "Australia",
+  "New Zealand",
+  "Japan",
+  "South Korea",
+  "Singapore",
+  "India",
+  "Brazil",
+  "Mexico",
+  "South Africa",
+  "Other",
+];
 
 function getString(formData, key) {
   return String(formData.get(key) ?? "").trim();
@@ -68,6 +123,14 @@ function getNumber(formData, key) {
 function getNullableTimestamp(formData, key) {
   const value = getString(formData, key);
   return value ? new Date(value).toISOString() : null;
+}
+
+function normalizeComparable(value) {
+  return String(value ?? "")
+    .trim()
+    .toLocaleLowerCase("en")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function formatDateTimeLocal(value) {
@@ -102,10 +165,13 @@ function buildBusinessPayload(formData, userId) {
     owner_id: userId,
     name: getString(formData, "name"),
     category: getString(formData, "category"),
+    country: getString(formData, "country"),
     description: getNullableString(formData, "description"),
     city: getString(formData, "city"),
     address,
     selected_address: getNullableString(formData, "selected_address"),
+    selected_country: getNullableString(formData, "selected_country"),
+    selected_city: getNullableString(formData, "selected_city"),
     latitude: getNumber(formData, "latitude"),
     longitude: getNumber(formData, "longitude"),
     is_active: formData.get("is_active") === "on",
@@ -129,12 +195,34 @@ function buildDealPayload(formData, userId) {
 }
 
 function validateBusiness(payload) {
-  if (!payload.name || !payload.category || !payload.city) {
-    return "Name, category, and city are required.";
+  if (!payload.name || !payload.category || !payload.country || !payload.city) {
+    return "Name, category, country, and city are required.";
+  }
+
+  if (!BUSINESS_CATEGORIES.includes(payload.category)) {
+    return "Choose a valid business category.";
+  }
+
+  if (!BUSINESS_COUNTRIES.includes(payload.country)) {
+    return "Choose a valid country.";
   }
 
   if (!payload.address || payload.address !== payload.selected_address) {
     return "Choose an address from the Mapbox suggestions before saving.";
+  }
+
+  if (
+    payload.selected_country &&
+    normalizeComparable(payload.country) !== normalizeComparable(payload.selected_country)
+  ) {
+    return `The selected address appears to be in ${payload.selected_country}. Choose the matching country or select another address.`;
+  }
+
+  if (
+    payload.selected_city &&
+    normalizeComparable(payload.city) !== normalizeComparable(payload.selected_city)
+  ) {
+    return `The selected address appears to be in ${payload.selected_city}. Choose the matching city or select another address.`;
   }
 
   if (payload.latitude === null || payload.longitude === null) {
@@ -147,6 +235,8 @@ function validateBusiness(payload) {
 function getBusinessSavePayload(payload) {
   const savePayload = { ...payload };
   delete savePayload.selected_address;
+  delete savePayload.selected_country;
+  delete savePayload.selected_city;
   return savePayload;
 }
 
@@ -514,6 +604,13 @@ function SubmitButton({ children }) {
 }
 
 function BusinessForm({ action, business, submitLabel }) {
+  const selectedCategory = business?.category ?? "";
+  const selectedCountry = business?.country ?? "";
+  const hasLegacyCategory =
+    selectedCategory && !BUSINESS_CATEGORIES.includes(selectedCategory);
+  const hasLegacyCountry =
+    selectedCountry && !BUSINESS_COUNTRIES.includes(selectedCountry);
+
   return (
     <form action={action} encType="multipart/form-data" className="grid gap-3">
       {business ? <input type="hidden" name="business_id" value={business.id} /> : null}
@@ -546,9 +643,32 @@ function BusinessForm({ action, business, submitLabel }) {
       <Field label="Business name">
         <TextInput name="name" required minLength={2} maxLength={120} defaultValue={business?.name ?? ""} />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Category">
-          <TextInput name="category" required minLength={2} maxLength={80} defaultValue={business?.category ?? ""} />
+      <Field label="Category">
+        <Select name="category" required defaultValue={selectedCategory}>
+          <option value="" disabled>Choose category</option>
+          {hasLegacyCategory ? (
+            <option value={selectedCategory}>{selectedCategory}</option>
+          ) : null}
+          {BUSINESS_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Country">
+          <Select name="country" required defaultValue={selectedCountry}>
+            <option value="" disabled>Choose country</option>
+            {hasLegacyCountry ? (
+              <option value={selectedCountry}>{selectedCountry}</option>
+            ) : null}
+            {BUSINESS_COUNTRIES.map((country) => (
+              <option key={country} value={country}>
+                {country}
+              </option>
+            ))}
+          </Select>
         </Field>
         <Field label="City">
           <TextInput name="city" required minLength={2} maxLength={120} defaultValue={business?.city ?? ""} />
@@ -810,7 +930,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         <div className="min-w-0">
                           <h3 className="truncate text-base font-bold">{business.name}</h3>
                           <p className="mt-1 text-sm text-zinc-500">
-                            {business.category} - {business.city}
+                            {[business.category, business.city, business.country]
+                              .filter(Boolean)
+                              .join(" - ")}
                           </p>
                         </div>
                       </div>
