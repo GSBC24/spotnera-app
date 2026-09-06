@@ -621,7 +621,19 @@ function CategoryFilters({
   onToggleCategory,
   onSelectAll,
 }) {
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const isAllSelected = selectedCategories.length === 0;
+  const selectedOnlyCategories = BUSINESS_CATEGORIES.filter(
+    (category) => selectedCategories.includes(category.label),
+  );
+  const visibleCategories = showAllCategories
+    ? BUSINESS_CATEGORIES
+    : [
+        ...BUSINESS_CATEGORIES.slice(0, 12),
+        ...selectedOnlyCategories.filter(
+          (category) => !BUSINESS_CATEGORIES.slice(0, 12).includes(category),
+        ),
+      ];
 
   return (
     <div className="grid gap-2">
@@ -635,7 +647,7 @@ function CategoryFilters({
         <span>All businesses</span>
       </label>
       <div className="grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-        {BUSINESS_CATEGORIES.map((category) => {
+        {visibleCategories.map((category) => {
           const isChecked = selectedCategories.includes(category.label);
 
           return (
@@ -655,6 +667,13 @@ function CategoryFilters({
           );
         })}
       </div>
+      <button
+        type="button"
+        onClick={() => setShowAllCategories((expanded) => !expanded)}
+        className="min-h-10 rounded-2xl border border-white/10 bg-white/8 px-3 text-xs font-bold text-white/72 transition hover:bg-white/14"
+      >
+        {showAllCategories ? "Show fewer" : `Show all categories (${BUSINESS_CATEGORIES.length})`}
+      </button>
     </div>
   );
 }
