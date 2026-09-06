@@ -29,7 +29,7 @@ function getSections() {
   ["Suspension And Removal", "Spotnera may suspend accounts, remove listings, remove content, or restrict access where necessary to protect the service, users, businesses, legal compliance, or security."],
   ["Disclaimers And Limitations", "This template requires legal review. Final warranty disclaimers, consumer-law language, and limitation-of-liability wording must be completed for the operating legal entity and applicable law before launch."],
   ["Changes To Service Or Terms", "Spotnera may update the service or these terms. Material changes should be communicated appropriately."],
-  ["Termination", "Users may stop using Spotnera. Account deletion and data deletion workflows must be confirmed before public launch."],
+  ["Termination", "Users may stop using Spotnera and may request in-app account deletion from the Profile/Me danger zone. Business owners are warned before deletion because owned business listings and dependent business data may also be removed."],
   ["Governing Law", "Governing law and venue must be confirmed before public launch."],
   [
     "Contact",

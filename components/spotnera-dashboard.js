@@ -6,10 +6,12 @@ import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { LogoutButton } from "@/components/logout-button";
+import { PrivacySettingsLink } from "@/components/privacy-settings-link";
 import {
   BUSINESS_CATEGORIES,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
+import { DeleteAccountPanel } from "@/components/delete-account-panel";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -906,6 +908,7 @@ export function SpotneraDashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("Map");
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
@@ -1353,45 +1356,57 @@ export function SpotneraDashboard({
     0,
   );
   const favoriteCount = filteredBusinesses.filter((business) => business.isFavorite).length;
+  const savedBusinesses = mappedBusinesses.filter((business) => business.isFavorite);
+  const activeHeading =
+    activeTab === "Me"
+      ? "Me"
+      : activeTab === "Saved"
+        ? "Saved businesses"
+        : activeTab === "Pulse"
+          ? "Local pulse"
+          : cityHeading;
 
   return (
     <main className="spotnera-app-shell">
-      <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-28 pt-4 sm:px-6 lg:px-8">
+      <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8">
         <header className="spotnera-surface z-20 flex items-center justify-between gap-3 rounded-[28px] px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-cover" />
             <div className="min-w-0">
               <p className="spotnera-kicker text-white/55">
-                Spotnera Live
+                {activeTab === "Me" ? "Account" : "Spotnera Live"}
               </p>
               <h1 className="mt-1 truncate text-[1.35rem] font-semibold leading-tight sm:text-2xl">
-                {cityHeading}
+                {activeHeading}
               </h1>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <LogoutButton
-              onError={setDashboardError}
-              className="min-h-11 rounded-2xl border border-white/10 bg-white/10 px-3 text-xs font-bold text-white/78 transition hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-60"
-              loadingChildren={
-                <>
-                  <span className="sm:hidden">Logging...</span>
-                  <span className="hidden sm:inline">Logging out...</span>
-                </>
-              }
-            />
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)]">
+            <button
+              type="button"
+              onClick={() => setActiveTab("Me")}
+              aria-label="Open profile"
+              className={`grid h-12 w-12 place-items-center rounded-2xl text-sm font-bold shadow-[0_14px_35px_rgba(255,255,255,0.2)] transition ${
+                activeTab === "Me"
+                  ? "bg-[#72f0cc] text-zinc-950"
+                  : "bg-white text-zinc-950 hover:bg-white/90"
+              }`}
+            >
               {displayName.slice(0, 2).toUpperCase()}
-            </div>
+            </button>
           </div>
         </header>
-        <Link
-          href="/owner"
-          className="spotnera-surface z-20 mt-3 rounded-2xl px-4 py-3 text-center text-sm font-bold text-white/82 transition hover:bg-white/16 sm:ml-auto sm:w-fit"
-        >
-          Business owner dashboard
-        </Link>
+        {activeTab === "Map" ? (
+          <Link
+            href="/owner"
+            className="spotnera-surface z-20 mt-3 rounded-2xl px-4 py-3 text-center text-sm font-bold text-white/82 transition hover:bg-white/16 sm:ml-auto sm:w-fit"
+          >
+            Business owner dashboard
+          </Link>
+        ) : null}
 
+        {activeTab === "Map" ? (
+        <>
         <section className="spotnera-surface z-20 mt-4 rounded-[28px] p-3">
           <div className="flex items-center gap-2">
             <input
@@ -1874,8 +1889,11 @@ export function SpotneraDashboard({
             )}
           </div>
         </section>
+        </>
+        ) : null}
 
-        <section className="mt-4">
+        {activeTab === "Pulse" ? (
+        <section className="mx-auto mt-4 w-full max-w-3xl">
           <div className="mb-3 flex items-end justify-between px-1">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">
@@ -1925,8 +1943,86 @@ export function SpotneraDashboard({
             )}
           </div>
         </section>
+        ) : null}
 
-        <section className="mt-4 rounded-[28px] border border-white/12 bg-white/10 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+        {activeTab === "Saved" ? (
+        <section className="mx-auto mt-4 w-full max-w-3xl">
+          <div className="mb-3 flex items-end justify-between px-1">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">
+                Saved
+              </p>
+              <h2 className="mt-1 text-lg font-semibold tracking-tight">
+                Your saved businesses
+              </h2>
+            </div>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/62">
+              {savedBusinesses.length} saved
+            </span>
+          </div>
+          <div className="grid gap-3">
+            {savedBusinesses.length ? (
+              savedBusinesses.map((business, index) => (
+                <motion.article
+                  key={business.id}
+                  initial={{ x: 24, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: index * 0.04, duration: 0.32 }}
+                  onClick={() => {
+                    setActiveTab("Map");
+                    handleSelectBusiness(business);
+                  }}
+                  className="flex cursor-pointer items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition hover:bg-white/14"
+                >
+                  <span
+                    className="h-12 w-1.5 rounded-full"
+                    style={{ backgroundColor: business.color }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="truncate text-sm font-semibold">
+                        {business.name}
+                      </h3>
+                      <span className="text-xs font-medium text-white/42">
+                        {business.deals.length} deals
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-sm text-white/54">
+                      {getBusinessSignal(business)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <RatingPill
+                        averageRating={business.averageRating}
+                        reviewCount={business.reviewCount}
+                      />
+                      <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/18 px-3 py-1.5 text-xs font-semibold text-white/54">
+                        <CategoryDot category={business.category} />
+                        {business.category}
+                      </span>
+                    </div>
+                  </div>
+                  <FavoriteButton
+                    size="sm"
+                    isFavorite={business.isFavorite}
+                    disabled={pendingFavoriteId === business.id}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleToggleFavorite(business);
+                    }}
+                  />
+                </motion.article>
+              ))
+            ) : (
+              <div className="rounded-[24px] border border-white/10 bg-white/10 p-4 text-sm text-white/58 backdrop-blur-2xl">
+                Saved businesses will appear here.
+              </div>
+            )}
+          </div>
+        </section>
+        ) : null}
+
+        {activeTab === "Me" ? (
+        <section className="mx-auto mt-4 w-full max-w-3xl rounded-[28px] border border-white/12 bg-white/10 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur-2xl sm:p-5">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">
@@ -1936,96 +2032,102 @@ export function SpotneraDashboard({
                 Profile
               </h2>
             </div>
-            <LogoutButton
-              onError={setDashboardError}
-              className="rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-xs font-bold text-white/78 transition hover:bg-white/14 disabled:cursor-not-allowed disabled:opacity-60"
-            />
           </div>
-          <form onSubmit={handleSaveProfile} className="grid gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  First name
-                </span>
-                <input
-                  name="first_name"
-                  required
-                  maxLength={80}
-                  defaultValue={localProfile?.first_name ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Last name
-                </span>
-                <input
-                  name="last_name"
-                  required
-                  maxLength={80}
-                  defaultValue={localProfile?.last_name ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Country
-                </span>
-                <select
-                  name="country"
-                  required
-                  defaultValue={localProfile?.country ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                >
-                  <option value="" disabled>
-                    Choose country
-                  </option>
-                  {PROFILE_COUNTRIES.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
+          {dashboardError ? (
+            <p className="mb-3 rounded-2xl border border-red-300/30 bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-50">
+              {dashboardError}
+            </p>
+          ) : null}
+          <section>
+            <p className="mb-3 text-sm font-semibold text-white/62">
+              Manage your personal Spotnera account details.
+            </p>
+            <form onSubmit={handleSaveProfile} className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    First name
+                  </span>
+                  <input
+                    name="first_name"
+                    required
+                    maxLength={80}
+                    defaultValue={localProfile?.first_name ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    Last name
+                  </span>
+                  <input
+                    name="last_name"
+                    required
+                    maxLength={80}
+                    defaultValue={localProfile?.last_name ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    Country
+                  </span>
+                  <select
+                    name="country"
+                    required
+                    defaultValue={localProfile?.country ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  >
+                    <option value="" disabled>
+                      Choose country
                     </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  City
-                </span>
-                <input
-                  name="city"
-                  required
-                  maxLength={120}
-                  defaultValue={localProfile?.city ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-            </div>
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                Phone optional
-              </span>
-              <input
-                type="tel"
-                name="phone"
-                maxLength={32}
-                defaultValue={localProfile?.phone ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-              />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Date of birth optional
-                </span>
-                <input
-                  type="date"
-                  name="date_of_birth"
-                  defaultValue={localProfile?.date_of_birth ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
+                    {PROFILE_COUNTRIES.map((country) => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    City
+                  </span>
+                  <input
+                    name="city"
+                    required
+                    maxLength={120}
+                    defaultValue={localProfile?.city ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    Phone optional
+                  </span>
+                  <input
+                    type="tel"
+                    name="phone"
+                    maxLength={32}
+                    defaultValue={localProfile?.phone ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    Date of birth optional
+                  </span>
+                  <input
+                    type="date"
+                    name="date_of_birth"
+                    defaultValue={localProfile?.date_of_birth ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+              </div>
               <label className="grid gap-1.5">
                 <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
                   Gender optional
@@ -2042,41 +2144,64 @@ export function SpotneraDashboard({
                   ))}
                 </select>
               </label>
-            </div>
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                Street address optional
-              </span>
-              <input
-                name="address"
-                maxLength={240}
-                defaultValue={localProfile?.address ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-              />
-            </label>
-            {profileMessage ? (
-              <p className="rounded-2xl border border-emerald-300/20 bg-emerald-500/14 px-3 py-2 text-sm font-semibold text-emerald-100">
-                {profileMessage}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={isSavingProfile}
-              className="h-11 rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSavingProfile ? "Saving..." : "Save changes"}
-            </button>
-          </form>
-        </section>
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                  Street address optional
+                </span>
+                <input
+                  name="address"
+                  maxLength={240}
+                  defaultValue={localProfile?.address ?? ""}
+                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                />
+              </label>
+              {profileMessage ? (
+                <p className="rounded-2xl border border-emerald-300/20 bg-emerald-500/14 px-3 py-2 text-sm font-semibold text-emerald-100">
+                  {profileMessage}
+                </p>
+              ) : null}
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="h-11 rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingProfile ? "Saving..." : "Save changes"}
+              </button>
+            </form>
+          </section>
 
+          <section className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
+              Privacy
+            </p>
+            <PrivacySettingsLink className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16" />
+          </section>
+
+          <section className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
+              Account
+            </p>
+            <LogoutButton
+              onError={setDashboardError}
+              className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </section>
+          <DeleteAccountPanel
+            ownedBusinessCount={
+              localBusinesses.filter((business) => business.owner_id === userId).length
+            }
+          />
+        </section>
+        ) : null}
         <nav className="fixed bottom-4 left-1/2 z-30 grid w-[min(92vw,430px)] -translate-x-1/2 grid-cols-4 rounded-[28px] border border-white/14 bg-zinc-950/62 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
-          {navItems.map((item, index) => (
+          {navItems.map((item) => (
             <button
               key={item.label}
               type="button"
               aria-label={item.label}
+              onClick={() => setActiveTab(item.label)}
               className={`flex h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
-                index === 0
+                activeTab === item.label
                   ? "bg-white text-zinc-950 shadow-[0_10px_26px_rgba(255,255,255,0.18)]"
                   : "text-white/56 hover:bg-white/10 hover:text-white"
               }`}

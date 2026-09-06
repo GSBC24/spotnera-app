@@ -50,7 +50,10 @@ const REVIEW_SELECT = `
   updated_at
 `;
 
-export default async function Home() {
+export default async function Home({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+  const accountDeleted = resolvedSearchParams?.accountDeleted === "1";
+
   if (!hasSupabaseEnv()) {
     return (
       <main className="spotnera-auth-shell flex min-h-screen items-center justify-center px-6 py-12">
@@ -376,6 +379,11 @@ export default async function Home() {
               <p className="mt-3 text-sm leading-6 text-zinc-600">
                 Discover live deals around you and keep your local profile in sync.
               </p>
+              {accountDeleted ? (
+                <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                  Your Spotnera account has been deleted.
+                </p>
+              ) : null}
               <div className="mt-6">
                 <AuthPanel />
               </div>

@@ -40,6 +40,10 @@ function getSections() {
     body: "Reviews and favorites are connected to signed-in accounts so users can manage their own saved businesses and review content. Public business pages show review content without exposing private account details.",
   },
   {
+    title: "Account Deletion",
+    body: "Signed-in users can request permanent account deletion from the Profile/Me danger zone. Deletion removes the account profile, favorites saved by the user, and reviews written by the user. If the user owns businesses, deletion also removes those business listings and dependent deals, reviews and favorites about those businesses, and business engagement events tied to those deleted businesses. Anonymous aggregate business engagement events are not tied to a user account and are retained unless the related business is deleted.",
+  },
+  {
     title: "Business Engagement Analytics",
     body: "Spotnera records anonymous first-party business engagement counters such as profile views, deal views, contact clicks, shares, and copied profile links. These events do not store customer names, emails, phone numbers, street addresses, IP addresses, auth tokens, or Supabase user IDs.",
   },
