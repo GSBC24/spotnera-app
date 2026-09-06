@@ -858,6 +858,7 @@ export function SpotneraDashboard({
   initialTab = "map",
   initialSearchOpen = false,
   initialAuthOpen = false,
+  initialAuthIntent = "/",
 }) {
   const supabase = useMemo(() => createClient(), []);
   const localProfile = profile ?? {};
@@ -873,7 +874,7 @@ export function SpotneraDashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(initialSearchOpen);
-  const [authIntent, setAuthIntent] = useState("/");
+  const [authIntent, setAuthIntent] = useState(initialAuthIntent);
   const [isAuthOpen, setIsAuthOpen] = useState(initialAuthOpen);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(
@@ -1180,7 +1181,9 @@ export function SpotneraDashboard({
             .eq("user_id", userId);
 
       if (error) {
-        console.error("Favorite update failed", error);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Favorite update failed", error);
+        }
         updateBusiness(business.id, (item) => ({
           ...item,
           isFavorite: !nextFavoriteState,
@@ -1233,7 +1236,9 @@ export function SpotneraDashboard({
         .single();
 
       if (error) {
-        console.error("Review save failed", error);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Review save failed", error);
+        }
         setDashboardError("Unable to save review.");
         setIsSavingReview(false);
         return;

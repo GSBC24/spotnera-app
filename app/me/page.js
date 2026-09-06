@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 export default async function MePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/?auth=1&next=/me");
 
   const [{ data: profile }, { count: ownedBusinessCount }] = await Promise.all([
     supabase.from("profiles").select("username, first_name, last_name, city, country, phone, date_of_birth, gender, address, onboarding_completed").eq("id", user.id).maybeSingle(),

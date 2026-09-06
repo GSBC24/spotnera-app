@@ -51,11 +51,20 @@ const REVIEW_SELECT = `
   updated_at
 `;
 
+function getPublicQueryError(query) {
+  return { query };
+}
+
 export default async function Home({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const accountDeleted = resolvedSearchParams?.accountDeleted === "1";
   const initialSearchOpen = resolvedSearchParams?.search === "1";
   const initialAuthOpen = resolvedSearchParams?.auth === "1";
+  const requestedAuthIntent = resolvedSearchParams?.next || "/";
+  const initialAuthIntent =
+    requestedAuthIntent.startsWith("/") && !requestedAuthIntent.startsWith("//")
+      ? requestedAuthIntent
+      : "/";
   const initialTab = initialSearchOpen
     ? "map"
     : ["map", "pulse", "saved"].includes(resolvedSearchParams?.tab)
@@ -108,41 +117,11 @@ export default async function Home({ searchParams }) {
 
     profile = data;
 
-    console.log("Profile city:", profile?.city ?? null);
-    console.log("Profile data:", {
-      username: profile?.username ?? null,
-      city: profile?.city ?? null,
-    });
-
     if (!profile?.onboarding_completed || !profile?.city || !profile?.country) {
       redirect("/onboarding");
     }
 
   }
-
-  console.log("Supabase client context:", {
-      urlHost: process.env.NEXT_PUBLIC_SUPABASE_URL
-        ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
-        : null,
-      userId: user?.id ?? null,
-      userEmail: user?.email ?? null,
-      client: "createServerClient from @supabase/ssr with anon key and auth cookies",
-    });
-
-  console.log(
-      "Supabase businesses query:",
-      {
-        from: "businesses",
-        select: BUSINESS_SELECT.replace(/\s+/g, " ").trim(),
-        filters: {
-          is_active: true,
-          city: null,
-          latitude: null,
-          longitude: null,
-        },
-        order: "name ascending",
-      },
-  );
 
     const { data: businessRows, error: businessesError } = await supabase
       .from("businesses")
@@ -151,34 +130,11 @@ export default async function Home({ searchParams }) {
       .order("name", { ascending: true });
 
     if (businessesError) {
-      queryErrors.push({
-        query: "businesses",
-        message: businessesError.message,
-        code: businessesError.code,
-        details: businessesError.details,
-        hint: businessesError.hint,
-      });
+      queryErrors.push(getPublicQueryError("businesses"));
       if (process.env.NODE_ENV !== "production") {
-        console.error("Supabase businesses query failed", businessesError.message);
+        console.error("Supabase businesses query failed", businessesError);
       }
     }
-
-  console.log(
-      "Supabase deals query:",
-      {
-        from: "deals",
-        select: DEAL_SELECT.replace(/\s+/g, " ").trim(),
-        filters: {
-          is_active: true,
-          live_window: true,
-          businesses_is_active: true,
-          city: null,
-          latitude: null,
-          longitude: null,
-        },
-        order: "created_at descending",
-      },
-  );
 
   const now = new Date();
     const { data: dealRows, error: dealsError } = await supabase
@@ -191,15 +147,9 @@ export default async function Home({ searchParams }) {
       .order("created_at", { ascending: false });
 
     if (dealsError) {
-      queryErrors.push({
-        query: "deals",
-        message: dealsError.message,
-        code: dealsError.code,
-        details: dealsError.details,
-        hint: dealsError.hint,
-      });
+      queryErrors.push(getPublicQueryError("deals"));
       if (process.env.NODE_ENV !== "production") {
-        console.error("Supabase deals query failed", dealsError.message);
+        console.error("Supabase deals query failed", dealsError);
       }
     }
 
@@ -208,40 +158,11 @@ export default async function Home({ searchParams }) {
 
     supabaseDealCount = liveDealRows.length;
 
-    console.log(
-      `Supabase returned ${supabaseBusinessCount} active businesses`,
-    );
-    console.log(`Supabase returned ${supabaseDealCount} active deals`);
-    console.log("Supabase business rows:", businessRows ?? []);
-    console.log("Supabase deal rows:", liveDealRows);
-    console.log(
-      "Supabase active business rows:",
-      (businessRows ?? []).map(({ id, name, city, latitude, longitude }) => ({
-        id,
-        name,
-        city,
-        latitude,
-        longitude,
-      })),
-    );
-
     const businessIds = (businessRows ?? []).map((business) => business.id);
     let reviewRows = [];
     let favoriteRows = [];
 
     if (businessIds.length) {
-      console.log(
-        "Supabase reviews query:",
-        {
-          from: "reviews",
-          select: REVIEW_SELECT.replace(/\s+/g, " ").trim(),
-          filters: {
-            business_id: businessIds,
-          },
-          order: "created_at descending",
-        },
-      );
-
       const { data: reviews, error: reviewsError } = await supabase
         .from("reviews")
         .select(REVIEW_SELECT)
@@ -249,29 +170,13 @@ export default async function Home({ searchParams }) {
         .order("created_at", { ascending: false });
 
       if (reviewsError) {
-        queryErrors.push({
-          query: "reviews",
-          message: reviewsError.message,
-          code: reviewsError.code,
-          details: reviewsError.details,
-          hint: reviewsError.hint,
-        });
-        console.error("Supabase reviews query failed", reviewsError);
+        queryErrors.push(getPublicQueryError("reviews"));
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Supabase reviews query failed", reviewsError);
+        }
       }
 
       reviewRows = reviews ?? [];
-
-      console.log(
-        "Supabase favorites query:",
-        {
-          from: "favorites",
-          select: "business_id",
-          filters: {
-            user_id: user?.id ?? null,
-            business_id: businessIds,
-          },
-        },
-      );
 
       const { data: favorites, error: favoritesError } = user
         ? await supabase
@@ -282,14 +187,10 @@ export default async function Home({ searchParams }) {
         : { data: [], error: null };
 
       if (favoritesError) {
-        queryErrors.push({
-          query: "favorites",
-          message: favoritesError.message,
-          code: favoritesError.code,
-          details: favoritesError.details,
-          hint: favoritesError.hint,
-        });
-        console.error("Supabase favorites query failed", favoritesError);
+        queryErrors.push(getPublicQueryError("favorites"));
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Supabase favorites query failed", favoritesError);
+        }
       }
 
       favoriteRows = favorites ?? [];
@@ -349,6 +250,7 @@ export default async function Home({ searchParams }) {
         initialTab={initialTab}
         initialSearchOpen={initialSearchOpen}
         initialAuthOpen={initialAuthOpen}
+        initialAuthIntent={initialAuthIntent}
       />
     );
   }
@@ -366,6 +268,7 @@ export default async function Home({ searchParams }) {
           queryErrors={queryErrors}
           initialTab={initialTab}
           initialSearchOpen={initialSearchOpen}
+          initialAuthIntent={initialAuthIntent}
         />
       ) : (
         <main className="spotnera-auth-shell px-5 py-6 sm:px-8">

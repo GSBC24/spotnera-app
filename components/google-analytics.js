@@ -6,7 +6,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { trackPageView } from "@/lib/analytics";
 import { getStoredConsent } from "@/lib/consent";
 
-const GA_MEASUREMENT_ID = "G-ZM6VRS3E8M";
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() ?? "";
 
 function clearGoogleAnalyticsCookies() {
   if (typeof document === "undefined") {
@@ -101,7 +101,7 @@ export function GoogleAnalytics() {
           });
         `}
       </Script>
-      {hasConsent ? (
+      {measurementId && hasConsent ? (
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}

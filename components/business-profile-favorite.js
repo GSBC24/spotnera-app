@@ -52,7 +52,9 @@ export function BusinessProfileFavorite({
           .eq("user_id", user.id);
 
     if (error) {
-      console.error("Favorite update failed", error);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Favorite update failed", error);
+      }
       setIsFavorite(!nextFavoriteState);
       setMessage("Unable to update saved businesses.");
     } else {
@@ -75,7 +77,7 @@ export function BusinessProfileFavorite({
   if (!isAuthenticated) {
     return (
       <Link
-        href="/"
+        href={`/?auth=1&next=${encodeURIComponent(`/business/${businessId}`)}`}
         className="spotnera-secondary-action inline-flex min-h-12 items-center justify-center px-5 text-sm"
       >
         Sign in to save

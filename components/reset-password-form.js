@@ -30,7 +30,9 @@ export function ResetPasswordForm() {
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
-      console.error("Password update failed", updateError);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Password update failed", updateError);
+      }
       setError("Unable to update your password. Open the latest reset link and try again.");
       setIsSubmitting(false);
       return;

@@ -182,6 +182,10 @@ function getNullableTimestamp(formData, key) {
     return null;
   }
 
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
+    return { error: "Enter a valid date and time." };
+  }
+
   const date = new Date(value);
 
   if (!Number.isFinite(date.getTime())) {
@@ -678,7 +682,7 @@ async function getSignedInUser() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/");
+    redirect("/?auth=1&next=/owner");
   }
 
   return { supabase, user };
@@ -686,6 +690,12 @@ async function getSignedInUser() {
 
 function redirectWithError(message) {
   redirect(`/owner?error=${encodeURIComponent(message)}`);
+}
+
+function logServerActionError(label, error) {
+  if (process.env.NODE_ENV !== "production") {
+    console.error(label, error?.message ?? error);
+  }
 }
 
 async function createBusiness(formData) {
@@ -706,13 +716,14 @@ async function createBusiness(formData) {
     .single();
 
   if (error) {
-    redirectWithError(error.message);
+    logServerActionError("Business creation failed", error);
+    redirectWithError("Unable to create business. Please try again.");
   }
 
   const uploaded = await uploadBusinessImages(supabase, user.id, business.id, formData);
 
   if (uploaded.error) {
-    redirectWithError(uploaded.error);
+    redirectWithError("Unable to upload business images. Please try again.");
   }
 
   if (Object.keys(uploaded.urls).length) {
@@ -723,7 +734,8 @@ async function createBusiness(formData) {
       .eq("owner_id", user.id);
 
     if (mediaError) {
-      redirectWithError(mediaError.message);
+      logServerActionError("Business media save failed", mediaError);
+      redirectWithError("Unable to save business images. Please try again.");
     }
   }
 
@@ -746,7 +758,7 @@ async function updateBusiness(formData) {
   const uploaded = await uploadBusinessImages(supabase, user.id, businessId, formData);
 
   if (uploaded.error) {
-    redirectWithError(uploaded.error);
+    redirectWithError("Unable to upload business images. Please try again.");
   }
 
   const { error } = await supabase
@@ -759,7 +771,8 @@ async function updateBusiness(formData) {
     .eq("owner_id", user.id);
 
   if (error) {
-    redirectWithError(error.message);
+    logServerActionError("Business update failed", error);
+    redirectWithError("Unable to update business. Please try again.");
   }
 
   revalidatePath(`/business/${businessId}`);
@@ -791,7 +804,8 @@ async function createDeal(formData) {
   const { error } = await supabase.from("deals").insert(getDealSavePayload(payload));
 
   if (error) {
-    redirectWithError(error.message);
+    logServerActionError("Deal creation failed", error);
+    redirectWithError("Unable to create deal. Please try again.");
   }
 
   revalidatePath(`/business/${payload.business_id}`);
@@ -828,7 +842,8 @@ async function updateDeal(formData) {
     .eq("owner_id", user.id);
 
   if (error) {
-    redirectWithError(error.message);
+    logServerActionError("Deal update failed", error);
+    redirectWithError("Unable to update deal. Please try again.");
   }
 
   revalidatePath(`/business/${payload.business_id}`);
@@ -854,7 +869,8 @@ async function deleteDeal(formData) {
     .eq("owner_id", user.id);
 
   if (error) {
-    redirectWithError(error.message);
+    logServerActionError("Deal deletion failed", error);
+    redirectWithError("Unable to delete deal. Please try again.");
   }
 
   if (businessId) {
@@ -1347,7 +1363,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
           ) : null}
           {businessesError ? (
             <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-              {businessesError.message}
+              Unable to load your businesses. Please try again.
             </p>
           ) : null}
         </header>

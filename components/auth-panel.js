@@ -31,6 +31,12 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function getSafeRedirectPath(value) {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : "/";
+}
+
 export function AuthPanel({ successRedirect = "/" } = {}) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -41,6 +47,7 @@ export function AuthPanel({ successRedirect = "/" } = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState(null);
   const supabase = createClient();
+  const safeSuccessRedirect = getSafeRedirectPath(successRedirect);
 
   async function signInWithProvider(provider) {
     setError(null);
@@ -50,12 +57,14 @@ export function AuthPanel({ successRedirect = "/" } = {}) {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(successRedirect)}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeSuccessRedirect)}`,
       },
     });
 
     if (signInError) {
-      console.error(`${provider} sign-in failed`, signInError);
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`${provider} sign-in failed`, signInError);
+      }
       setError(getFriendlyAuthError(signInError));
       setLoadingProvider(null);
     } else {
@@ -102,7 +111,9 @@ export function AuthPanel({ successRedirect = "/" } = {}) {
           });
 
     if (authError) {
-      console.error("Email authentication failed", authError);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Email authentication failed", authError);
+      }
       setError(getFriendlyAuthError(authError));
       setIsSubmitting(false);
       return;
@@ -118,7 +129,7 @@ export function AuthPanel({ successRedirect = "/" } = {}) {
     trackEvent(mode === "signup" ? "sign_up" : "login", {
       auth_method: "email",
     });
-        window.location.assign(successRedirect);
+        window.location.assign(safeSuccessRedirect);
   }
 
   async function handlePasswordReset() {
@@ -135,12 +146,14 @@ export function AuthPanel({ successRedirect = "/" } = {}) {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       trimmedEmail,
       {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
       },
     );
 
     if (resetError) {
-      console.error("Password reset failed", resetError);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Password reset failed", resetError);
+      }
       setError("Unable to send a password reset email.");
     } else {
       setMessage("Check your email for a Spotnera password reset link.");

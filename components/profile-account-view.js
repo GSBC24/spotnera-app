@@ -86,7 +86,9 @@ export function ProfileAccountView({ profile, userId, ownedBusinessCount = 0 }) 
       .eq("id", userId);
 
     if (updateError) {
-      console.error("Profile update failed", updateError);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Profile update failed", updateError);
+      }
       setError("Unable to save profile changes.");
     } else {
       setLocalProfile(nextProfile);
