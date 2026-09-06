@@ -11,7 +11,7 @@ import { DealTimeLabel } from "@/components/deal-time-label";
 import { LogoutButton } from "@/components/logout-button";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
-import { BUSINESS_CATEGORY_LABELS, isKnownBusinessCategory } from "@/lib/business-categories";
+import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
 import { PROMOTION_TYPES, PROMOTION_TYPE_VALUES } from "@/lib/promotions";
 import {
   DEAL_STATUS,
@@ -1310,21 +1310,16 @@ export default async function OwnerDashboardPage({ searchParams }) {
             <div className="flex min-w-0 items-center gap-3">
               <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" />
               <div className="min-w-0">
-                <p className="spotnera-kicker text-zinc-500">
-                  Owner dashboard
-                </p>
+                <p className="spotnera-kicker text-white/55">Spotnera Business</p>
                 <h1 className="mt-1 text-2xl font-semibold leading-tight sm:text-3xl">
-                  {profile?.username ? `${profile.username}'s businesses` : "Your businesses"}
+                  Manage your businesses
                 </h1>
+                <p className="mt-1 text-sm text-white/54">
+                  {profile?.username ? `${profile.username}'s portfolio` : "Your business portfolio"}
+                </p>
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap justify-end gap-2">
-              <Link
-                href="/"
-                className="spotnera-secondary-action inline-flex min-h-10 items-center px-4 text-xs"
-              >
-                Explore
-              </Link>
               <LogoutButton
                 className="spotnera-secondary-action inline-flex min-h-10 items-center px-4 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                 errorClassName="basis-full text-right text-xs font-semibold text-red-600"
@@ -1423,8 +1418,14 @@ export default async function OwnerDashboardPage({ searchParams }) {
                   (metric) => metric.key !== "average_rating" && Number(metric.value || 0) > 0,
                 );
 
+                const categoryConfig = getBusinessCategoryConfig(business.category);
+
                 return (
-                  <article key={business.id} className="rounded-[24px] border border-zinc-200 bg-white/72 p-3">
+                  <article
+                    key={business.id}
+                    className="rounded-[24px] border border-white/10 bg-white/8 p-3"
+                    style={{ borderTopColor: categoryConfig.color, borderTopWidth: "3px" }}
+                  >
                     <div
                       className="mb-3 h-28 rounded-2xl bg-cover bg-center"
                       style={{
@@ -1445,8 +1446,12 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         />
                         <div className="min-w-0">
                           <h3 className="truncate text-base font-bold">{business.name}</h3>
-                          <p className="mt-1 text-sm text-zinc-500">
-                            {[business.category, business.city, business.country]
+                          <p className="mt-1 flex items-center gap-2 text-sm text-white/54">
+                            <span
+                              className="inline-block h-2 w-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: categoryConfig.color }}
+                            />
+                            {[categoryConfig.label, business.city, business.country]
                               .filter(Boolean)
                               .join(" - ")}
                           </p>
@@ -1460,20 +1465,20 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         {business.is_active ? "Active" : "Hidden"}
                       </span>
                     </div>
-                    <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-                      <div className="rounded-2xl bg-white p-2">
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+                      <div className="rounded-2xl border border-white/8 bg-white/8 p-2">
                         <p className="font-black">{businessDeals.length}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Deals</p>
                       </div>
-                      <div className="rounded-2xl bg-white p-2">
+                      <div className="rounded-2xl border border-white/8 bg-white/8 p-2">
                         <p className="font-black">{formatRating(getAverageRating(businessReviews))}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Rating</p>
                       </div>
-                      <div className="rounded-2xl bg-white p-2">
+                      <div className="rounded-2xl border border-white/8 bg-white/8 p-2">
                         <p className="font-black">{businessReviews.length}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Reviews</p>
                       </div>
-                      <div className="rounded-2xl bg-white p-2">
+                      <div className="rounded-2xl border border-white/8 bg-white/8 p-2">
                         <p className="font-black">{favoriteCount}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Saved</p>
                       </div>

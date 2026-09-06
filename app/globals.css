@@ -161,10 +161,63 @@ button {
 .spotnera-owner-shell {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 8% 0%, rgba(255, 122, 89, 0.16), transparent 32%),
-    radial-gradient(circle at 92% 8%, rgba(51, 214, 166, 0.16), transparent 30%),
-    linear-gradient(180deg, #f7f4ef 0%, #eef2f3 100%);
-  color: #101217;
+    radial-gradient(circle at 18% 8%, rgba(255, 122, 89, 0.28), transparent 28%),
+    radial-gradient(circle at 82% 0%, rgba(51, 214, 166, 0.2), transparent 30%),
+    linear-gradient(180deg, #191d24 0%, #101217 46%, #0c0d11 100%);
+  color: #ffffff;
+}
+
+.spotnera-owner-shell .spotnera-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+}
+
+.spotnera-owner-shell input,
+.spotnera-owner-shell select,
+.spotnera-owner-shell textarea {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.spotnera-owner-shell input::placeholder,
+.spotnera-owner-shell textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.spotnera-owner-shell select option {
+  background: #191d24;
+  color: #ffffff;
+}
+
+.spotnera-owner-shell [class~="bg-white"],
+.spotnera-owner-shell [class~="bg-white/70"],
+.spotnera-owner-shell [class~="bg-white/72"],
+.spotnera-owner-shell [class~="bg-white/80"],
+.spotnera-owner-shell [class~="bg-white/86"],
+.spotnera-owner-shell [class~="bg-zinc-50"],
+.spotnera-owner-shell [class~="bg-zinc-50/80"],
+.spotnera-owner-shell [class~="bg-zinc-100"] {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.spotnera-owner-shell [class~="text-zinc-950"],
+.spotnera-owner-shell [class~="text-zinc-900"],
+.spotnera-owner-shell [class~="text-zinc-800"] {
+  color: #ffffff;
+}
+
+.spotnera-owner-shell [class~="text-zinc-600"],
+.spotnera-owner-shell [class~="text-zinc-500"],
+.spotnera-owner-shell [class~="text-zinc-400"] {
+  color: rgba(255, 255, 255, 0.54);
+}
+
+.spotnera-owner-shell [class~="border-zinc-200"],
+.spotnera-owner-shell [class~="border-zinc-300"] {
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .spotnera-popup .mapboxgl-popup-content {
