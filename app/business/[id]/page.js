@@ -262,7 +262,9 @@ async function getPublicBusiness(id) {
     .maybeSingle();
 
   if (businessError) {
-    console.error("Public business query failed", businessError);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Public business query failed", businessError.message);
+    }
     return { business: null, error: "load_failed" };
   }
 
@@ -289,11 +291,15 @@ async function getPublicBusiness(id) {
     ]);
 
   if (dealsError) {
-    console.error("Public business deals query failed", dealsError);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Public business deals query failed", dealsError.message);
+    }
   }
 
   if (reviewsError) {
-    console.error("Public business reviews query failed", reviewsError);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Public business reviews query failed", reviewsError.message);
+    }
   }
 
   let isFavorite = false;

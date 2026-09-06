@@ -158,7 +158,9 @@ export default async function Home({ searchParams }) {
         details: businessesError.details,
         hint: businessesError.hint,
       });
-      console.error("Supabase businesses query failed", businessesError);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Supabase businesses query failed", businessesError.message);
+      }
     }
 
   console.log(
@@ -196,7 +198,9 @@ export default async function Home({ searchParams }) {
         details: dealsError.details,
         hint: dealsError.hint,
       });
-      console.error("Supabase deals query failed", dealsError);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Supabase deals query failed", dealsError.message);
+      }
     }
 
     supabaseBusinessCount = businessRows?.length ?? 0;
