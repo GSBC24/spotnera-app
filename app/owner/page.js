@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
 import { CopyProfileLinkButton } from "@/components/copy-profile-link-button";
+import { DeleteBusinessButton } from "@/components/delete-business-button";
 import {
   DealDateTimeInput,
 } from "@/components/deal-date-time-input";
@@ -1331,6 +1332,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
               />
             </div>
           </div>
+          {resolvedSearchParams?.businessDeleted === "1" ? (
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Business deleted.</p>
+          ) : null}
           {resolvedSearchParams?.error ? (
             <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
               {resolvedSearchParams.error}
@@ -1524,6 +1528,11 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         businessCategory={business.category}
                         city={business.city}
                         country={business.country}
+                      />
+                      <DeleteBusinessButton
+                        businessId={business.id}
+                        businessName={business.name}
+                        businessCategory={business.category}
                       />
                     </div>
                   </article>
