@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const items = [
   { id: "map", label: "Map", href: "/", icon: "M12 3l7 4v12l-7-4-7 4V7l7-4zm0 2.2L7 8v8.8l5-2.8 5 2.8V8l-5-2.8z" },
   { id: "search", label: "Search", href: "/?search=1", icon: "M10.8 4a6.8 6.8 0 1 0 4.25 12.1l4.42 4.42 1.42-1.42-4.42-4.42A6.8 6.8 0 0 0 10.8 4zm0 2a4.8 4.8 0 1 1 0 9.6 4.8 4.8 0 0 1 0-9.6z" },
-  { id: "pulse", label: "Pulse", href: "/?tab=pulse", icon: "M4 13h3l2-7 4 12 2-5h5v2h-3.6L13 22 9.2 10.5 8.5 15H4v-2z" },
+  { id: "pulse", label: "Deals", href: "/?tab=pulse", icon: "M4 13h3l2-7 4 12 2-5h5v2h-3.6L13 22 9.2 10.5 8.5 15H4v-2z" },
   { id: "saved", label: "Saved", href: "/?tab=saved", icon: "M6 3h12v18l-6-3.8L6 21V3zm2 2v12.4l4-2.5 4 2.5V5H8z" },
   { id: "me", label: "Me", href: "/me", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.1-7 5v1h14v-1c0-2.9-3-5-7-5z" },
   { id: "business", label: "Business", href: "/owner", icon: "M4 7h16v13H4V7zm3-4h10l2 4H5l2-4zm2 8v6m6-6v6" },

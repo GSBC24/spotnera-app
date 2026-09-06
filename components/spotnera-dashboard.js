@@ -1308,7 +1308,7 @@ export function SpotneraDashboard({
     activeTab === "saved"
         ? "Saved businesses"
         : activeTab === "pulse"
-          ? "Local pulse"
+          ? "Live deals"
           : cityHeading;
 
   return (
@@ -1777,7 +1777,7 @@ export function SpotneraDashboard({
                 Live activity
               </p>
               <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                Moving around you
+                Live deals
               </h2>
             </div>
             <span className="rounded-full bg-[#33d6a6]/16 px-3 py-1 text-xs font-semibold text-[#72f0cc]">
