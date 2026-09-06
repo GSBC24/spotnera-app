@@ -23,10 +23,10 @@ import {
 import { createClient } from "@/utils/supabase/browser";
 
 const navItems = [
-  { label: "Map", icon: "M12 3l7 4v12l-7-4-7 4V7l7-4zm0 2.2L7 8v8.8l5-2.8 5 2.8V8l-5-2.8z" },
-  { label: "Pulse", icon: "M4 13h3l2-7 4 12 2-5h5v2h-3.6L13 22 9.2 10.5 8.5 15H4v-2z" },
-  { label: "Saved", icon: "M6 3h12v18l-6-3.8L6 21V3zm2 2v12.4l4-2.5 4 2.5V5H8z" },
-  { label: "Me", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.1-7 5v1h14v-1c0-2.9-3-5-7-5z" },
+  { id: "map", label: "Map", icon: "M12 3l7 4v12l-7-4-7 4V7l7-4zm0 2.2L7 8v8.8l5-2.8 5 2.8V8l-5-2.8z" },
+  { id: "pulse", label: "Pulse", icon: "M4 13h3l2-7 4 12 2-5h5v2h-3.6L13 22 9.2 10.5 8.5 15H4v-2z" },
+  { id: "saved", label: "Saved", icon: "M6 3h12v18l-6-3.8L6 21V3zm2 2v12.4l4-2.5 4 2.5V5H8z" },
+  { id: "me", label: "Me", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.1-7 5v1h14v-1c0-2.9-3-5-7-5z" },
 ];
 
 const HEART_PATH =
@@ -908,7 +908,13 @@ export function SpotneraDashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("Map");
+  const [activeTab, setActiveTab] = useState("map");
+  const handleSelectTab = useCallback((tabId) => {
+    setActiveTab(tabId);
+    if (tabId !== "map") {
+      setIsDetailOpen(false);
+    }
+  }, []);
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
@@ -1358,11 +1364,11 @@ export function SpotneraDashboard({
   const favoriteCount = filteredBusinesses.filter((business) => business.isFavorite).length;
   const savedBusinesses = mappedBusinesses.filter((business) => business.isFavorite);
   const activeHeading =
-    activeTab === "Me"
+    activeTab === "me"
       ? "Me"
-      : activeTab === "Saved"
+      : activeTab === "saved"
         ? "Saved businesses"
-        : activeTab === "Pulse"
+        : activeTab === "pulse"
           ? "Local pulse"
           : cityHeading;
 
@@ -1374,7 +1380,7 @@ export function SpotneraDashboard({
             <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-cover" />
             <div className="min-w-0">
               <p className="spotnera-kicker text-white/55">
-                {activeTab === "Me" ? "Account" : "Spotnera Live"}
+                {activeTab === "me" ? "Account" : "Spotnera Live"}
               </p>
               <h1 className="mt-1 truncate text-[1.35rem] font-semibold leading-tight sm:text-2xl">
                 {activeHeading}
@@ -1384,10 +1390,10 @@ export function SpotneraDashboard({
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={() => setActiveTab("Me")}
+              onClick={() => handleSelectTab("me")}
               aria-label="Open profile"
               className={`grid h-12 w-12 place-items-center rounded-2xl text-sm font-bold shadow-[0_14px_35px_rgba(255,255,255,0.2)] transition ${
-                activeTab === "Me"
+                activeTab === "me"
                   ? "bg-[#72f0cc] text-zinc-950"
                   : "bg-white text-zinc-950 hover:bg-white/90"
               }`}
@@ -1396,7 +1402,7 @@ export function SpotneraDashboard({
             </button>
           </div>
         </header>
-        {activeTab === "Map" ? (
+        {activeTab === "map" ? (
           <Link
             href="/owner"
             className="spotnera-surface z-20 mt-3 rounded-2xl px-4 py-3 text-center text-sm font-bold text-white/82 transition hover:bg-white/16 sm:ml-auto sm:w-fit"
@@ -1405,7 +1411,7 @@ export function SpotneraDashboard({
           </Link>
         ) : null}
 
-        {activeTab === "Map" ? (
+        {activeTab === "map" ? (
         <>
         <section className="spotnera-surface z-20 mt-4 rounded-[28px] p-3">
           <div className="flex items-center gap-2">
@@ -1892,7 +1898,7 @@ export function SpotneraDashboard({
         </>
         ) : null}
 
-        {activeTab === "Pulse" ? (
+        {activeTab === "pulse" ? (
         <section className="mx-auto mt-4 w-full max-w-3xl">
           <div className="mb-3 flex items-end justify-between px-1">
             <div>
@@ -1945,7 +1951,7 @@ export function SpotneraDashboard({
         </section>
         ) : null}
 
-        {activeTab === "Saved" ? (
+        {activeTab === "saved" ? (
         <section className="mx-auto mt-4 w-full max-w-3xl">
           <div className="mb-3 flex items-end justify-between px-1">
             <div>
@@ -1969,7 +1975,7 @@ export function SpotneraDashboard({
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: index * 0.04, duration: 0.32 }}
                   onClick={() => {
-                    setActiveTab("Map");
+                    handleSelectTab("map");
                     handleSelectBusiness(business);
                   }}
                   className="flex cursor-pointer items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition hover:bg-white/14"
@@ -2021,7 +2027,7 @@ export function SpotneraDashboard({
         </section>
         ) : null}
 
-        {activeTab === "Me" ? (
+        {activeTab === "me" ? (
         <section className="mx-auto mt-4 w-full max-w-3xl rounded-[28px] border border-white/12 bg-white/10 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur-2xl sm:p-5">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
@@ -2193,15 +2199,15 @@ export function SpotneraDashboard({
           />
         </section>
         ) : null}
-        <nav className="fixed bottom-4 left-1/2 z-30 grid w-[min(92vw,430px)] -translate-x-1/2 grid-cols-4 rounded-[28px] border border-white/14 bg-zinc-950/62 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
+        <nav className="fixed bottom-4 left-1/2 z-[70] grid w-[min(92vw,430px)] -translate-x-1/2 grid-cols-4 rounded-[28px] border border-white/14 bg-zinc-950/62 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
           {navItems.map((item) => (
             <button
-              key={item.label}
+              key={item.id}
               type="button"
               aria-label={item.label}
-              onClick={() => setActiveTab(item.label)}
+              onClick={() => handleSelectTab(item.id)}
               className={`flex h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
-                activeTab === item.label
+                activeTab === item.id
                   ? "bg-white text-zinc-950 shadow-[0_10px_26px_rgba(255,255,255,0.18)]"
                   : "text-white/56 hover:bg-white/10 hover:text-white"
               }`}
