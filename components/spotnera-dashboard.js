@@ -376,6 +376,18 @@ function businessMatchesFilters(business, filters) {
   return matchesCategory && matchesSearch && matchesCountry && matchesCity;
 }
 
+function getInitialProfileBusinessFilter(profile, businesses, field) {
+  const profileValue = getDisplayValue(profile?.[field]);
+
+  if (!profileValue) {
+    return "";
+  }
+
+  return businesses.some((business) => getDisplayValue(business[field]) === profileValue)
+    ? profileValue
+    : "";
+}
+
 function normalizeBusinesses(businesses) {
   const invalidLocationBusinesses = businesses.filter(
     (business) =>
@@ -903,8 +915,12 @@ export function SpotneraDashboard({
   const [dashboardError, setDashboardError] = useState(null);
   const [profileMessage, setProfileMessage] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedCountry, setSelectedCountry] = useState(() => profile?.country ?? "");
-  const [selectedCity, setSelectedCity] = useState(() => profile?.city ?? "");
+  const [selectedCountry, setSelectedCountry] = useState(() =>
+    getInitialProfileBusinessFilter(profile, businesses, "country"),
+  );
+  const [selectedCity, setSelectedCity] = useState(() =>
+    getInitialProfileBusinessFilter(profile, businesses, "city"),
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -915,6 +931,7 @@ export function SpotneraDashboard({
       setIsDetailOpen(false);
     }
   }, []);
+
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
@@ -942,6 +959,7 @@ export function SpotneraDashboard({
     () => getUniqueDisplayValues([selectedCity, ...cityOptions]),
     [cityOptions, selectedCity],
   );
+
   const filteredBusinesses = useMemo(() => {
     const filters = {
       searchQuery,
@@ -954,11 +972,6 @@ export function SpotneraDashboard({
       businessMatchesFilters(business, filters),
     );
   }, [mappedBusinesses, searchQuery, selectedCategories, selectedCity, selectedCountry]);
-
-  useEffect(() => {
-    console.log(`Dashboard received ${localBusinesses.length} businesses`);
-    console.log(`Dashboard mapped ${mappedBusinesses.length} businesses`);
-  }, [localBusinesses.length, mappedBusinesses.length]);
 
   useEffect(() => {
     const normalizedSearch = searchQuery.trim();
@@ -1331,7 +1344,7 @@ export function SpotneraDashboard({
   );
   const activity = useMemo(
     () =>
-      filteredBusinesses
+      mappedBusinesses
         .flatMap((business) =>
           business.deals
             .filter((deal) => isLiveDeal(deal))
@@ -1344,7 +1357,7 @@ export function SpotneraDashboard({
             })),
         )
         .slice(0, 5),
-    [filteredBusinesses],
+    [mappedBusinesses],
   );
 
   const displayName =
@@ -1356,7 +1369,7 @@ export function SpotneraDashboard({
     .filter(Boolean)
     .join(", ");
   const cityHeading = locationHeading ? `${locationHeading} nearby` : "Nearby";
-  const activeDeals = filteredBusinesses.reduce(
+  const activeDeals = mappedBusinesses.reduce(
     (count, business) =>
       count + getLiveDeals(business.deals).length,
     0,
@@ -2199,7 +2212,7 @@ export function SpotneraDashboard({
           />
         </section>
         ) : null}
-        <nav className="fixed bottom-4 left-1/2 z-[70] grid w-[min(92vw,430px)] -translate-x-1/2 grid-cols-4 rounded-[28px] border border-white/14 bg-zinc-950/62 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
+        <nav className="fixed bottom-4 left-1/2 z-[85] grid w-[min(92vw,430px)] -translate-x-1/2 grid-cols-4 rounded-[28px] border border-white/14 bg-zinc-950/62 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
           {navItems.map((item) => (
             <button
               key={item.id}
