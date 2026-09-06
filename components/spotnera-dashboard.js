@@ -827,6 +827,7 @@ export function SpotneraDashboard({
   supabaseDealCount = 0,
   queryErrors = [],
   initialTab = "map",
+  initialSearchOpen = false,
 }) {
   const supabase = useMemo(() => createClient(), []);
   const localProfile = profile ?? {};
@@ -840,6 +841,7 @@ export function SpotneraDashboard({
   const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(initialSearchOpen);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(
     ["map", "pulse", "saved"].includes(initialTab) ? initialTab : "map",
@@ -1212,6 +1214,25 @@ export function SpotneraDashboard({
     [mappedBusinesses],
   );
 
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery("");
+    setSelectedCountry("");
+    setSelectedCity("");
+    setSelectedCategories([]);
+    setAreFiltersOpen(false);
+    clearSelectedBusinessIfExcluded({
+      searchQuery: "",
+      selectedCategories: [],
+      selectedCountry: "",
+      selectedCity: "",
+    });
+  }, [clearSelectedBusinessIfExcluded]);
+
+  const handleOpenSearch = useCallback(() => {
+    setActiveTab("map");
+    setIsSearchOpen(true);
+  }, []);
+
   const displayName =
     [localProfile?.first_name, localProfile?.last_name].filter(Boolean).join(" ") ||
     localProfile?.username ||
@@ -1256,7 +1277,15 @@ export function SpotneraDashboard({
         </header>
         {activeTab === "map" ? (
         <>
-        <section className="spotnera-surface z-20 mt-4 rounded-[28px] p-3">
+        {isSearchOpen ? (
+        <section role="dialog" aria-modal="true" aria-labelledby="search-panel-title" className="fixed inset-x-3 bottom-24 z-[80] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-2xl overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/96 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(92vw,560px)] sm:-translate-x-1/2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">Discovery</p>
+              <h2 id="search-panel-title" className="mt-1 text-xl font-semibold">Search</h2>
+            </div>
+            <button type="button" onClick={() => setIsSearchOpen(false)} aria-label="Close search" className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80 transition hover:bg-white/16">&times;</button>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="search"
@@ -1315,7 +1344,12 @@ export function SpotneraDashboard({
               />
             </div>
           ) : null}
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={handleClearFilters} className="min-h-10 rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/75 transition hover:bg-white/14">Clear filters</button>
+            <button type="button" onClick={() => setIsSearchOpen(false)} className="min-h-10 rounded-2xl bg-white px-4 text-xs font-bold text-zinc-950 transition hover:bg-white/90">Show results</button>
+          </div>
         </section>
+        ) : null}
 
         <div className="relative isolate mt-4 h-[58vh] min-h-[420px] overflow-hidden rounded-[32px] border border-white/12 bg-zinc-950 shadow-[0_28px_90px_rgba(0,0,0,0.38)] sm:min-h-[440px] lg:h-[64vh]">
           <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
@@ -1872,6 +1906,9 @@ export function SpotneraDashboard({
 
         <SpotneraBottomNav
           activeTab={activeTab}
+          searchOpen={isSearchOpen}
+          searchActiveCount={activeFilterCount + (searchQuery.trim() ? 1 : 0)}
+          onSearch={handleOpenSearch}
           onPulse={() => handleSelectTab("pulse")}
           onSaved={() => handleSelectTab("saved")}
         />
