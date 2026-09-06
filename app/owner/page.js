@@ -77,6 +77,8 @@ const ANALYTICS_RANGES = [
   { key: "all", label: "All time" },
 ];
 
+const OWNER_SECTIONS = ["overview", "businesses", "deals", "analytics", "reviews"];
+
 const BUSINESS_ANALYTICS_METRICS = [
   {
     key: "profile_view",
@@ -1214,6 +1216,13 @@ export default async function OwnerDashboardPage({ searchParams }) {
 
   const resolvedSearchParams = await searchParams;
   const analyticsRange = getAnalyticsRange(resolvedSearchParams?.analyticsRange);
+  const ownerSection = OWNER_SECTIONS.includes(resolvedSearchParams?.section)
+    ? resolvedSearchParams.section
+    : "overview";
+  const editingBusinessId = resolvedSearchParams?.editBusiness ?? "";
+  const editingDealId = resolvedSearchParams?.editDeal ?? "";
+  const showCreateBusiness = resolvedSearchParams?.createBusiness === "1";
+  const showCreateDeal = resolvedSearchParams?.createDeal === "1";
   const { supabase, user } = await getSignedInUser();
   const { data: profile } = await supabase
     .from("profiles")
@@ -1297,6 +1306,11 @@ export default async function OwnerDashboardPage({ searchParams }) {
   const sortedDeals = sortDealsByComputedStatus(deals, now);
   const totalFavorites = favorites.length;
   const activeDealCount = getLiveDeals(deals, now).length;
+  const selectedAnalyticsBusinessId =
+    resolvedSearchParams?.analyticsBusinessId &&
+    businesses.some((business) => business.id === resolvedSearchParams.analyticsBusinessId)
+      ? resolvedSearchParams.analyticsBusinessId
+      : businesses[0]?.id;
 
   return (
     <main className="spotnera-owner-shell">
@@ -1342,26 +1356,70 @@ export default async function OwnerDashboardPage({ searchParams }) {
           ) : null}
         </header>
 
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile label="Businesses" value={businesses.length} />
-          <StatTile label="Active deals" value={activeDealCount} />
-          <StatTile label="Reviews" value={reviews.length} />
-          <StatTile label="Favorites" value={totalFavorites} />
-        </section>
+        <nav aria-label="Business sections" className="spotnera-surface flex gap-1 overflow-x-auto rounded-[22px] p-1.5">
+          {[
+            ["overview", "Overview"],
+            ["businesses", "Businesses"],
+            ["deals", "Deals"],
+            ["analytics", "Analytics"],
+            ["reviews", "Reviews"],
+          ].map(([key, label]) => (
+            <Link
+              key={key}
+              href={`/owner?section=${key}`}
+              className={`min-h-10 shrink-0 rounded-2xl px-3 text-xs font-black transition sm:px-4 ${
+                ownerSection === key
+                  ? "bg-white text-zinc-950"
+                  : "text-white/58 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
 
+        {ownerSection === "overview" ? (
+          <>
+            <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile label="Businesses" value={businesses.length} />
+              <StatTile label="Active deals" value={activeDealCount} />
+              <StatTile label="Reviews" value={reviews.length} />
+              <StatTile label="Favorites" value={totalFavorites} />
+            </section>
+            <section className="spotnera-card rounded-[30px] p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/48">Portfolio</p>
+              <h2 className="mt-1 text-xl font-semibold">Your businesses</h2>
+              <div className="mt-4 grid gap-2">
+                {businesses.length ? businesses.map((business) => (
+                  <div key={business.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/8 px-3 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold">{business.name}</p>
+                      <p className="mt-1 text-xs text-white/54">{getLiveDeals(dealsByBusinessId.get(business.id) ?? [], now).length} active deals</p>
+                    </div>
+                    <span className="shrink-0 text-sm font-bold text-white/72">{formatRating(getAverageRating(reviewsByBusinessId.get(business.id) ?? []))} rating</span>
+                  </div>
+                )) : (
+                  <p className="rounded-2xl border border-dashed border-white/14 p-4 text-sm text-white/58">No businesses yet. Open Businesses to create your first profile.</p>
+                )}
+              </div>
+            </section>
+          </>
+        ) : null}
+
+        {(ownerSection === "businesses" || ownerSection === "analytics") ? (
         <section className="spotnera-card rounded-[30px] p-4">
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-                Portfolio
+                {ownerSection === "analytics" ? "Performance" : "Portfolio"}
               </p>
-              <h2 className="mt-1 text-xl font-semibold">Business statistics</h2>
+          <h2 className="mt-1 text-xl font-semibold">{ownerSection === "analytics" ? "Business analytics" : "Your businesses"}</h2>
             </div>
-            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+            {ownerSection === "analytics" ? <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
               {ANALYTICS_RANGES.map((range) => (
                 <Link
                   key={range.key}
-                  href={`/owner?analyticsRange=${range.key}`}
+                  href={`/owner?section=analytics&analyticsRange=${range.key}&analyticsBusinessId=${selectedAnalyticsBusinessId ?? ""}`}
                   className={`rounded-full px-3 py-1 text-xs font-bold transition ${
                     range.key === analyticsRange.key
                       ? "bg-zinc-950 text-white"
@@ -1371,17 +1429,40 @@ export default async function OwnerDashboardPage({ searchParams }) {
                   {range.label}
                 </Link>
               ))}
-            </div>
+            </div> : null}
           </div>
+          {ownerSection === "businesses" ? (
+            <div className="mb-4 flex justify-end">
+              <Link href="/owner?section=businesses&createBusiness=1" className="spotnera-primary-action inline-flex min-h-11 items-center justify-center px-4 text-sm">
+                + Create business
+              </Link>
+            </div>
+          ) : null}
           {analyticsError ? (
             <p className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
               Business analytics will appear after the business events migration is applied.
             </p>
           ) : null}
 
+          {ownerSection === "analytics" ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-[0.16em] text-white/48">Business</span>
+              {businesses.map((business) => (
+                <Link
+                  key={business.id}
+                  href={`/owner?section=analytics&analyticsBusinessId=${business.id}&analyticsRange=${analyticsRange.key}`}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selectedAnalyticsBusinessId === business.id ? "bg-white text-zinc-950" : "bg-white/10 text-white/62 hover:bg-white/16"}`}
+                >
+                  {business.name}
+                </Link>
+              ))}
+            </div>
+          ) : null}
           <div className="grid gap-3">
             {businesses.length ? (
-              businesses.map((business) => {
+              businesses
+                .filter((business) => ownerSection !== "analytics" || business.id === selectedAnalyticsBusinessId)
+                .map((business) => {
                 const businessDeals = dealsByBusinessId.get(business.id) ?? [];
                 const businessReviews = reviewsByBusinessId.get(business.id) ?? [];
                 const favoriteCount = favoriteCountsByBusinessId.get(business.id) ?? 0;
@@ -1483,6 +1564,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Saved</p>
                       </div>
                     </div>
+                    {ownerSection === "analytics" ? (
                     <section className="mt-4 rounded-[22px] border border-zinc-200 bg-zinc-50/80 p-3">
                       <div className="flex flex-wrap items-end justify-between gap-2">
                         <div>
@@ -1521,6 +1603,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         </p>
                       ) : null}
                     </section>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link
                         href={`/business/${business.id}`}
@@ -1534,6 +1617,12 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         city={business.city}
                         country={business.country}
                       />
+                      <Link
+                        href={`/owner?section=businesses&editBusiness=${business.id}`}
+                        className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
+                      >
+                        Edit
+                      </Link>
                       <DeleteBusinessButton
                         businessId={business.id}
                         businessName={business.name}
@@ -1550,52 +1639,81 @@ export default async function OwnerDashboardPage({ searchParams }) {
             )}
           </div>
         </section>
+        ) : null}
 
-        <section className="grid gap-4 lg:grid-cols-2">
-          <details open className="spotnera-card rounded-[30px] p-4">
-            <summary className="cursor-pointer text-lg font-bold">Create business profile</summary>
-            <div className="mt-4">
-              <BusinessForm action={createBusiness} submitLabel="Create profile" />
+        {ownerSection === "businesses" ? (
+          <section className="grid gap-4">
+            {showCreateBusiness ? (
+              <section className="spotnera-card rounded-[30px] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-bold">Create business profile</h2>
+                  <Link href="/owner?section=businesses" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
+                </div>
+                <div className="mt-4"><BusinessForm action={createBusiness} submitLabel="Create profile" /></div>
+              </section>
+            ) : null}
+            {editingBusinessId ? businesses.filter((business) => business.id === editingBusinessId).map((business) => (
+              <section key={business.id} className="spotnera-card rounded-[30px] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-bold">Edit {business.name}</h2>
+                  <Link href="/owner?section=businesses" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
+                </div>
+                <div className="mt-4"><BusinessForm action={updateBusiness} business={business} submitLabel="Save business" /></div>
+              </section>
+            )) : null}
+          </section>
+        ) : null}
+
+        {ownerSection === "deals" ? (
+          <section className="grid gap-4">
+            <div className="flex justify-end">
+              <Link href="/owner?section=deals&createDeal=1" className="spotnera-primary-action inline-flex min-h-11 items-center justify-center px-4 text-sm">
+                + Create deal
+              </Link>
             </div>
-          </details>
+            {showCreateDeal ? (
+              <section className="spotnera-card rounded-[30px] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-bold">Create deal</h2>
+                  <Link href="/owner?section=deals" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
+                </div>
+                <div className="mt-4">
+                  {businesses.length ? <DealForm action={createDeal} businesses={businesses} submitLabel="Create deal" /> : <p className="text-sm text-white/58">Create a business before adding deals.</p>}
+                </div>
+              </section>
+            ) : null}
+            {sortedDeals.length ? sortedDeals.map((deal) => {
+              const status = getDealStatus(deal, now);
+              const business = businesses.find((item) => item.id === deal.business_id);
+              return (
+                <article key={deal.id} className="spotnera-card rounded-[24px] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/48">{business?.name ?? "Business"}</p>
+                      <h3 className="mt-1 text-lg font-bold">{deal.title}</h3>
+                      <p className="mt-1 text-sm text-white/54">{deal.promotion_type || "Promotion"}</p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${DEAL_STATUS_META[status].background} ${DEAL_STATUS_META[status].text}`}>
+                      {DEAL_STATUS_META[status].label}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xs text-white/54"><DealTimeLabel deal={deal} fallback="Promotion timing" /></p>
+                  {editingDealId === deal.id ? (
+                    <div className="mt-4 border-t border-white/10 pt-4">
+                      <DealForm action={updateDeal} deal={deal} businesses={businesses} submitLabel="Save deal" />
+                    </div>
+                  ) : (
+                    <Link href={`/owner?section=deals&editDeal=${deal.id}`} className="spotnera-secondary-action mt-4 inline-flex min-h-10 items-center justify-center px-4 text-xs">Edit</Link>
+                  )}
+                </article>
+              );
+            }) : (
+              <p className="rounded-3xl border border-dashed border-white/14 p-4 text-sm text-white/58">No promotions yet. Create a deal to start reaching customers.</p>
+            )}
+          </section>
+        ) : null}
 
-          {businesses.map((business) => (
-            <details key={business.id} className="spotnera-card rounded-[30px] p-4">
-              <summary className="cursor-pointer text-lg font-bold">Edit {business.name}</summary>
-              <div className="mt-4">
-                <BusinessForm action={updateBusiness} business={business} submitLabel="Save business" />
-              </div>
-            </details>
-          ))}
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-2">
-          <details open={Boolean(businesses.length)} className="spotnera-card rounded-[30px] p-4">
-            <summary className="cursor-pointer text-lg font-bold">Create deal</summary>
-            <div className="mt-4">
-              {businesses.length ? (
-                <DealForm action={createDeal} businesses={businesses} submitLabel="Create deal" />
-              ) : (
-                <p className="text-sm font-medium text-zinc-500">Create a business before adding deals.</p>
-              )}
-            </div>
-          </details>
-
-          {sortedDeals.map((deal) => (
-            <details key={deal.id} className="spotnera-card rounded-[30px] p-4">
-              <summary className="cursor-pointer text-lg font-bold">
-                Edit {deal.title}
-                <span className={`ml-2 rounded-full px-2 py-1 text-[10px] font-black ${DEAL_STATUS_META[getDealStatus(deal, now)].background} ${DEAL_STATUS_META[getDealStatus(deal, now)].text}`}>
-                  {DEAL_STATUS_META[getDealStatus(deal, now)].label}
-                </span>
-              </summary>
-              <div className="mt-4">
-                <DealForm action={updateDeal} deal={deal} businesses={businesses} submitLabel="Save deal" />
-              </div>
-            </details>
-          ))}
-        </section>
-
+        {ownerSection === "reviews" ? (
         <section className="spotnera-card rounded-[30px] p-4">
           <div className="mb-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
@@ -1629,6 +1747,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
             )}
           </div>
         </section>
+        ) : null}
         <SpotneraBottomNav />
       </section>
     </main>
