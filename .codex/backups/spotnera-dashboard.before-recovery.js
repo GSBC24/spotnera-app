@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -376,6 +376,18 @@ function businessMatchesFilters(business, filters) {
   return matchesCategory && matchesSearch && matchesCountry && matchesCity;
 }
 
+function getInitialProfileBusinessFilter(profile, businesses, field) {
+  const profileValue = getDisplayValue(profile?.[field]);
+
+  if (!profileValue) {
+    return "";
+  }
+
+  return businesses.some((business) => getDisplayValue(business[field]) === profileValue)
+    ? profileValue
+    : "";
+}
+
 function normalizeBusinesses(businesses) {
   const invalidLocationBusinesses = businesses.filter(
     (business) =>
@@ -613,16 +625,18 @@ function ContactActions({ business, compact = false }) {
           href={action.href}
           target={action.external ? "_blank" : undefined}
           rel={action.external ? "noopener noreferrer" : undefined}
-          onClick={() => {
-            trackEvent(`contact_${action.method}`, {
-              ...getBusinessEventParameters(business),
-              contact_method: action.method,
-            });
-            recordBusinessEvent({
-              businessId: business.id,
-              eventType: `${action.method}_click`,
-            });
-          }}
+          onClick={() =>
+            {
+              trackEvent(`contact_${action.method}`, {
+                ...getBusinessEventParameters(business),
+                contact_method: action.method,
+              });
+              recordBusinessEvent({
+                businessId: business.id,
+                eventType: `${action.method}_click`,
+              });
+            }
+          }
           className={`rounded-full border border-white/10 bg-white/10 font-bold text-white/76 transition hover:bg-white/16 hover:text-white ${
             compact ? "px-3 py-1.5 text-xs" : "px-3 py-2 text-sm"
           }`}
@@ -901,8 +915,12 @@ export function SpotneraDashboard({
   const [dashboardError, setDashboardError] = useState(null);
   const [profileMessage, setProfileMessage] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedCountry, setSelectedCountry] = useState("");
-  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(() =>
+    getInitialProfileBusinessFilter(profile, businesses, "country"),
+  );
+  const [selectedCity, setSelectedCity] = useState(() =>
+    getInitialProfileBusinessFilter(profile, businesses, "city"),
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -913,6 +931,7 @@ export function SpotneraDashboard({
       setIsDetailOpen(false);
     }
   }, []);
+
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
@@ -940,6 +959,7 @@ export function SpotneraDashboard({
     () => getUniqueDisplayValues([selectedCity, ...cityOptions]),
     [cityOptions, selectedCity],
   );
+
   const filteredBusinesses = useMemo(() => {
     const filters = {
       searchQuery,
@@ -1396,14 +1416,16 @@ export function SpotneraDashboard({
           </div>
         </header>
         {activeTab === "map" ? (
-        <>
-        <Link
-          href="/owner"
-          className="spotnera-surface z-20 mt-3 rounded-2xl px-4 py-3 text-center text-sm font-bold text-white/82 transition hover:bg-white/16 sm:ml-auto sm:w-fit"
-        >
-          Business owner dashboard
-        </Link>
+          <Link
+            href="/owner"
+            className="spotnera-surface z-20 mt-3 rounded-2xl px-4 py-3 text-center text-sm font-bold text-white/82 transition hover:bg-white/16 sm:ml-auto sm:w-fit"
+          >
+            Business owner dashboard
+          </Link>
+        ) : null}
 
+        {activeTab === "map" ? (
+        <>
         <section className="spotnera-surface z-20 mt-4 rounded-[28px] p-3">
           <div className="flex items-center gap-2">
             <input
@@ -2035,94 +2057,96 @@ export function SpotneraDashboard({
               {dashboardError}
             </p>
           ) : null}
-          <p className="mb-3 text-sm font-semibold text-white/62">
-            Manage your personal Spotnera account details.
-          </p>
-          <form onSubmit={handleSaveProfile} className="grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  First name
-                </span>
-                <input
-                  name="first_name"
-                  required
-                  maxLength={80}
-                  defaultValue={localProfile?.first_name ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Last name
-                </span>
-                <input
-                  name="last_name"
-                  required
-                  maxLength={80}
-                  defaultValue={localProfile?.last_name ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Country
-                </span>
-                <select
-                  name="country"
-                  required
-                  defaultValue={localProfile?.country ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                >
-                  <option value="" disabled>
-                    Choose country
-                  </option>
-                  {PROFILE_COUNTRIES.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
+          <section>
+            <p className="mb-3 text-sm font-semibold text-white/62">
+              Manage your personal Spotnera account details.
+            </p>
+            <form onSubmit={handleSaveProfile} className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    First name
+                  </span>
+                  <input
+                    name="first_name"
+                    required
+                    maxLength={80}
+                    defaultValue={localProfile?.first_name ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    Last name
+                  </span>
+                  <input
+                    name="last_name"
+                    required
+                    maxLength={80}
+                    defaultValue={localProfile?.last_name ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    Country
+                  </span>
+                  <select
+                    name="country"
+                    required
+                    defaultValue={localProfile?.country ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  >
+                    <option value="" disabled>
+                      Choose country
                     </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  City
-                </span>
-                <input
-                  name="city"
-                  required
-                  maxLength={120}
-                  defaultValue={localProfile?.city ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-            </div>
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                Phone optional
-              </span>
-              <input
-                type="tel"
-                name="phone"
-                maxLength={32}
-                defaultValue={localProfile?.phone ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Date of birth optional
-                </span>
-                <input
-                  type="date"
-                  name="date_of_birth"
-                  defaultValue={localProfile?.date_of_birth ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
+                    {PROFILE_COUNTRIES.map((country) => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    City
+                  </span>
+                  <input
+                    name="city"
+                    required
+                    maxLength={120}
+                    defaultValue={localProfile?.city ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    Phone optional
+                  </span>
+                  <input
+                    type="tel"
+                    name="phone"
+                    maxLength={32}
+                    defaultValue={localProfile?.phone ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                    Date of birth optional
+                  </span>
+                  <input
+                    type="date"
+                    name="date_of_birth"
+                    defaultValue={localProfile?.date_of_birth ?? ""}
+                    className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  />
+                </label>
+              </div>
               <label className="grid gap-1.5">
                 <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
                   Gender optional
@@ -2139,31 +2163,32 @@ export function SpotneraDashboard({
                   ))}
                 </select>
               </label>
-            </div>
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                Street address optional
-              </span>
-              <input
-                name="address"
-                maxLength={240}
-                defaultValue={localProfile?.address ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-              />
-            </label>
-            {profileMessage ? (
-              <p className="rounded-2xl border border-emerald-300/20 bg-emerald-500/14 px-3 py-2 text-sm font-semibold text-emerald-100">
-                {profileMessage}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={isSavingProfile}
-              className="h-11 rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSavingProfile ? "Saving..." : "Save changes"}
-            </button>
-          </form>
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
+                  Street address optional
+                </span>
+                <input
+                  name="address"
+                  maxLength={240}
+                  defaultValue={localProfile?.address ?? ""}
+                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
+                />
+              </label>
+              {profileMessage ? (
+                <p className="rounded-2xl border border-emerald-300/20 bg-emerald-500/14 px-3 py-2 text-sm font-semibold text-emerald-100">
+                  {profileMessage}
+                </p>
+              ) : null}
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="h-11 rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingProfile ? "Saving..." : "Save changes"}
+              </button>
+            </form>
+          </section>
+
           <section className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-4">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
               Privacy
@@ -2187,7 +2212,6 @@ export function SpotneraDashboard({
           />
         </section>
         ) : null}
-
         <nav className="fixed bottom-4 left-1/2 z-[85] grid w-[min(92vw,430px)] -translate-x-1/2 grid-cols-4 rounded-[28px] border border-white/14 bg-zinc-950/62 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
           {navItems.map((item) => (
             <button
