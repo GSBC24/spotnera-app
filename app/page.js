@@ -53,6 +53,9 @@ const REVIEW_SELECT = `
 export default async function Home({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const accountDeleted = resolvedSearchParams?.accountDeleted === "1";
+  const initialTab = ["map", "pulse", "saved"].includes(resolvedSearchParams?.tab)
+    ? resolvedSearchParams.tab
+    : "map";
 
   if (!hasSupabaseEnv()) {
     return (
@@ -331,6 +334,7 @@ export default async function Home({ searchParams }) {
           supabaseBusinessCount={supabaseBusinessCount}
           supabaseDealCount={supabaseDealCount}
           queryErrors={queryErrors}
+          initialTab={initialTab}
         />
       ) : (
         <main className="spotnera-auth-shell px-5 py-6 sm:px-8">

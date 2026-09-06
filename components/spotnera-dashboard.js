@@ -5,13 +5,10 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { LogoutButton } from "@/components/logout-button";
-import { PrivacySettingsLink } from "@/components/privacy-settings-link";
 import {
   BUSINESS_CATEGORIES,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
-import { DeleteAccountPanel } from "@/components/delete-account-panel";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -65,47 +62,6 @@ const SOCIAL_PROFILES = [
     buildUrl: (handle) => `https://www.snapchat.com/add/${handle}`,
     handlePattern: /^[A-Za-z0-9._-]{3,30}$/,
   },
-];
-
-const PROFILE_COUNTRIES = [
-  "Norway",
-  "Sweden",
-  "Denmark",
-  "Finland",
-  "Iceland",
-  "United Kingdom",
-  "Ireland",
-  "Germany",
-  "France",
-  "Spain",
-  "Italy",
-  "Netherlands",
-  "Belgium",
-  "Switzerland",
-  "Austria",
-  "Poland",
-  "Portugal",
-  "Greece",
-  "United States",
-  "Canada",
-  "Australia",
-  "New Zealand",
-  "Japan",
-  "South Korea",
-  "Singapore",
-  "India",
-  "Brazil",
-  "Mexico",
-  "South Africa",
-  "Other",
-];
-
-const GENDER_OPTIONS = [
-  "Prefer not to say",
-  "Woman",
-  "Man",
-  "Non-binary",
-  "Other",
 ];
 
 function Icon({ path }) {
@@ -218,20 +174,6 @@ function getPhoneHref(phone) {
 
 function getEmailHref(email) {
   return `mailto:${email}`;
-}
-
-function normalizeProfilePhone(value) {
-  const phone = String(value ?? "").trim().replace(/\s+/g, " ");
-
-  if (!phone) {
-    return { value: null };
-  }
-
-  if (!/^\+?[0-9][0-9\s().-]{5,24}$/.test(phone)) {
-    return { error: "Enter a valid phone number." };
-  }
-
-  return { value: phone };
 }
 
 function getWebsiteUrl(value) {
@@ -890,28 +832,27 @@ export function SpotneraDashboard({
   supabaseBusinessCount = businesses.length,
   supabaseDealCount = 0,
   queryErrors = [],
+  initialTab = "map",
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [localProfile, setLocalProfile] = useState(() => profile ?? {});
+  const localProfile = profile ?? {};
   const [localBusinesses, setLocalBusinesses] = useState(() => businesses);
   const [pendingFavoriteId, setPendingFavoriteId] = useState(null);
   const [reviewDrafts, setReviewDrafts] = useState({});
   const [isSavingReview, setIsSavingReview] = useState(false);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [dashboardError, setDashboardError] = useState(null);
-  const [profileMessage, setProfileMessage] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("map");
+  const [activeTab, setActiveTab] = useState(
+    ["map", "pulse", "saved"].includes(initialTab) ? initialTab : "map",
+  );
   const handleSelectTab = useCallback((tabId) => {
     setActiveTab(tabId);
-    if (tabId !== "map") {
-      setIsDetailOpen(false);
-    }
+    if (tabId !== "map") setIsDetailOpen(false);
   }, []);
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
@@ -1259,69 +1200,6 @@ export function SpotneraDashboard({
     ],
   );
 
-  const handleSaveProfile = useCallback(
-    async (event) => {
-      event.preventDefault();
-      setDashboardError(null);
-      setProfileMessage(null);
-
-      const formData = new FormData(event.currentTarget);
-      const firstName = String(formData.get("first_name") ?? "").trim();
-      const lastName = String(formData.get("last_name") ?? "").trim();
-      const country = String(formData.get("country") ?? "").trim();
-      const city = String(formData.get("city") ?? "").trim();
-      const phone = normalizeProfilePhone(formData.get("phone"));
-      const dateOfBirth = String(formData.get("date_of_birth") ?? "").trim() || null;
-      const gender = String(formData.get("gender") ?? "").trim() || "Prefer not to say";
-      const address = String(formData.get("address") ?? "").trim() || null;
-
-      if (!firstName || !lastName || !country || !city) {
-        setDashboardError("First name, last name, country, and city are required.");
-        return;
-      }
-
-      if (!PROFILE_COUNTRIES.includes(country)) {
-        setDashboardError("Choose a valid country.");
-        return;
-      }
-
-      if (phone.error) {
-        setDashboardError(phone.error);
-        return;
-      }
-
-      setIsSavingProfile(true);
-      const nextProfile = {
-        ...localProfile,
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone.value,
-        date_of_birth: dateOfBirth,
-        gender,
-        address,
-        city,
-        country,
-        onboarding_completed: true,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error } = await supabase
-        .from("profiles")
-        .update(nextProfile)
-        .eq("id", userId);
-
-      if (error) {
-        console.error("Profile update failed", error);
-        setDashboardError("Unable to save profile changes.");
-      } else {
-        setLocalProfile(nextProfile);
-        setProfileMessage("Profile saved.");
-      }
-
-      setIsSavingProfile(false);
-    },
-    [localProfile, supabase, userId],
-  );
   const activity = useMemo(
     () =>
       mappedBusinesses
@@ -1357,9 +1235,7 @@ export function SpotneraDashboard({
   const favoriteCount = filteredBusinesses.filter((business) => business.isFavorite).length;
   const savedBusinesses = mappedBusinesses.filter((business) => business.isFavorite);
   const activeHeading =
-    activeTab === "me"
-      ? "Me"
-      : activeTab === "saved"
+    activeTab === "saved"
         ? "Saved businesses"
         : activeTab === "pulse"
           ? "Local pulse"
@@ -1372,27 +1248,16 @@ export function SpotneraDashboard({
           <div className="flex min-w-0 items-center gap-3">
             <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-cover" />
             <div className="min-w-0">
-              <p className="spotnera-kicker text-white/55">
-                {activeTab === "me" ? "Account" : "Spotnera Live"}
-              </p>
+              <p className="spotnera-kicker text-white/55">Spotnera Live</p>
               <h1 className="mt-1 truncate text-[1.35rem] font-semibold leading-tight sm:text-2xl">
                 {activeHeading}
               </h1>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleSelectTab("me")}
-              aria-label="Open profile"
-              className={`grid h-12 w-12 place-items-center rounded-2xl text-sm font-bold shadow-[0_14px_35px_rgba(255,255,255,0.2)] transition ${
-                activeTab === "me"
-                  ? "bg-[#72f0cc] text-zinc-950"
-                  : "bg-white text-zinc-950 hover:bg-white/90"
-              }`}
-            >
+            <Link href="/me" aria-label="Open profile" className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)] transition hover:bg-white/90">
               {displayName.slice(0, 2).toUpperCase()}
-            </button>
+            </Link>
           </div>
         </header>
         {activeTab === "map" ? (
@@ -2018,193 +1883,21 @@ export function SpotneraDashboard({
         </section>
         ) : null}
 
-        {activeTab === "me" ? (
-        <section className="mx-auto mt-4 w-full max-w-3xl rounded-[28px] border border-white/12 bg-white/10 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur-2xl sm:p-5">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">
-                Me
-              </p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                Profile
-              </h2>
-            </div>
-          </div>
-          {dashboardError ? (
-            <p className="mb-3 rounded-2xl border border-red-300/30 bg-red-500/20 px-3 py-2 text-sm font-semibold text-red-50">
-              {dashboardError}
-            </p>
-          ) : null}
-          <p className="mb-3 text-sm font-semibold text-white/62">
-            Manage your personal Spotnera account details.
-          </p>
-          <form onSubmit={handleSaveProfile} className="grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  First name
-                </span>
-                <input
-                  name="first_name"
-                  required
-                  maxLength={80}
-                  defaultValue={localProfile?.first_name ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Last name
-                </span>
-                <input
-                  name="last_name"
-                  required
-                  maxLength={80}
-                  defaultValue={localProfile?.last_name ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Country
-                </span>
-                <select
-                  name="country"
-                  required
-                  defaultValue={localProfile?.country ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                >
-                  <option value="" disabled>
-                    Choose country
-                  </option>
-                  {PROFILE_COUNTRIES.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  City
-                </span>
-                <input
-                  name="city"
-                  required
-                  maxLength={120}
-                  defaultValue={localProfile?.city ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-            </div>
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                Phone optional
-              </span>
-              <input
-                type="tel"
-                name="phone"
-                maxLength={32}
-                defaultValue={localProfile?.phone ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Date of birth optional
-                </span>
-                <input
-                  type="date"
-                  name="date_of_birth"
-                  defaultValue={localProfile?.date_of_birth ?? ""}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                />
-              </label>
-              <label className="grid gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                  Gender optional
-                </span>
-                <select
-                  name="gender"
-                  defaultValue={localProfile?.gender ?? "Prefer not to say"}
-                  className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-                >
-                  {GENDER_OPTIONS.map((gender) => (
-                    <option key={gender} value={gender}>
-                      {gender}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">
-                Street address optional
-              </span>
-              <input
-                name="address"
-                maxLength={240}
-                defaultValue={localProfile?.address ?? ""}
-                className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"
-              />
-            </label>
-            {profileMessage ? (
-              <p className="rounded-2xl border border-emerald-300/20 bg-emerald-500/14 px-3 py-2 text-sm font-semibold text-emerald-100">
-                {profileMessage}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={isSavingProfile}
-              className="h-11 rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSavingProfile ? "Saving..." : "Save changes"}
-            </button>
-          </form>
-          <section className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
-              Privacy
-            </p>
-            <PrivacySettingsLink className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16" />
-          </section>
-
-          <section className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
-              Account
-            </p>
-            <LogoutButton
-              onError={setDashboardError}
-              className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </section>
-          <DeleteAccountPanel
-            ownedBusinessCount={
-              localBusinesses.filter((business) => business.owner_id === userId).length
-            }
-          />
-        </section>
-        ) : null}
-
         <nav className="fixed bottom-4 left-1/2 z-[85] grid w-[min(92vw,430px)] -translate-x-1/2 grid-cols-4 rounded-[28px] border border-white/14 bg-zinc-950/62 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-label={item.label}
-              onClick={() => handleSelectTab(item.id)}
-              className={`flex h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
-                activeTab === item.id
-                  ? "bg-white text-zinc-950 shadow-[0_10px_26px_rgba(255,255,255,0.18)]"
-                  : "text-white/56 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <Icon path={item.icon} />
-              <span>{item.label}</span>
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const className = `flex h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
+              activeTab === item.id
+                ? "bg-white text-zinc-950 shadow-[0_10px_26px_rgba(255,255,255,0.18)]"
+                : "text-white/56 hover:bg-white/10 hover:text-white"
+            }`;
+
+            if (item.id === "map" || item.id === "me") {
+              const href = item.id === "map" ? "/" : "/me";
+              return <Link key={item.id} href={href} aria-label={item.label} className={className}><Icon path={item.icon} /><span>{item.label}</span></Link>;
+            }
+
+            return <button key={item.id} type="button" aria-label={item.label} onClick={() => handleSelectTab(item.id)} className={className}><Icon path={item.icon} /><span>{item.label}</span></button>;
+          })}
         </nav>
       </section>
     </main>
