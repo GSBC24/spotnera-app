@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/utils/supabase/browser";
@@ -213,6 +214,31 @@ export function AuthPanel() {
         >
           {isSubmitting ? "Please wait..." : mode === "signup" ? "Sign up" : "Log in"}
         </button>
+        {mode === "signup" ? (
+          <p className="text-xs leading-5 text-zinc-500">
+            By creating an account, you agree to the{" "}
+            <Link href="/terms" className="font-bold text-zinc-700 underline-offset-4 hover:underline">
+              Terms
+            </Link>{" "}
+            and can read how Spotnera handles data in the{" "}
+            <Link href="/privacy" className="font-bold text-zinc-700 underline-offset-4 hover:underline">
+              Privacy Policy
+            </Link>
+            . Analytics consent is optional and managed separately.
+          </p>
+        ) : (
+          <p className="text-xs leading-5 text-zinc-500">
+            Read Spotnera&apos;s{" "}
+            <Link href="/privacy" className="font-bold text-zinc-700 underline-offset-4 hover:underline">
+              Privacy Policy
+            </Link>{" "}
+            and{" "}
+            <Link href="/terms" className="font-bold text-zinc-700 underline-offset-4 hover:underline">
+              Terms
+            </Link>
+            .
+          </p>
+        )}
       </form>
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm font-semibold">

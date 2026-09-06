@@ -1,5 +1,7 @@
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { GoogleAnalytics } from "@/components/google-analytics";
+import { ConsentManager } from "@/components/consent-manager";
+import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 
 export const metadata = {
@@ -50,8 +52,12 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="min-h-full flex flex-col">
-        {children}
+        <div className="flex-1">
+          {children}
+        </div>
+        <SiteFooter />
         <PwaInstallPrompt />
+        <ConsentManager />
         <GoogleAnalytics />
       </body>
     </html>
