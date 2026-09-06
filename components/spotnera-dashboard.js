@@ -1303,7 +1303,6 @@ export function SpotneraDashboard({
       count + getLiveDeals(business.deals).length,
     0,
   );
-  const favoriteCount = filteredBusinesses.filter((business) => business.isFavorite).length;
   const savedBusinesses = mappedBusinesses.filter((business) => business.isFavorite);
   const activeHeading =
     activeTab === "saved"
@@ -1420,7 +1419,7 @@ export function SpotneraDashboard({
         </section>
         ) : null}
 
-        <div className="relative isolate mt-4 h-[58vh] min-h-[420px] overflow-hidden rounded-[32px] border border-white/12 bg-zinc-950 shadow-[0_28px_90px_rgba(0,0,0,0.38)] sm:min-h-[440px] lg:h-[64vh]">
+        <div className="relative isolate mt-4 h-[68vh] min-h-[520px] overflow-hidden rounded-[32px] border border-white/12 bg-zinc-950 shadow-[0_28px_90px_rgba(0,0,0,0.38)] sm:min-h-[560px] lg:h-[72vh]">
           <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
               {totalBusinessLabel}
@@ -1767,80 +1766,6 @@ export function SpotneraDashboard({
           </div>
         ) : null}
 
-        <section className="mt-4">
-          <div className="mb-3 flex items-end justify-between px-1">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">
-                Businesses
-              </p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                Rated nearby
-              </h2>
-            </div>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/62">
-              {favoriteCount} saved
-            </span>
-          </div>
-          <div className="grid gap-3">
-            {filteredBusinesses.length ? (
-              filteredBusinesses.map((business, index) => (
-                <motion.article
-                  key={business.id}
-                  initial={{ x: 24, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: index * 0.04, duration: 0.32 }}
-                  onClick={() => handleSelectBusiness(business)}
-                  className={`flex cursor-pointer items-center gap-3 rounded-[24px] border p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition ${
-                    selectedBusiness?.id === business.id
-                      ? "border-white/24 bg-white/16"
-                      : "border-white/10 bg-white/10 hover:bg-white/14"
-                  }`}
-                >
-                  <span
-                    className="h-12 w-1.5 rounded-full"
-                    style={{ backgroundColor: business.color }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="truncate text-sm font-semibold">
-                        {business.name}
-                      </h3>
-                      <span className="text-xs font-medium text-white/42">
-                        {business.deals.length} deals
-                      </span>
-                    </div>
-                    <p className="mt-1 truncate text-sm text-white/54">
-                      {getBusinessSignal(business)}
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <RatingPill
-                        averageRating={business.averageRating}
-                        reviewCount={business.reviewCount}
-                      />
-                      <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/18 px-3 py-1.5 text-xs font-semibold text-white/54">
-                        <CategoryDot category={business.category} />
-                        {business.category}
-                      </span>
-                    </div>
-                  </div>
-                  <FavoriteButton
-                    size="sm"
-                    isFavorite={business.isFavorite}
-                    disabled={pendingFavoriteId === business.id}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleToggleFavorite(business);
-                    }}
-                  />
-                </motion.article>
-              ))
-            ) : (
-              <div className="rounded-[24px] border border-white/10 bg-white/10 p-4 text-sm text-white/58 backdrop-blur-2xl">
-                No businesses match your search and filters.
-              </div>
-            )}
-          </div>
-        </section>
         </>
         ) : null}
 
