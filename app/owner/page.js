@@ -8,7 +8,7 @@ import {
   DealDateTimeInput,
 } from "@/components/deal-date-time-input";
 import { DealTimeLabel } from "@/components/deal-time-label";
-import { LogoutButton } from "@/components/logout-button";
+import { HeaderLogout } from "@/components/header-logout";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
@@ -1334,11 +1334,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap justify-end gap-2">
-              <LogoutButton
-                className="spotnera-secondary-action inline-flex min-h-10 items-center px-4 text-xs disabled:cursor-not-allowed disabled:opacity-60"
-                errorClassName="basis-full text-right text-xs font-semibold text-red-600"
-                loadingChildren="Logging out..."
-              />
+              <div className="relative"><HeaderLogout /></div>
             </div>
           </div>
           {resolvedSearchParams?.businessDeleted === "1" ? (
