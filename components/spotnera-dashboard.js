@@ -879,7 +879,7 @@ function StableMapboxMap({ businesses, token, selectedBusiness, onSelectBusiness
     });
   }, [selectedBusiness]);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return <div ref={containerRef} className="absolute inset-0 h-full min-h-[420px] w-full" />;
 }
 
 export function SpotneraDashboard({
@@ -1465,7 +1465,7 @@ export function SpotneraDashboard({
           ) : null}
         </section>
 
-        <div className="relative mt-4 h-[58vh] min-h-[440px] overflow-hidden rounded-[32px] border border-white/12 bg-white/8 shadow-[0_28px_90px_rgba(0,0,0,0.38)] lg:h-[64vh]">
+        <div className="relative isolate mt-4 h-[58vh] min-h-[420px] overflow-hidden rounded-[32px] border border-white/12 bg-zinc-950 shadow-[0_28px_90px_rgba(0,0,0,0.38)] sm:min-h-[440px] lg:h-[64vh]">
           <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
               {totalBusinessLabel}
@@ -1500,7 +1500,7 @@ export function SpotneraDashboard({
             </span>
           ) : null}
 
-          {token && mappedBusinesses.length ? (
+          {token ? (
             <StableMapboxMap
               businesses={filteredBusinesses}
               token={token}
