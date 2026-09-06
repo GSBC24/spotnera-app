@@ -878,6 +878,11 @@ export function SpotneraDashboard({
     setActiveTab(tabId);
     if (tabId !== "map") setIsDetailOpen(false);
   }, []);
+  const handleSelectMap = useCallback(() => {
+    setActiveTab("map");
+    setIsSearchOpen(false);
+    setIsDetailOpen(false);
+  }, []);
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
@@ -1902,6 +1907,7 @@ export function SpotneraDashboard({
           activeTab={activeTab}
           searchOpen={isSearchOpen}
           searchActiveCount={activeFilterCount + (searchQuery.trim() ? 1 : 0)}
+          onMap={handleSelectMap}
           onSearch={handleOpenSearch}
           onPulse={() => handleSelectTab("pulse")}
           onSaved={() => handleSelectTab("saved")}

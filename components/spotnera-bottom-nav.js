@@ -12,7 +12,7 @@ const items = [
   { id: "business", label: "Business", href: "/owner", icon: "M4 7h16v13H4V7zm3-4h10l2 4H5l2-4zm2 8v6m6-6v6" },
 ];
 
-export function SpotneraBottomNav({ activeTab = "map", searchOpen = false, searchActiveCount = 0, onSearch, onPulse, onSaved }) {
+export function SpotneraBottomNav({ activeTab = "map", searchOpen = false, searchActiveCount = 0, onMap, onSearch, onPulse, onSaved }) {
   const pathname = usePathname();
   const routeActiveId = pathname?.startsWith("/owner")
     ? "business"
@@ -30,6 +30,9 @@ export function SpotneraBottomNav({ activeTab = "map", searchOpen = false, searc
         const label = item.id === "search" && searchActiveCount ? `Search (${searchActiveCount})` : item.label;
         const className = `relative flex min-w-0 h-14 flex-col items-center justify-center gap-1 rounded-2xl px-0.5 text-[9px] font-semibold transition sm:px-1 sm:text-[11px] ${routeActiveId === item.id ? "bg-white text-zinc-950 shadow-[0_10px_26px_rgba(255,255,255,0.18)]" : "text-white/56 hover:bg-white/10 hover:text-white"}`;
 
+        if (item.id === "map" && onMap) {
+          return <Link key={item.id} href="/" aria-label={item.label} onClick={onMap} className={className}><Icon path={item.icon} /><span className="truncate">{item.label}</span></Link>;
+        }
         if (item.id === "search" && onSearch) {
           return <button key={item.id} type="button" aria-label="Open search and filters" onClick={onSearch} className={className}><Icon path={item.icon} /><span className="truncate">{label}</span></button>;
         }
