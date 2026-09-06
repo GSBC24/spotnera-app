@@ -55,6 +55,7 @@ export default async function Home({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const accountDeleted = resolvedSearchParams?.accountDeleted === "1";
   const initialSearchOpen = resolvedSearchParams?.search === "1";
+  const initialAuthOpen = resolvedSearchParams?.auth === "1";
   const initialTab = initialSearchOpen
     ? "map"
     : ["map", "pulse", "saved"].includes(resolvedSearchParams?.tab)
@@ -117,16 +118,18 @@ export default async function Home({ searchParams }) {
       redirect("/onboarding");
     }
 
-    console.log("Supabase client context:", {
+  }
+
+  console.log("Supabase client context:", {
       urlHost: process.env.NEXT_PUBLIC_SUPABASE_URL
         ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
         : null,
-      userId: user.id,
-      userEmail: user.email,
+      userId: user?.id ?? null,
+      userEmail: user?.email ?? null,
       client: "createServerClient from @supabase/ssr with anon key and auth cookies",
     });
 
-    console.log(
+  console.log(
       "Supabase businesses query:",
       {
         from: "businesses",
@@ -139,7 +142,7 @@ export default async function Home({ searchParams }) {
         },
         order: "name ascending",
       },
-    );
+  );
 
     const { data: businessRows, error: businessesError } = await supabase
       .from("businesses")
@@ -158,7 +161,7 @@ export default async function Home({ searchParams }) {
       console.error("Supabase businesses query failed", businessesError);
     }
 
-    console.log(
+  console.log(
       "Supabase deals query:",
       {
         from: "deals",
@@ -173,9 +176,9 @@ export default async function Home({ searchParams }) {
         },
         order: "created_at descending",
       },
-    );
+  );
 
-    const now = new Date();
+  const now = new Date();
     const { data: dealRows, error: dealsError } = await supabase
       .from("deals")
       .select(DEAL_SELECT)
@@ -260,17 +263,19 @@ export default async function Home({ searchParams }) {
           from: "favorites",
           select: "business_id",
           filters: {
-            user_id: user.id,
+            user_id: user?.id ?? null,
             business_id: businessIds,
           },
         },
       );
 
-      const { data: favorites, error: favoritesError } = await supabase
-        .from("favorites")
-        .select("business_id")
-        .eq("user_id", user.id)
-        .in("business_id", businessIds);
+      const { data: favorites, error: favoritesError } = user
+        ? await supabase
+            .from("favorites")
+            .select("business_id")
+            .eq("user_id", user.id)
+            .in("business_id", businessIds)
+        : { data: [], error: null };
 
       if (favoritesError) {
         queryErrors.push({
@@ -307,7 +312,7 @@ export default async function Home({ searchParams }) {
       const businessReviews = reviewsByBusinessId.get(review.business_id) ?? [];
       businessReviews.push({
         id: review.id,
-        user_id: review.user_id,
+        user_id: user ? review.user_id : null,
         rating: review.rating,
         comment: review.comment,
         created_at: review.created_at,
@@ -326,6 +331,22 @@ export default async function Home({ searchParams }) {
       reviews: reviewsByBusinessId.get(business.id) ?? [],
       isFavorite: favoriteBusinessIds.has(business.id),
     }));
+
+  if (!user) {
+    return (
+      <SpotneraDashboard
+        businesses={businesses}
+        profile={null}
+        userId={null}
+        userEmail={null}
+        supabaseBusinessCount={supabaseBusinessCount}
+        supabaseDealCount={supabaseDealCount}
+        queryErrors={queryErrors}
+        initialTab={initialTab}
+        initialSearchOpen={initialSearchOpen}
+        initialAuthOpen={initialAuthOpen}
+      />
+    );
   }
 
   return (

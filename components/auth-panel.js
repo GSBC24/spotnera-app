@@ -31,7 +31,7 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export function AuthPanel() {
+export function AuthPanel({ successRedirect = "/" } = {}) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,7 +50,7 @@ export function AuthPanel() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(successRedirect)}`,
       },
     });
 
@@ -118,7 +118,7 @@ export function AuthPanel() {
     trackEvent(mode === "signup" ? "sign_up" : "login", {
       auth_method: "email",
     });
-    window.location.assign("/");
+        window.location.assign(successRedirect);
   }
 
   async function handlePasswordReset() {

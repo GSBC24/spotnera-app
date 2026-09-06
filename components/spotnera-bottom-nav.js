@@ -12,7 +12,7 @@ const items = [
   { id: "business", label: "Business", href: "/owner", icon: "M4 7h16v13H4V7zm3-4h10l2 4H5l2-4zm2 8v6m6-6v6" },
 ];
 
-export function SpotneraBottomNav({ activeTab = "map", searchOpen = false, searchActiveCount = 0, onMap, onSearch, onPulse, onSaved }) {
+export function SpotneraBottomNav({ activeTab = "map", searchOpen = false, searchActiveCount = 0, isAuthenticated = true, onMap, onSearch, onPulse, onSaved, onRequireAuth }) {
   const pathname = usePathname();
   const routeActiveId = pathname?.startsWith("/owner")
     ? "business"
@@ -41,6 +41,9 @@ export function SpotneraBottomNav({ activeTab = "map", searchOpen = false, searc
         }
         if (item.id === "saved" && onSaved) {
           return <button key={item.id} type="button" aria-label={item.label} onClick={onSaved} className={className}><Icon path={item.icon} /><span>{item.label}</span></button>;
+        }
+        if ((item.id === "me" || item.id === "business") && !isAuthenticated && onRequireAuth) {
+          return <button key={item.id} type="button" aria-label={item.label} onClick={() => onRequireAuth(item.id)} className={className}><Icon path={item.icon} /><span className="truncate">{item.label}</span></button>;
         }
         return <Link key={item.id} href={item.href} aria-label={item.label} className={className}><Icon path={item.icon} /><span className="truncate">{item.label}</span></Link>;
       })}

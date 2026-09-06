@@ -22,6 +22,7 @@ import {
 import { createClient } from "@/utils/supabase/browser";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { HeaderLogout } from "@/components/header-logout";
+import { AuthPanel } from "@/components/auth-panel";
 
 const HEART_PATH =
   "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
@@ -856,6 +857,7 @@ export function SpotneraDashboard({
   queryErrors = [],
   initialTab = "map",
   initialSearchOpen = false,
+  initialAuthOpen = false,
 }) {
   const supabase = useMemo(() => createClient(), []);
   const localProfile = profile ?? {};
@@ -871,6 +873,8 @@ export function SpotneraDashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(initialSearchOpen);
+  const [authIntent, setAuthIntent] = useState("/");
+  const [isAuthOpen, setIsAuthOpen] = useState(initialAuthOpen);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(
     ["map", "pulse", "saved"].includes(initialTab) ? initialTab : "map",
@@ -883,6 +887,11 @@ export function SpotneraDashboard({
     setActiveTab("map");
     setIsSearchOpen(false);
     setIsDetailOpen(false);
+  }, []);
+  const requestAuth = useCallback((intent = "/") => {
+    const destination = intent === "business" ? "/owner" : intent === "saved" ? "/?tab=saved" : intent === "me" ? "/me" : intent;
+    setAuthIntent(destination);
+    setIsAuthOpen(true);
   }, []);
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
@@ -1143,7 +1152,11 @@ export function SpotneraDashboard({
 
   const handleToggleFavorite = useCallback(
     async (business) => {
-      if (!userId || pendingFavoriteId) {
+      if (!userId) {
+        requestAuth(`/business/${business.id}`);
+        return;
+      }
+      if (pendingFavoriteId) {
         return;
       }
 
@@ -1186,14 +1199,19 @@ export function SpotneraDashboard({
 
       setPendingFavoriteId(null);
     },
-    [pendingFavoriteId, supabase, updateBusiness, userId],
+    [pendingFavoriteId, requestAuth, supabase, updateBusiness, userId],
   );
 
   const handleSubmitReview = useCallback(
     async (event) => {
       event.preventDefault();
 
-      if (!selectedBusiness || !userId || isSavingReview) {
+      if (!userId) {
+        event.preventDefault();
+        if (selectedBusiness) requestAuth(`/business/${selectedBusiness.id}`);
+        return;
+      }
+      if (!selectedBusiness || isSavingReview) {
         return;
       }
 
@@ -1248,6 +1266,7 @@ export function SpotneraDashboard({
       activeReviewComment,
       activeReviewRating,
       isSavingReview,
+      requestAuth,
       selectedBusiness,
       supabase,
       updateBusiness,
@@ -1331,12 +1350,15 @@ export function SpotneraDashboard({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Link href="/me" aria-label="Open profile" className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)] transition hover:bg-white/90">
-              {displayName.slice(0, 2).toUpperCase()}
-            </Link>
-            <div className="relative"><HeaderLogout /></div>
+            {userId ? <><Link href="/me" aria-label="Open profile" className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)] transition hover:bg-white/90">{displayName.slice(0, 2).toUpperCase()}</Link><div className="relative"><HeaderLogout /></div></> : <Link href="/?auth=1" className="inline-flex min-h-10 items-center rounded-2xl bg-white px-3 text-xs font-bold text-zinc-950">Sign in</Link>}
           </div>
         </header>
+        {isAuthOpen ? (
+          <section role="dialog" aria-modal="true" aria-labelledby="auth-gate-title" className="fixed inset-x-3 bottom-24 z-[90] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-md overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/98 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+            <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button type="button" aria-label="Close sign in" onClick={() => setIsAuthOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
+            <div className="mt-5 rounded-2xl bg-white p-4 text-zinc-950"><AuthPanel successRedirect={authIntent} /></div>
+          </section>
+        ) : null}
         {activeTab === "map" ? (
         <>
         {isSearchOpen ? (
@@ -1912,7 +1934,9 @@ export function SpotneraDashboard({
           onMap={handleSelectMap}
           onSearch={handleOpenSearch}
           onPulse={() => handleSelectTab("pulse")}
-          onSaved={() => handleSelectTab("saved")}
+          onSaved={() => userId ? handleSelectTab("saved") : requestAuth("saved")}
+          isAuthenticated={Boolean(userId)}
+          onRequireAuth={requestAuth}
         />
       </section>
     </main>
