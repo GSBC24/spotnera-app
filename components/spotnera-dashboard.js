@@ -18,13 +18,7 @@ import {
   isLiveDeal,
 } from "@/lib/deals";
 import { createClient } from "@/utils/supabase/browser";
-
-const navItems = [
-  { id: "map", label: "Map", icon: "M12 3l7 4v12l-7-4-7 4V7l7-4zm0 2.2L7 8v8.8l5-2.8 5 2.8V8l-5-2.8z" },
-  { id: "pulse", label: "Pulse", icon: "M4 13h3l2-7 4 12 2-5h5v2h-3.6L13 22 9.2 10.5 8.5 15H4v-2z" },
-  { id: "saved", label: "Saved", icon: "M6 3h12v18l-6-3.8L6 21V3zm2 2v12.4l4-2.5 4 2.5V5H8z" },
-  { id: "me", label: "Me", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.1-7 5v1h14v-1c0-2.9-3-5-7-5z" },
-];
+import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 
 const HEART_PATH =
   "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
@@ -1262,13 +1256,6 @@ export function SpotneraDashboard({
         </header>
         {activeTab === "map" ? (
         <>
-        <Link
-          href="/owner"
-          className="spotnera-surface z-20 mt-3 rounded-2xl px-4 py-3 text-center text-sm font-bold text-white/82 transition hover:bg-white/16 sm:ml-auto sm:w-fit"
-        >
-          Business owner dashboard
-        </Link>
-
         <section className="spotnera-surface z-20 mt-4 rounded-[28px] p-3">
           <div className="flex items-center gap-2">
             <input
@@ -1883,22 +1870,11 @@ export function SpotneraDashboard({
         </section>
         ) : null}
 
-        <nav className="fixed bottom-4 left-1/2 z-[85] grid w-[min(92vw,430px)] -translate-x-1/2 grid-cols-4 rounded-[28px] border border-white/14 bg-zinc-950/62 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
-          {navItems.map((item) => {
-            const className = `flex h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${
-              activeTab === item.id
-                ? "bg-white text-zinc-950 shadow-[0_10px_26px_rgba(255,255,255,0.18)]"
-                : "text-white/56 hover:bg-white/10 hover:text-white"
-            }`;
-
-            if (item.id === "map" || item.id === "me") {
-              const href = item.id === "map" ? "/" : "/me";
-              return <Link key={item.id} href={href} aria-label={item.label} className={className}><Icon path={item.icon} /><span>{item.label}</span></Link>;
-            }
-
-            return <button key={item.id} type="button" aria-label={item.label} onClick={() => handleSelectTab(item.id)} className={className}><Icon path={item.icon} /><span>{item.label}</span></button>;
-          })}
-        </nav>
+        <SpotneraBottomNav
+          activeTab={activeTab}
+          onPulse={() => handleSelectTab("pulse")}
+          onSaved={() => handleSelectTab("saved")}
+        />
       </section>
     </main>
   );

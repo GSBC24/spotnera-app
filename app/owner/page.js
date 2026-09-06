@@ -8,6 +8,7 @@ import {
 } from "@/components/deal-date-time-input";
 import { DealTimeLabel } from "@/components/deal-time-label";
 import { LogoutButton } from "@/components/logout-button";
+import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS } from "@/lib/business-categories";
 import {
@@ -1285,7 +1286,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
         businessCount={businesses.length}
         activeDealCount={activeDealCount}
       />
-      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8">
         <header className="spotnera-card rounded-[30px] p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -1597,6 +1598,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
             )}
           </div>
         </section>
+        <SpotneraBottomNav />
       </section>
     </main>
   );
