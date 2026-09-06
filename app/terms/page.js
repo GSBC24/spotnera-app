@@ -1,6 +1,21 @@
 import Link from "next/link";
+import {
+  getSoleProprietorshipSentence,
+  legalConfig,
+} from "@/lib/legal-config";
 
-const sections = [
+function getSections() {
+  return [
+  [
+    "Contractual Operator",
+    [
+      `These Terms govern the use of Spotnera, a service operated by ${legalConfig.legalEntityName} in ${legalConfig.country || "Norway"}.`,
+      getSoleProprietorshipSentence(),
+      legalConfig.organizationNumber
+        ? `Organization number: ${legalConfig.organizationNumber}.`
+        : null,
+    ].filter(Boolean).join(" "),
+  ],
   ["Service Description", "Spotnera helps users discover local businesses, public business profiles, reviews, favorites, maps, and live/scheduled/expired/disabled promotions or deals."],
   ["User Accounts", "Users are responsible for keeping account credentials secure and for the activity that occurs through their account."],
   ["Business-Owner Accounts", "Business owners may create and manage business listings, public contact details, images, and promotions. Owners are responsible for having the rights and authority to publish this information."],
@@ -15,11 +30,26 @@ const sections = [
   ["Disclaimers And Limitations", "This template requires legal review. Final warranty disclaimers, consumer-law language, and limitation-of-liability wording must be completed for the operating legal entity and applicable law before launch."],
   ["Changes To Service Or Terms", "Spotnera may update the service or these terms. Material changes should be communicated appropriately."],
   ["Termination", "Users may stop using Spotnera. Account deletion and data deletion workflows must be confirmed before public launch."],
-  ["Governing Law", "Governing law and venue: [GOVERNING LAW / COURT PLACEHOLDER]. Complete this before launch."],
-  ["Contact", "Legal contact: [LEGAL ENTITY NAME], [ORGANIZATION NUMBER], [BUSINESS ADDRESS], [LEGAL CONTACT EMAIL]."],
-];
+  ["Governing Law", "Governing law and venue must be confirmed before public launch."],
+  [
+    "Contact",
+    [
+      `Legal entity: ${legalConfig.legalEntityName}.`,
+      legalConfig.organizationNumber
+        ? `Organization number: ${legalConfig.organizationNumber}.`
+        : null,
+      legalConfig.country ? `Country: ${legalConfig.country}.` : null,
+      legalConfig.legalContactEmail
+        ? `Legal contact: ${legalConfig.legalContactEmail}.`
+        : "Configure NEXT_PUBLIC_LEGAL_CONTACT_EMAIL before public launch.",
+    ].filter(Boolean).join(" "),
+  ],
+  ];
+}
 
 export default function TermsPage() {
+  const sections = getSections();
+
   return (
     <main className="spotnera-owner-shell min-h-screen px-4 py-6 sm:px-6">
       <section className="mx-auto grid w-full max-w-4xl gap-4">
@@ -27,7 +57,7 @@ export default function TermsPage() {
           <p className="spotnera-kicker text-zinc-500">Legal template</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-normal">Terms of Service</h1>
           <p className="mt-3 text-sm leading-6 text-zinc-600">
-            Launch-ready template only. Complete legal placeholders and obtain review before public launch.
+            These Terms govern the use of Spotnera, a service operated by {legalConfig.legalEntityName} in {legalConfig.country || "Norway"}. Launch-ready template only; obtain legal review before public launch.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href="/privacy" className="spotnera-secondary-action inline-flex min-h-10 items-center px-4 text-xs">

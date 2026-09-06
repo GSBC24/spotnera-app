@@ -1,11 +1,28 @@
 import Link from "next/link";
 import { PrivacySettingsLink } from "@/components/privacy-settings-link";
+import {
+  getOperatorSentence,
+  getSoleProprietorshipSentence,
+  legalConfig,
+} from "@/lib/legal-config";
 
-const sections = [
-  {
-    title: "Who operates Spotnera",
-    body: "Spotnera is operated by [LEGAL ENTITY NAME], organization number [ORGANIZATION NUMBER], business address [BUSINESS ADDRESS]. Complete these placeholders before public launch.",
-  },
+function getSections() {
+  const contactText = legalConfig.privacyContactEmail
+    ? `Requests should be sent to ${legalConfig.privacyContactEmail}.`
+    : "Configure NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL before public launch.";
+
+  return [
+    {
+      title: "Who operates Spotnera",
+      body: [
+        getOperatorSentence(),
+        getSoleProprietorshipSentence(),
+        legalConfig.organizationNumber
+          ? `Organization number: ${legalConfig.organizationNumber}.`
+          : null,
+        legalConfig.country ? `Country: ${legalConfig.country}.` : null,
+      ].filter(Boolean).join(" "),
+    },
   {
     title: "Information Users Provide",
     body: "Users may provide account details, profile information, city/country, favorites, reviews, and business-owner listing information. Business owners may add public business contact details, addresses, images, social links, and promotions/deals.",
@@ -60,7 +77,7 @@ const sections = [
   },
   {
     title: "Your GDPR Rights",
-    body: "Depending on the situation, users may request access, rectification, erasure, restriction, objection, and portability. Users may withdraw analytics consent at any time. Requests should be sent to [PRIVACY CONTACT EMAIL].",
+    body: `Depending on the situation, users may request access, rectification, erasure, restriction, objection, and portability. Users may withdraw analytics consent at any time. ${contactText}`,
   },
   {
     title: "Complaint To Supervisory Authority",
@@ -76,11 +93,23 @@ const sections = [
   },
   {
     title: "Contact",
-    body: "Privacy requests and questions: [PRIVACY CONTACT EMAIL]. Legal entity: [LEGAL ENTITY NAME], [ORGANIZATION NUMBER], [BUSINESS ADDRESS].",
+    body: [
+      legalConfig.privacyContactEmail
+        ? `Privacy requests and questions: ${legalConfig.privacyContactEmail}.`
+        : "Privacy contact email must be configured before public launch.",
+      `Legal entity: ${legalConfig.legalEntityName}.`,
+      legalConfig.organizationNumber
+        ? `Organization number: ${legalConfig.organizationNumber}.`
+        : null,
+      legalConfig.country ? `Country: ${legalConfig.country}.` : null,
+    ].filter(Boolean).join(" "),
   },
-];
+  ];
+}
 
 export default function PrivacyPage() {
+  const sections = getSections();
+
   return (
     <main className="spotnera-owner-shell min-h-screen px-4 py-6 sm:px-6">
       <section className="mx-auto grid w-full max-w-4xl gap-4">
@@ -88,7 +117,7 @@ export default function PrivacyPage() {
           <p className="spotnera-kicker text-zinc-500">Legal template</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-normal">Privacy Policy</h1>
           <p className="mt-3 text-sm leading-6 text-zinc-600">
-            This template reflects the current Spotnera implementation and must be reviewed by the owner/legal counsel before public launch.
+            {getOperatorSentence()} This template reflects the current Spotnera implementation and must be reviewed by the owner/legal counsel before public launch.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href="/cookies" className="spotnera-secondary-action inline-flex min-h-10 items-center px-4 text-xs">

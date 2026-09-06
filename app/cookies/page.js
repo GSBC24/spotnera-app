@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PrivacySettingsLink } from "@/components/privacy-settings-link";
+import { getOperatorSentence, legalConfig } from "@/lib/legal-config";
 
 const rows = [
   {
@@ -42,8 +43,14 @@ export default function CookiesPage() {
           <p className="spotnera-kicker text-zinc-500">Cookie & tracking information</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-normal">Cookies and Storage</h1>
           <p className="mt-3 text-sm leading-6 text-zinc-600">
-            Spotnera only starts Google Analytics after analytics consent. Necessary technologies remain available so the service works when analytics is rejected.
+            {getOperatorSentence()} Spotnera only starts Google Analytics after analytics consent. Necessary technologies remain available so the service works when analytics is rejected.
           </p>
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm font-semibold text-zinc-500">
+            {legalConfig.organizationNumber ? (
+              <span>Org. no. {legalConfig.organizationNumber}</span>
+            ) : null}
+            {legalConfig.country ? <span>{legalConfig.country}</span> : null}
+          </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <PrivacySettingsLink className="spotnera-primary-action inline-flex min-h-10 items-center rounded-full px-4 text-xs" />
             <Link href="/privacy" className="spotnera-secondary-action inline-flex min-h-10 items-center px-4 text-xs">
