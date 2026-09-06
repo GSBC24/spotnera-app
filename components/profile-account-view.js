@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { DeleteAccountPanel } from "@/components/delete-account-panel";
-import { LogoutButton } from "@/components/logout-button";
 import { PrivacySettingsLink } from "@/components/privacy-settings-link";
 import { createClient } from "@/utils/supabase/browser";
 
@@ -123,7 +122,6 @@ export function ProfileAccountView({ profile, userId, ownedBusinessCount = 0 }) 
         <button type="submit" disabled={isSaving} className="h-11 rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60">{isSaving ? "Saving..." : "Save changes"}</button>
       </form>
       <section className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">Privacy</p><PrivacySettingsLink className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16" /></section>
-      <section className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">Account</p><LogoutButton className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-60" /></section>
       <DeleteAccountPanel ownedBusinessCount={ownedBusinessCount} />
     </section>
   );
