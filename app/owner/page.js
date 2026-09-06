@@ -1308,7 +1308,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
         <header className="spotnera-card rounded-[30px] p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-cover" />
+              <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="spotnera-kicker text-zinc-500">
                   Owner dashboard

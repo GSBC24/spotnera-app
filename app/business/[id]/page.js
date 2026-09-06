@@ -384,11 +384,11 @@ function BrandedUnavailable({ title, message }) {
       <section className="spotnera-card w-full max-w-md rounded-[30px] p-6 text-zinc-950 sm:p-8">
         <div className="flex items-center gap-3">
           <Image
-            src="/icons/spotnera-icon.svg"
+            src="/icons/logo.png"
             alt="Spotnera"
             width={40}
             height={40}
-            className="spotnera-brand-mark object-cover"
+            className="spotnera-brand-mark object-contain"
           />
           <div>
             <p className="spotnera-kicker text-zinc-500">Spotnera</p>
@@ -450,11 +450,11 @@ export default async function BusinessProfilePage({ params }) {
         <header className="spotnera-surface flex items-center justify-between gap-3 rounded-[28px] px-4 py-3 lg:col-span-2">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <Image
-              src="/icons/spotnera-icon.svg"
+              src="/icons/logo.png"
               alt="Spotnera"
               width={40}
               height={40}
-              className="spotnera-brand-mark shrink-0 object-cover"
+              className="spotnera-brand-mark shrink-0 object-contain"
             />
             <div className="min-w-0">
               <p className="spotnera-kicker text-white/55">Spotnera</p>

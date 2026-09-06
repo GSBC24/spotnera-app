@@ -66,7 +66,7 @@ export default async function Home({ searchParams }) {
       <main className="spotnera-auth-shell flex min-h-screen items-center justify-center px-6 py-12">
         <section className="spotnera-card w-full max-w-md rounded-[28px] p-8">
           <div className="flex items-center gap-3">
-            <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark object-cover" />
+            <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark object-contain" />
             <div>
               <p className="spotnera-kicker text-zinc-500">Spotnera</p>
               <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
@@ -348,7 +348,7 @@ export default async function Home({ searchParams }) {
             <div className="hidden lg:block">
               <div className="max-w-xl">
                 <div className="flex items-center gap-3">
-                  <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark object-cover" />
+                  <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark object-contain" />
                   <div>
                     <p className="spotnera-kicker text-zinc-500">Spotnera</p>
                     <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
@@ -375,7 +375,7 @@ export default async function Home({ searchParams }) {
             <div className="spotnera-card mx-auto w-full max-w-md rounded-[30px] p-5 sm:p-7">
               <div className="mb-6 lg:hidden">
                 <div className="flex items-center gap-3">
-                  <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark object-cover" />
+                  <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark object-contain" />
                   <div>
                     <p className="spotnera-kicker text-zinc-500">Spotnera</p>
                     <p className="text-sm font-bold text-zinc-950">Live local discovery</p>

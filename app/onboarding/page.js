@@ -187,7 +187,7 @@ export default async function OnboardingPage() {
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 pb-6 pt-8 sm:px-8">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark object-cover" />
+            <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark object-contain" />
             <div>
               <p className="spotnera-kicker text-zinc-500">Spotnera</p>
               <p className="text-sm font-bold text-zinc-950">Live local discovery</p>

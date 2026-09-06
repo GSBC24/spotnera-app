@@ -1316,7 +1316,7 @@ export function SpotneraDashboard({
       <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8">
         <header className="spotnera-surface z-20 flex items-center justify-between gap-3 rounded-[28px] px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/icons/spotnera-icon.svg" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-cover" />
+            <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" />
             <div className="min-w-0">
               <p className="spotnera-kicker text-white/55">Spotnera Live</p>
               <h1 className="mt-1 truncate text-[1.35rem] font-semibold leading-tight sm:text-2xl">

@@ -1,7 +1,8 @@
 const CACHE_NAME = "spotnera-static-v1";
 const PRECACHE_URLS = [
   "/offline.html",
-  "/favicon.ico",
+  "/icons/logo.png",
+  "/icons/spotnera-favicon.png",
   "/icons/apple-touch-icon.png",
   "/icons/spotnera-icon-192.png",
   "/icons/spotnera-icon-512.png",
@@ -56,7 +57,6 @@ self.addEventListener("fetch", (event) => {
   const isStaticAsset =
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
-    url.pathname === "/favicon.ico" ||
     url.pathname === "/manifest.webmanifest";
 
   if (!isStaticAsset) {

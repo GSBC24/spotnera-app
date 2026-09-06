@@ -7,11 +7,11 @@ export default function BusinessProfileNotFound() {
       <section className="spotnera-card w-full max-w-md rounded-[30px] p-6 text-zinc-950 sm:p-8">
         <div className="flex items-center gap-3">
           <Image
-            src="/icons/spotnera-icon.svg"
+            src="/icons/logo.png"
             alt="Spotnera"
             width={40}
             height={40}
-            className="spotnera-brand-mark object-cover"
+            className="spotnera-brand-mark object-contain"
           />
           <div>
             <p className="spotnera-kicker text-zinc-500">Spotnera</p>
