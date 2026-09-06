@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 
 export function BusinessProfileAnalytics({ businessId, businessCategory, city, country }) {
@@ -17,6 +18,10 @@ export function BusinessProfileAnalytics({ businessId, businessCategory, city, c
       business_category: businessCategory,
       city,
       country,
+    });
+    recordBusinessEvent({
+      businessId,
+      eventType: "profile_view",
     });
   }, [businessCategory, businessId, city, country]);
 

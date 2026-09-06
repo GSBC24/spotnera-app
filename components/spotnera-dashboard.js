@@ -10,6 +10,7 @@ import {
   BUSINESS_CATEGORIES,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
+import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import {
   DEAL_STATUS_META,
@@ -611,10 +612,16 @@ function ContactActions({ business, compact = false }) {
           target={action.external ? "_blank" : undefined}
           rel={action.external ? "noopener noreferrer" : undefined}
           onClick={() =>
-            trackEvent(`contact_${action.method}`, {
-              ...getBusinessEventParameters(business),
-              contact_method: action.method,
-            })
+            {
+              trackEvent(`contact_${action.method}`, {
+                ...getBusinessEventParameters(business),
+                contact_method: action.method,
+              });
+              recordBusinessEvent({
+                businessId: business.id,
+                eventType: `${action.method}_click`,
+              });
+            }
           }
           className={`rounded-full border border-white/10 bg-white/10 font-bold text-white/76 transition hover:bg-white/16 hover:text-white ${
             compact ? "px-3 py-1.5 text-xs" : "px-3 py-2 text-sm"
@@ -642,12 +649,16 @@ function SocialLinks({ business, compact = false }) {
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() =>
+          onClick={() => {
             trackEvent("social_click", {
               ...getBusinessEventParameters(business),
               social_platform: link.label.toLowerCase(),
-            })
-          }
+            });
+            recordBusinessEvent({
+              businessId: business.id,
+              eventType: "social_click",
+            });
+          }}
           className={`rounded-full border border-white/10 bg-white/8 font-bold text-white/64 transition hover:bg-white/14 hover:text-white ${
             compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-2 text-sm"
           }`}
@@ -1139,9 +1150,6 @@ export function SpotneraDashboard({
       }
 
       const nextFavoriteState = !business.isFavorite;
-      trackEvent(nextFavoriteState ? "favorite_add" : "favorite_remove", {
-        ...getBusinessEventParameters(business),
-      });
       setDashboardError(null);
       setPendingFavoriteId(business.id);
       updateBusiness(business.id, (item) => ({
@@ -1167,6 +1175,15 @@ export function SpotneraDashboard({
           isFavorite: !nextFavoriteState,
         }));
         setDashboardError("Unable to update saved businesses.");
+      } else {
+        const eventType = nextFavoriteState ? "favorite_add" : "favorite_remove";
+        trackEvent(eventType, {
+          ...getBusinessEventParameters(business),
+        });
+        recordBusinessEvent({
+          businessId: business.id,
+          eventType,
+        });
       }
 
       setPendingFavoriteId(null);
@@ -1540,12 +1557,21 @@ export function SpotneraDashboard({
                     trackEvent("view_business", {
                       ...getBusinessEventParameters(selectedBusiness),
                     });
+                    recordBusinessEvent({
+                      businessId: selectedBusiness.id,
+                      eventType: "profile_view",
+                    });
                     const activeDeal = getActiveDeal(selectedBusiness.deals);
 
                     if (activeDeal) {
                       trackEvent("deal_view", {
                         ...getBusinessEventParameters(selectedBusiness),
                         deal_id: activeDeal.id,
+                      });
+                      recordBusinessEvent({
+                        businessId: selectedBusiness.id,
+                        eventType: "deal_view",
+                        dealId: activeDeal.id,
                       });
                     }
                   }}

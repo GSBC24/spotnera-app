@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { BusinessEventLink } from "@/components/business-event-link";
 import { BusinessProfileAnalytics } from "@/components/business-profile-analytics";
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
 import { BusinessProfileMap } from "@/components/business-profile-map";
@@ -224,10 +225,10 @@ function getContactActions(business) {
 
   return [
     phone && phoneHref
-      ? { label: "Call", detail: phone, href: phoneHref, external: false }
+      ? { label: "Call", detail: phone, href: phoneHref, external: false, eventType: "call_click" }
       : null,
     emailHref
-      ? { label: "Email", detail: "Send email", href: emailHref, external: false }
+      ? { label: "Email", detail: "Send email", href: emailHref, external: false, eventType: "email_click" }
       : null,
     websiteUrl
       ? {
@@ -235,6 +236,7 @@ function getContactActions(business) {
           detail: getWebsiteDisplayLabel(websiteUrl),
           href: websiteUrl,
           external: true,
+          eventType: "website_click",
         }
       : null,
   ].filter(Boolean);
@@ -547,12 +549,17 @@ export default async function BusinessProfilePage({ params }) {
                     <LocalDealDateTime prefix="Valid until " value={activeDeal.ends_at} />
                   </p>
                 ) : null}
-                <a
+                <BusinessEventLink
+                  business={business}
+                  dealId={activeDeal.id}
+                  eventType="deal_view"
+                  gaEventName="deal_view"
+                  gaParameters={{ deal_id: activeDeal.id }}
                   href="#contact"
                   className="mt-5 inline-flex min-h-11 items-center rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90"
                 >
                   View deal
-                </a>
+                </BusinessEventLink>
               </div>
             ) : (
               <p className="mt-4 rounded-[26px] border border-white/10 bg-white/8 p-4 text-sm font-semibold text-white/62">
@@ -573,7 +580,12 @@ export default async function BusinessProfilePage({ params }) {
             {contactActions.length ? (
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
                 {contactActions.map((action) => (
-                  <a
+                  <BusinessEventLink
+                    business={business}
+                    eventType={action.eventType}
+                    gaParameters={{
+                      contact_method: action.eventType.replace("_click", ""),
+                    }}
                     key={action.href}
                     href={action.href}
                     target={action.external ? "_blank" : undefined}
@@ -584,7 +596,7 @@ export default async function BusinessProfilePage({ params }) {
                     <span className="mt-1 block truncate text-xs font-semibold text-white/52">
                       {action.detail}
                     </span>
-                  </a>
+                  </BusinessEventLink>
                 ))}
               </div>
             ) : (
@@ -599,7 +611,13 @@ export default async function BusinessProfilePage({ params }) {
               <p className="spotnera-kicker text-white/42">Social</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {socialLinks.map((link) => (
-                  <a
+                  <BusinessEventLink
+                    business={business}
+                    eventType="social_click"
+                    gaEventName="social_click"
+                    gaParameters={{
+                      social_platform: link.label.toLowerCase(),
+                    }}
                     key={link.label}
                     href={link.href}
                     target="_blank"
@@ -607,7 +625,7 @@ export default async function BusinessProfilePage({ params }) {
                     className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white/74 transition hover:bg-white/16 hover:text-white"
                   >
                     {link.label}
-                  </a>
+                  </BusinessEventLink>
                 ))}
               </div>
             </section>

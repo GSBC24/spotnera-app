@@ -67,6 +67,55 @@ const REVIEW_FIELDS = `
   created_at
 `;
 
+const ANALYTICS_RANGES = [
+  { key: "7d", label: "Last 7 days" },
+  { key: "30d", label: "Last 30 days" },
+  { key: "all", label: "All time" },
+];
+
+const BUSINESS_ANALYTICS_METRICS = [
+  {
+    key: "profile_view",
+    label: "Profile views",
+    description: "Customers opened your Spotnera profile.",
+  },
+  {
+    key: "deal_view",
+    label: "Deal views",
+    description: "Customers opened or viewed your live deal.",
+  },
+  {
+    key: "website_click",
+    label: "Website clicks",
+    description: "Customers opened your website from Spotnera.",
+  },
+  {
+    key: "call_click",
+    label: "Call clicks",
+    description: "Customers tapped Call.",
+  },
+  {
+    key: "email_click",
+    label: "Email clicks",
+    description: "Customers tapped Email.",
+  },
+  {
+    key: "social_click",
+    label: "Social clicks",
+    description: "Customers opened your social links.",
+  },
+  {
+    key: "business_share",
+    label: "Shares",
+    description: "Customers used the share action.",
+  },
+  {
+    key: "business_link_copy",
+    label: "Copy link actions",
+    description: "Customers copied your profile link.",
+  },
+];
+
 const BUSINESS_COUNTRIES = [
   "Norway",
   "Sweden",
@@ -281,6 +330,80 @@ function formatRating(rating) {
   }
 
   return Number.isInteger(rating) ? `${rating}.0` : String(rating);
+}
+
+function getAnalyticsRange(value) {
+  return ANALYTICS_RANGES.find((range) => range.key === value) ?? ANALYTICS_RANGES[1];
+}
+
+function formatMetricValue(value) {
+  return Number(value || 0).toLocaleString("en");
+}
+
+function getEmptyEventCounts() {
+  return Object.fromEntries(BUSINESS_ANALYTICS_METRICS.map((metric) => [metric.key, 0]));
+}
+
+function buildEventAnalytics(eventRows = []) {
+  const analyticsByBusinessId = new Map();
+
+  for (const row of eventRows) {
+    if (!analyticsByBusinessId.has(row.business_id)) {
+      analyticsByBusinessId.set(row.business_id, {
+        counts: getEmptyEventCounts(),
+        dailyTotals: new Map(),
+      });
+    }
+
+    const analytics = analyticsByBusinessId.get(row.business_id);
+    const count = Number(row.event_count || 0);
+    analytics.counts[row.event_type] = (analytics.counts[row.event_type] ?? 0) + count;
+    analytics.dailyTotals.set(
+      row.event_date,
+      (analytics.dailyTotals.get(row.event_date) ?? 0) + count,
+    );
+  }
+
+  return analyticsByBusinessId;
+}
+
+function buildChartPoints(dailyTotals) {
+  return [...dailyTotals.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, count]) => ({ date, count }));
+}
+
+function EngagementChart({ points }) {
+  if (!points.length) {
+    return (
+      <div className="mt-3 rounded-2xl border border-dashed border-zinc-200 bg-white/70 p-3 text-xs font-semibold text-zinc-500">
+        No customer activity yet.
+      </div>
+    );
+  }
+
+  const maxCount = Math.max(...points.map((point) => point.count), 1);
+
+  return (
+    <div className="mt-3 rounded-2xl border border-zinc-200 bg-white/80 p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">
+          Engagement over time
+        </p>
+        <p className="text-[10px] font-bold text-zinc-400">{points.length} days</p>
+      </div>
+      <div className="flex h-20 items-end gap-1" aria-label="Daily engagement events">
+        {points.map((point) => (
+          <div
+            key={point.date}
+            title={`${point.date}: ${point.count}`}
+            className="min-w-1 flex-1 rounded-t bg-[#33d6a6]"
+            style={{ height: `${Math.max(8, (point.count / maxCount) * 100)}%` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function buildBusinessPayload(formData, userId) {
@@ -1071,6 +1194,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
   }
 
   const resolvedSearchParams = await searchParams;
+  const analyticsRange = getAnalyticsRange(resolvedSearchParams?.analyticsRange);
   const { supabase, user } = await getSignedInUser();
   const { data: profile } = await supabase
     .from("profiles")
@@ -1089,12 +1213,15 @@ export default async function OwnerDashboardPage({ searchParams }) {
   let deals = [];
   let reviews = [];
   let favorites = [];
+  let eventRows = [];
+  let analyticsError = null;
 
   if (businessIds.length) {
     const [
       { data: dealRows },
       { data: reviewRows },
       { data: favoriteRows },
+      { data: eventCountRows, error: eventCountsError },
     ] = await Promise.all([
       supabase
         .from("deals")
@@ -1110,11 +1237,16 @@ export default async function OwnerDashboardPage({ searchParams }) {
         .from("favorites")
         .select("business_id")
         .in("business_id", businessIds),
+      supabase.rpc("get_owner_business_event_counts", {
+        range_key: analyticsRange.key,
+      }),
     ]);
 
     deals = dealRows ?? [];
     reviews = reviewRows ?? [];
     favorites = favoriteRows ?? [];
+    eventRows = eventCountRows ?? [];
+    analyticsError = eventCountsError;
   }
 
   const dealsByBusinessId = new Map();
@@ -1142,10 +1274,10 @@ export default async function OwnerDashboardPage({ searchParams }) {
   }
 
   const now = new Date();
+  const eventAnalyticsByBusinessId = buildEventAnalytics(eventRows);
   const sortedDeals = sortDealsByComputedStatus(deals, now);
   const totalFavorites = favorites.length;
   const activeDealCount = getLiveDeals(deals, now).length;
-  const averageRating = getAverageRating(reviews);
 
   return (
     <main className="spotnera-owner-shell">
@@ -1208,10 +1340,27 @@ export default async function OwnerDashboardPage({ searchParams }) {
               </p>
               <h2 className="mt-1 text-xl font-semibold">Business statistics</h2>
             </div>
-            <span className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-bold text-white">
-              {formatRating(averageRating)} avg
-            </span>
+            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+              {ANALYTICS_RANGES.map((range) => (
+                <Link
+                  key={range.key}
+                  href={`/owner?analyticsRange=${range.key}`}
+                  className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                    range.key === analyticsRange.key
+                      ? "bg-zinc-950 text-white"
+                      : "bg-white/72 text-zinc-600 hover:bg-white"
+                  }`}
+                >
+                  {range.label}
+                </Link>
+              ))}
+            </div>
           </div>
+          {analyticsError ? (
+            <p className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+              Business analytics will appear after the business events migration is applied.
+            </p>
+          ) : null}
 
           <div className="grid gap-3">
             {businesses.length ? (
@@ -1219,6 +1368,38 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 const businessDeals = dealsByBusinessId.get(business.id) ?? [];
                 const businessReviews = reviewsByBusinessId.get(business.id) ?? [];
                 const favoriteCount = favoriteCountsByBusinessId.get(business.id) ?? 0;
+                const eventAnalytics = eventAnalyticsByBusinessId.get(business.id) ?? {
+                  counts: getEmptyEventCounts(),
+                  dailyTotals: new Map(),
+                };
+                const analyticsMetrics = [
+                  ...BUSINESS_ANALYTICS_METRICS.map((metric) => ({
+                    ...metric,
+                    value: eventAnalytics.counts[metric.key] ?? 0,
+                  })),
+                  {
+                    key: "favorites",
+                    label: "Favorites",
+                    description: "Current customers who saved your business.",
+                    value: favoriteCount,
+                  },
+                  {
+                    key: "reviews",
+                    label: "Reviews",
+                    description: "Current customer review count.",
+                    value: businessReviews.length,
+                  },
+                  {
+                    key: "average_rating",
+                    label: "Average rating",
+                    description: "Average rating from customer reviews.",
+                    value: formatRating(getAverageRating(businessReviews)),
+                  },
+                ];
+                const chartPoints = buildChartPoints(eventAnalytics.dailyTotals);
+                const hasActivity = analyticsMetrics.some(
+                  (metric) => metric.key !== "average_rating" && Number(metric.value || 0) > 0,
+                );
 
                 return (
                   <article key={business.id} className="rounded-[24px] border border-zinc-200 bg-white/72 p-3">
@@ -1275,6 +1456,44 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Saved</p>
                       </div>
                     </div>
+                    <section className="mt-4 rounded-[22px] border border-zinc-200 bg-zinc-50/80 p-3">
+                      <div className="flex flex-wrap items-end justify-between gap-2">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">
+                            Business Analytics
+                          </p>
+                          <h4 className="mt-1 text-base font-bold text-zinc-950">
+                            Customer engagement
+                          </h4>
+                        </div>
+                        <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">
+                          {analyticsRange.label}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                        {analyticsMetrics.map((metric) => (
+                          <div key={metric.key} className="rounded-2xl bg-white p-3">
+                            <p className="text-xl font-black text-zinc-950">
+                              {metric.key === "average_rating"
+                                ? metric.value
+                                : formatMetricValue(metric.value)}
+                            </p>
+                            <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-400">
+                              {metric.label}
+                            </p>
+                            <p className="mt-1 text-xs leading-4 text-zinc-500">
+                              {metric.description}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      <EngagementChart points={chartPoints} />
+                      {!hasActivity ? (
+                        <p className="mt-3 rounded-2xl border border-dashed border-zinc-200 bg-white/70 p-3 text-sm font-medium text-zinc-500">
+                          No customer activity yet. Publish a live deal and share your profile to start building engagement.
+                        </p>
+                      ) : null}
+                    </section>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link
                         href={`/business/${business.id}`}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 
 export function BusinessShareActions({ businessId, businessCategory, city, country, title }) {
@@ -25,6 +26,10 @@ export function BusinessShareActions({ businessId, businessCategory, city, count
         ...analyticsParameters,
         share_method: shareMethod,
       });
+      recordBusinessEvent({
+        businessId,
+        eventType: "business_link_copy",
+      });
     } catch (error) {
       console.error("Business link copy failed", error);
       setMessage("Unable to copy link");
@@ -47,6 +52,10 @@ export function BusinessShareActions({ businessId, businessCategory, city, count
         trackEvent("business_share", {
           ...analyticsParameters,
           share_method: "native",
+        });
+        recordBusinessEvent({
+          businessId,
+          eventType: "business_share",
         });
         return;
       } catch (error) {

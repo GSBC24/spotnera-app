@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/utils/supabase/browser";
 
@@ -38,12 +39,6 @@ export function BusinessProfileFavorite({
 
     const nextFavoriteState = !isFavorite;
     setIsFavorite(nextFavoriteState);
-    trackEvent(nextFavoriteState ? "favorite_add" : "favorite_remove", {
-      business_id: businessId,
-      business_category: businessCategory,
-      city,
-      country,
-    });
 
     const { error } = nextFavoriteState
       ? await supabase.from("favorites").insert({
@@ -60,6 +55,18 @@ export function BusinessProfileFavorite({
       console.error("Favorite update failed", error);
       setIsFavorite(!nextFavoriteState);
       setMessage("Unable to update saved businesses.");
+    } else {
+      const eventType = nextFavoriteState ? "favorite_add" : "favorite_remove";
+      trackEvent(eventType, {
+        business_id: businessId,
+        business_category: businessCategory,
+        city,
+        country,
+      });
+      recordBusinessEvent({
+        businessId,
+        eventType,
+      });
     }
 
     setIsPending(false);
