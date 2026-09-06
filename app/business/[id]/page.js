@@ -8,6 +8,7 @@ import { BusinessProfileMap } from "@/components/business-profile-map";
 import { BusinessShareActions } from "@/components/business-share-actions";
 import { LocalDealDateTime } from "@/components/deal-time-label";
 import { getPrimaryLiveDeal } from "@/lib/deals";
+import { getPromotionTypeLabel } from "@/lib/promotions";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
@@ -43,6 +44,7 @@ const DEAL_SELECT = `
   business_id,
   title,
   description,
+  promotion_type,
   status,
   is_active,
   starts_at,
@@ -539,6 +541,11 @@ export default async function BusinessProfilePage({ params }) {
             {activeDeal ? (
               <div className="mt-4 rounded-[26px] border border-[#33d6a6]/24 bg-[#33d6a6]/14 p-4">
                 <h2 className="text-2xl font-semibold">{activeDeal.title}</h2>
+                {activeDeal.promotion_type ? (
+                  <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-[#72f0cc]">
+                    {getPromotionTypeLabel(activeDeal.promotion_type)}
+                  </p>
+                ) : null}
                 {activeDeal.description ? (
                   <p className="mt-3 text-sm leading-6 text-white/68">
                     {activeDeal.description}

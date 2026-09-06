@@ -7,8 +7,10 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import {
   BUSINESS_CATEGORIES,
+  businessCategoryMatches,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
+import { getPromotionTypeLabel, PROMOTION_TYPES } from "@/lib/promotions";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -301,7 +303,12 @@ function businessMatchesFilters(business, filters) {
   const businessCity = getDisplayValue(business.city);
   const matchesCategory =
     filters.selectedCategories.length === 0 ||
-    filters.selectedCategories.includes(business.category);
+    filters.selectedCategories.some((category) => businessCategoryMatches(business.category, category));
+  const matchesPromotion =
+    !filters.selectedPromotionType ||
+    business.deals.some((deal) =>
+      isLiveDeal(deal) && (deal.promotion_type || "other") === filters.selectedPromotionType,
+    );
   const matchesSearch =
     !normalizedSearch ||
     normalizeSearchValue(business.name).includes(normalizedSearch);
@@ -309,7 +316,7 @@ function businessMatchesFilters(business, filters) {
     !filters.selectedCountry || businessCountry === filters.selectedCountry;
   const matchesCity = !filters.selectedCity || businessCity === filters.selectedCity;
 
-  return matchesCategory && matchesSearch && matchesCountry && matchesCity;
+  return matchesCategory && matchesSearch && matchesCountry && matchesCity && matchesPromotion;
 }
 
 function normalizeBusinesses(businesses) {
@@ -339,7 +346,8 @@ function normalizeBusinesses(businesses) {
     )
     .map((business) => ({
       ...business,
-      category: getBusinessCategoryConfig(business.category).label,
+      category: business.category,
+      categoryLabel: getBusinessCategoryConfig(business.category).label,
       latitude: Number(business.latitude),
       longitude: Number(business.longitude),
       deals: business.deals ?? [],
@@ -624,7 +632,7 @@ function CategoryFilters({
   const [showAllCategories, setShowAllCategories] = useState(false);
   const isAllSelected = selectedCategories.length === 0;
   const selectedOnlyCategories = BUSINESS_CATEGORIES.filter(
-    (category) => selectedCategories.includes(category.label),
+    (category) => selectedCategories.includes(category.value),
   );
   const visibleCategories = showAllCategories
     ? BUSINESS_CATEGORIES
@@ -648,7 +656,7 @@ function CategoryFilters({
       </label>
       <div className="grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
         {visibleCategories.map((category) => {
-          const isChecked = selectedCategories.includes(category.label);
+    const isChecked = selectedCategories.includes(category.value);
 
           return (
             <label
@@ -658,10 +666,10 @@ function CategoryFilters({
               <input
                 type="checkbox"
                 checked={isChecked}
-                onChange={() => onToggleCategory(category.label)}
+                onChange={() => onToggleCategory(category.value)}
                 className="h-4 w-4 accent-white"
               />
-              <CategoryDot category={category.label} />
+              <CategoryDot category={category.value} />
               <span>{category.label}</span>
             </label>
           );
@@ -856,6 +864,7 @@ export function SpotneraDashboard({
   const [isSavingReview, setIsSavingReview] = useState(false);
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedPromotionType, setSelectedPromotionType] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -900,6 +909,7 @@ export function SpotneraDashboard({
     const filters = {
       searchQuery,
       selectedCategories,
+      selectedPromotionType,
       selectedCountry,
       selectedCity,
     };
@@ -907,7 +917,7 @@ export function SpotneraDashboard({
     return mappedBusinesses.filter((business) =>
       businessMatchesFilters(business, filters),
     );
-  }, [mappedBusinesses, searchQuery, selectedCategories, selectedCity, selectedCountry]);
+  }, [mappedBusinesses, searchQuery, selectedCategories, selectedCity, selectedCountry, selectedPromotionType]);
 
   useEffect(() => {
     const normalizedSearch = searchQuery.trim();
@@ -931,7 +941,7 @@ export function SpotneraDashboard({
     filteredBusinesses.find((business) => business.id === selectedBusinessId) ?? null;
   const selectedCategoryCount = selectedCategories.length;
   const activeFilterCount =
-    selectedCategoryCount + (selectedCountry ? 1 : 0) + (selectedCity ? 1 : 0);
+    selectedCategoryCount + (selectedCountry ? 1 : 0) + (selectedCity ? 1 : 0) + (selectedPromotionType ? 1 : 0);
   const totalBusinessLabel = getCountLabel(supabaseBusinessCount, "Business", "Businesses");
   const totalActiveDealLabel = getCountLabel(
     supabaseDealCount,
@@ -971,6 +981,7 @@ export function SpotneraDashboard({
       clearSelectedBusinessIfExcluded({
         searchQuery: nextSearchQuery,
         selectedCategories,
+        selectedPromotionType,
         selectedCountry,
         selectedCity,
       });
@@ -978,6 +989,7 @@ export function SpotneraDashboard({
     [
       clearSelectedBusinessIfExcluded,
       selectedCategories,
+      selectedPromotionType,
       selectedCity,
       selectedCountry,
     ],
@@ -1001,6 +1013,7 @@ export function SpotneraDashboard({
       clearSelectedBusinessIfExcluded({
         searchQuery,
         selectedCategories: nextCategories,
+        selectedPromotionType,
         selectedCountry,
         selectedCity,
       });
@@ -1009,6 +1022,7 @@ export function SpotneraDashboard({
       clearSelectedBusinessIfExcluded,
       searchQuery,
       selectedCategories,
+      selectedPromotionType,
       selectedCity,
       selectedCountry,
     ],
@@ -1022,10 +1036,11 @@ export function SpotneraDashboard({
     clearSelectedBusinessIfExcluded({
       searchQuery,
       selectedCategories: [],
+      selectedPromotionType,
       selectedCountry,
       selectedCity,
     });
-  }, [clearSelectedBusinessIfExcluded, searchQuery, selectedCity, selectedCountry]);
+  }, [clearSelectedBusinessIfExcluded, searchQuery, selectedCity, selectedCountry, selectedPromotionType]);
   const handleSelectCountry = useCallback(
     (event) => {
       const nextCountry = event.target.value;
@@ -1049,6 +1064,7 @@ export function SpotneraDashboard({
         selectedCategories,
         selectedCountry: nextCountry,
         selectedCity: nextCity,
+        selectedPromotionType,
       });
     },
     [
@@ -1056,6 +1072,7 @@ export function SpotneraDashboard({
       mappedBusinesses,
       searchQuery,
       selectedCategories,
+      selectedPromotionType,
       selectedCity,
     ],
   );
@@ -1073,6 +1090,7 @@ export function SpotneraDashboard({
         selectedCategories,
         selectedCountry,
         selectedCity: nextCity,
+        selectedPromotionType,
       });
     },
     [
@@ -1080,8 +1098,24 @@ export function SpotneraDashboard({
       searchQuery,
       selectedCategories,
       selectedCountry,
+      selectedPromotionType,
     ],
   );
+
+  const handleSelectPromotionType = useCallback((event) => {
+    const nextPromotionType = event.target.value;
+    setSelectedPromotionType(nextPromotionType);
+    trackEvent("filter_promotion_type", {
+      promotion_type: nextPromotionType || "all",
+    });
+    clearSelectedBusinessIfExcluded({
+      searchQuery,
+      selectedCategories,
+      selectedPromotionType: nextPromotionType,
+      selectedCountry,
+      selectedCity,
+    });
+  }, [clearSelectedBusinessIfExcluded, searchQuery, selectedCategories, selectedCountry, selectedCity]);
 
   const currentUserReview = selectedBusiness?.reviews.find(
     (review) => review.user_id === userId,
@@ -1224,7 +1258,8 @@ export function SpotneraDashboard({
             .map((deal) => ({
               id: deal.id,
               title: business.name,
-              detail: deal.title,
+              detail: `${getPromotionTypeLabel(deal.promotion_type)} - ${deal.title}`,
+              promotionType: deal.promotion_type,
               time: "Active",
               color: DEAL_STATUS_META.LIVE.color,
             })),
@@ -1238,10 +1273,12 @@ export function SpotneraDashboard({
     setSelectedCountry("");
     setSelectedCity("");
     setSelectedCategories([]);
+    setSelectedPromotionType("");
     setAreFiltersOpen(false);
     clearSelectedBusinessIfExcluded({
       searchQuery: "",
       selectedCategories: [],
+      selectedPromotionType: "",
       selectedCountry: "",
       selectedCity: "",
     });
@@ -1354,6 +1391,19 @@ export function SpotneraDashboard({
               Filters {activeFilterCount ? `(${activeFilterCount})` : ""}
             </button>
           </div>
+          <label className="mt-2 block min-w-0">
+            <span className="sr-only">Promotion type</span>
+            <select
+              value={selectedPromotionType}
+              onChange={handleSelectPromotionType}
+              className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
+            >
+              <option value="">All promotions</option>
+              {PROMOTION_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
+          </label>
           {areFiltersOpen ? (
             <div className="mt-3 rounded-[24px] border border-white/10 bg-zinc-950/54 p-3">
               <CategoryFilters

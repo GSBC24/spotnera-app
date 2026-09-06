@@ -10,7 +10,8 @@ import { DealTimeLabel } from "@/components/deal-time-label";
 import { LogoutButton } from "@/components/logout-button";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
-import { BUSINESS_CATEGORY_LABELS } from "@/lib/business-categories";
+import { BUSINESS_CATEGORY_LABELS, isKnownBusinessCategory } from "@/lib/business-categories";
+import { PROMOTION_TYPES, PROMOTION_TYPE_VALUES } from "@/lib/promotions";
 import {
   DEAL_STATUS,
   DEAL_STATUS_META,
@@ -52,6 +53,7 @@ const DEAL_FIELDS = `
   owner_id,
   title,
   description,
+  promotion_type,
   status,
   is_active,
   starts_at,
@@ -460,6 +462,7 @@ function buildDealPayload(formData, userId) {
     owner_id: userId,
     title: getString(formData, "title"),
     description: getNullableString(formData, "description"),
+    promotion_type: getString(formData, "promotion_type") || null,
     is_active: isActive,
     starts_at: startsAt?.value ?? null,
     ends_at: endsAt?.value ?? null,
@@ -491,7 +494,9 @@ function validateBusiness(payload) {
   }
 
   if (!BUSINESS_CATEGORY_LABELS.includes(payload.category)) {
+    if (!isKnownBusinessCategory(payload.category)) {
     return "Choose a valid business category.";
+    }
   }
 
   if (!BUSINESS_COUNTRIES.includes(payload.country)) {
@@ -539,6 +544,10 @@ function validateDeal(payload) {
 
   if (!payload.business_id || !payload.title) {
     return "Choose a business and add a deal title.";
+  }
+
+  if (payload.promotion_type && !PROMOTION_TYPE_VALUES.includes(payload.promotion_type)) {
+    return "Choose a valid promotion type.";
   }
 
   if (payload.starts_at && payload.ends_at && payload.starts_at >= payload.ends_at) {
@@ -1143,6 +1152,14 @@ function DealForm({ action, deal, businesses, submitLabel }) {
       </Field>
       <Field label="Description">
         <TextArea name="description" defaultValue={deal?.description ?? ""} />
+      </Field>
+      <Field label="Promotion type">
+        <Select name="promotion_type" defaultValue={deal?.promotion_type ?? ""}>
+          <option value="">No type selected</option>
+          {PROMOTION_TYPES.map((type) => (
+            <option key={type.value} value={type.value}>{type.label}</option>
+          ))}
+        </Select>
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Starts">
