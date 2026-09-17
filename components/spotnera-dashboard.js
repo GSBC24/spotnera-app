@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -857,9 +858,9 @@ export function SpotneraDashboard({
   queryErrors = [],
   initialTab = "map",
   initialSearchOpen = false,
-  initialAuthOpen = false,
-  initialAuthIntent = "/",
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const localProfile = profile ?? {};
   const [localBusinesses, setLocalBusinesses] = useState(() => businesses);
@@ -874,12 +875,19 @@ export function SpotneraDashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(initialSearchOpen);
-  const [authIntent, setAuthIntent] = useState(initialAuthIntent);
-  const [isAuthOpen, setIsAuthOpen] = useState(initialAuthOpen);
+  const [requestedAuthIntent, setRequestedAuthIntent] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(
     ["map", "pulse", "saved"].includes(initialTab) ? initialTab : "map",
   );
+  const requestedNext = searchParams.get("next") ?? "/";
+  const queryAuthIntent =
+    requestedNext.startsWith("/") && !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/";
+  const isAuthOpen =
+    !userId && (searchParams.get("auth") === "1" || requestedAuthIntent !== null);
+  const authIntent = requestedAuthIntent ?? queryAuthIntent;
   const handleSelectTab = useCallback((tabId) => {
     setActiveTab(tabId);
     if (tabId !== "map") setIsDetailOpen(false);
@@ -891,9 +899,18 @@ export function SpotneraDashboard({
   }, []);
   const requestAuth = useCallback((intent = "/") => {
     const destination = intent === "business" ? "/owner" : intent === "saved" ? "/?tab=saved" : intent === "me" ? "/me" : intent;
-    setAuthIntent(destination);
-    setIsAuthOpen(true);
+    setRequestedAuthIntent(destination);
   }, []);
+  const handleCloseAuth = useCallback(() => {
+    setRequestedAuthIntent(null);
+
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.delete("auth");
+    searchParams.delete("next");
+    const query = searchParams.toString();
+
+    router.replace(query ? `/?${query}` : "/", { scroll: false });
+  }, [router]);
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
@@ -1351,7 +1368,7 @@ export function SpotneraDashboard({
         </header>
         {isAuthOpen ? (
           <section role="dialog" aria-modal="true" aria-labelledby="auth-gate-title" className="fixed inset-x-3 bottom-24 z-[90] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-md overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/98 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
-            <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button type="button" aria-label="Close sign in" onClick={() => setIsAuthOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
+            <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button type="button" aria-label="Close sign in" onClick={handleCloseAuth} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
             <div className="mt-5 rounded-2xl bg-white p-4 text-zinc-950"><AuthPanel successRedirect={authIntent} /></div>
           </section>
         ) : null}

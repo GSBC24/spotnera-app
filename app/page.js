@@ -59,12 +59,6 @@ export default async function Home({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const accountDeleted = resolvedSearchParams?.accountDeleted === "1";
   const initialSearchOpen = resolvedSearchParams?.search === "1";
-  const initialAuthOpen = resolvedSearchParams?.auth === "1";
-  const requestedAuthIntent = resolvedSearchParams?.next || "/";
-  const initialAuthIntent =
-    requestedAuthIntent.startsWith("/") && !requestedAuthIntent.startsWith("//")
-      ? requestedAuthIntent
-      : "/";
   const initialTab = initialSearchOpen
     ? "map"
     : ["map", "pulse", "saved"].includes(resolvedSearchParams?.tab)
@@ -249,8 +243,6 @@ export default async function Home({ searchParams }) {
         queryErrors={queryErrors}
         initialTab={initialTab}
         initialSearchOpen={initialSearchOpen}
-        initialAuthOpen={initialAuthOpen}
-        initialAuthIntent={initialAuthIntent}
       />
     );
   }
@@ -268,7 +260,6 @@ export default async function Home({ searchParams }) {
           queryErrors={queryErrors}
           initialTab={initialTab}
           initialSearchOpen={initialSearchOpen}
-          initialAuthIntent={initialAuthIntent}
         />
       ) : (
         <main className="spotnera-auth-shell px-5 py-6 sm:px-8">
