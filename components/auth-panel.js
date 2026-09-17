@@ -8,6 +8,14 @@ import { createClient } from "@/utils/supabase/browser";
 function getFriendlyAuthError(error) {
   const message = String(error?.message ?? "").toLowerCase();
 
+  if (
+    error?.status === 429 ||
+    message.includes("rate limit") ||
+    message.includes("too many requests")
+  ) {
+    return "Too many authentication emails have been requested. Wait a few minutes and try again.";
+  }
+
   if (message.includes("invalid login credentials")) {
     return "The email or password is incorrect.";
   }
