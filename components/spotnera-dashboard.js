@@ -964,15 +964,6 @@ export function SpotneraDashboard({
     "Active deal",
     "Active deals",
   );
-  const recommendedBusiness = useMemo(
-    () =>
-      filteredBusinesses.find((business) =>
-        business.deals.some((deal) => isLiveDeal(deal)),
-      ) ??
-      filteredBusinesses[0] ??
-      null,
-    [filteredBusinesses],
-  );
   const clearSelectedBusinessIfExcluded = useCallback(
     (filters) => {
       if (
@@ -1585,34 +1576,6 @@ export function SpotneraDashboard({
                 >
                   Full profile
                 </Link>
-              </div>
-            </motion.div>
-          ) : recommendedBusiness ? (
-            <motion.div
-              initial={{ y: 28, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 130, damping: 18 }}
-              className="absolute bottom-4 left-4 right-4 z-10 rounded-[24px] border border-white/12 bg-zinc-950/48 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.36)] backdrop-blur-2xl"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/44">
-                    Best nearby
-                  </p>
-                  <h2 className="mt-1 truncate text-base font-semibold">
-                    {recommendedBusiness.name}
-                  </h2>
-                  <p className="mt-0.5 truncate text-xs text-white/56">
-                    {getBusinessSignal(recommendedBusiness)}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleSelectBusiness(recommendedBusiness)}
-                  className="rounded-2xl bg-white/12 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/18"
-                >
-                  View
-                </button>
               </div>
             </motion.div>
           ) : null}
