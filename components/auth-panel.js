@@ -169,7 +169,7 @@ export function AuthPanel({ successRedirect = "/" } = {}) {
   ];
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="spotnera-auth-panel flex w-full flex-col gap-4">
       <div className="grid gap-3">
         {providerButtons.map((button) => (
           <button

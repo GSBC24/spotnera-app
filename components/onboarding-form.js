@@ -33,7 +33,9 @@ function Field({ label, optional = false, children }) {
         {label}
         {optional ? (
           <span className="normal-case tracking-normal text-zinc-400"> optional</span>
-        ) : null}
+        ) : (
+          <span className="ml-1 normal-case tracking-normal text-[#72f0cc]">required</span>
+        )}
       </span>
       {children}
     </label>

@@ -906,7 +906,7 @@ function FileInput(props) {
       {...props}
       type="file"
       accept="image/png,image/jpeg,image/webp,image/gif"
-      className="rounded-2xl border border-dashed border-zinc-300 bg-white/86 px-3 py-3 text-sm font-medium text-zinc-600 file:mr-3 file:rounded-xl file:border-0 file:bg-zinc-950 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white"
+      className="rounded-2xl border border-dashed border-zinc-300 bg-white/86 px-3 py-3 text-sm font-medium text-zinc-600 file:mr-3 file:rounded-xl file:border-0 file:bg-[#33d6a6] file:px-3 file:py-2 file:text-xs file:font-bold file:text-zinc-950"
     />
   );
 }
@@ -1381,7 +1381,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
               href={`/owner?section=${key}`}
               className={`min-h-10 shrink-0 rounded-2xl px-3 text-xs font-black transition sm:px-4 ${
                 ownerSection === key
-                  ? "bg-white text-zinc-950"
+                  ? "spotnera-brand-action"
                   : "text-white/58 hover:bg-white/10 hover:text-white"
               }`}
             >
@@ -1434,7 +1434,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                   href={`/owner?section=analytics&analyticsRange=${range.key}&analyticsBusinessId=${selectedAnalyticsBusinessId ?? ""}`}
                   className={`rounded-full px-3 py-1 text-xs font-bold transition ${
                     range.key === analyticsRange.key
-                      ? "bg-zinc-950 text-white"
+                      ? "spotnera-brand-action"
                       : "bg-white/72 text-zinc-600 hover:bg-white"
                   }`}
                 >
@@ -1463,7 +1463,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 <Link
                   key={business.id}
                   href={`/owner?section=analytics&analyticsBusinessId=${business.id}&analyticsRange=${analyticsRange.key}`}
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selectedAnalyticsBusinessId === business.id ? "bg-white text-zinc-950" : "bg-white/10 text-white/62 hover:bg-white/16"}`}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selectedAnalyticsBusinessId === business.id ? "spotnera-brand-action" : "bg-white/10 text-white/62 hover:bg-white/16"}`}
                 >
                   {business.name}
                 </Link>

@@ -456,7 +456,7 @@ function FavoriteButton({ isFavorite, onClick, size = "md", disabled = false }) 
       onClick={onClick}
       className={`grid ${sizeClass} shrink-0 place-items-center border transition disabled:cursor-not-allowed disabled:opacity-60 ${
         isFavorite
-          ? "border-[#ff7a59]/50 bg-[#ff7a59] text-white shadow-[0_12px_30px_rgba(255,122,89,0.22)]"
+          ? "border-[#33d6a6]/50 bg-[#33d6a6] text-zinc-950 shadow-[0_12px_30px_rgba(51,214,166,0.22)]"
           : "border-white/12 bg-white/10 text-white/70 hover:bg-white/16 hover:text-white"
       }`}
     >
@@ -653,7 +653,7 @@ function CategoryFilters({
           type="checkbox"
           checked={isAllSelected}
           onChange={onSelectAll}
-          className="h-4 w-4 accent-white"
+          className="h-4 w-4 accent-[#33d6a6]"
         />
         <span>All businesses</span>
       </label>
@@ -670,7 +670,7 @@ function CategoryFilters({
                 type="checkbox"
                 checked={isChecked}
                 onChange={() => onToggleCategory(category.value)}
-                className="h-4 w-4 accent-white"
+                className="h-4 w-4 accent-[#33d6a6]"
               />
               <CategoryDot category={category.value} />
               <span>{category.label}</span>
@@ -1363,13 +1363,13 @@ export function SpotneraDashboard({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {userId ? <><Link href="/me" aria-label="Open profile" className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.2)] transition hover:bg-white/90">{displayName.slice(0, 2).toUpperCase()}</Link><div className="relative"><HeaderLogout /></div></> : <Link href="/?auth=1" className="inline-flex min-h-10 items-center rounded-2xl bg-white px-3 text-xs font-bold text-zinc-950">Sign in</Link>}
+            {userId ? <><Link href="/me" aria-label="Open profile" className="spotnera-brand-action grid h-12 w-12 place-items-center rounded-2xl text-sm font-bold transition">{displayName.slice(0, 2).toUpperCase()}</Link><div className="relative"><HeaderLogout /></div></> : <Link href="/?auth=1" className="spotnera-brand-action inline-flex min-h-10 items-center rounded-2xl px-3 text-xs font-bold">Sign in</Link>}
           </div>
         </header>
         {isAuthOpen ? (
           <section role="dialog" aria-modal="true" aria-labelledby="auth-gate-title" className="fixed inset-x-3 bottom-24 z-[90] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-md overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/98 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
             <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button type="button" aria-label="Close sign in" onClick={handleCloseAuth} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
-            <div className="mt-5 rounded-2xl bg-white p-4 text-zinc-950"><AuthPanel successRedirect={authIntent} /></div>
+            <div className="spotnera-auth-panel mt-5 rounded-2xl border border-white/10 p-4"><AuthPanel successRedirect={authIntent} /></div>
           </section>
         ) : null}
         {activeTab === "map" ? (
@@ -1427,7 +1427,7 @@ export function SpotneraDashboard({
               type="button"
               onClick={() => setAreFiltersOpen((isOpen) => !isOpen)}
               aria-expanded={areFiltersOpen}
-              className="col-span-2 h-11 rounded-2xl border border-white/10 bg-white px-4 text-xs font-bold text-zinc-950 transition hover:bg-white/90 sm:col-span-1"
+              className="spotnera-brand-action col-span-2 h-11 rounded-2xl border border-[#33d6a6]/40 px-4 text-xs font-bold transition sm:col-span-1"
             >
               Filters {activeFilterCount ? `(${activeFilterCount})` : ""}
             </button>
@@ -1456,7 +1456,7 @@ export function SpotneraDashboard({
           ) : null}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             <button type="button" onClick={handleClearFilters} className="min-h-10 rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/75 transition hover:bg-white/14">Clear filters</button>
-            <button type="button" onClick={() => setIsSearchOpen(false)} className="min-h-10 rounded-2xl bg-white px-4 text-xs font-bold text-zinc-950 transition hover:bg-white/90">Show results</button>
+            <button type="button" onClick={() => setIsSearchOpen(false)} className="spotnera-brand-action min-h-10 rounded-2xl px-4 text-xs font-bold transition">Show results</button>
           </div>
         </section>
         ) : null}
@@ -1583,7 +1583,7 @@ export function SpotneraDashboard({
                       });
                     }
                   }}
-                  className="shrink-0 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-zinc-950 transition hover:bg-white/90"
+                  className="spotnera-brand-action shrink-0 rounded-2xl px-4 py-2 text-xs font-bold transition"
                 >
                   View details
                 </button>
@@ -1744,7 +1744,7 @@ export function SpotneraDashboard({
                   <button
                     type="submit"
                     disabled={isSavingReview}
-                    className="rounded-2xl bg-white px-4 py-2 text-xs font-bold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="spotnera-brand-action rounded-2xl px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSavingReview
                       ? "Saving"
@@ -1794,7 +1794,7 @@ export function SpotneraDashboard({
                 Live deals
               </h2>
             </div>
-            <span className="rounded-full bg-[#33d6a6]/16 px-3 py-1 text-xs font-semibold text-[#72f0cc]">
+            <span className="spotnera-live-badge rounded-full px-3 py-1 text-xs font-semibold">
               {activeDeals} active
             </span>
           </div>

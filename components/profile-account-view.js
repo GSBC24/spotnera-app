@@ -121,7 +121,7 @@ export function ProfileAccountView({ profile, userId, ownedBusinessCount = 0 }) 
         </div>
         <label className="grid gap-1.5"><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">Street address optional</span><input name="address" maxLength={240} defaultValue={localProfile.address ?? ""} className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30" /></label>
         {message ? <p className="rounded-2xl border border-emerald-300/20 bg-emerald-500/14 px-3 py-2 text-sm font-semibold text-emerald-100">{message}</p> : null}
-        <button type="submit" disabled={isSaving} className="h-11 rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60">{isSaving ? "Saving..." : "Save changes"}</button>
+        <button type="submit" disabled={isSaving} className="spotnera-brand-action h-11 rounded-2xl px-4 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60">{isSaving ? "Saving..." : "Save changes"}</button>
       </form>
       <section className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">Privacy</p><PrivacySettingsLink className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16" /></section>
       <DeleteAccountPanel ownedBusinessCount={ownedBusinessCount} />

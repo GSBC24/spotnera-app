@@ -193,7 +193,7 @@ export default async function OnboardingPage() {
               <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
             </div>
           </div>
-          <div className="rounded-full border border-zinc-200/80 bg-white/70 px-3 py-1 text-xs font-semibold text-zinc-600 shadow-sm backdrop-blur">
+          <div className="rounded-full border border-[#33d6a6]/25 bg-[#33d6a6]/10 px-3 py-1 text-xs font-semibold text-[#72f0cc] shadow-sm backdrop-blur">
             Step 1 of 1
           </div>
         </header>
@@ -201,9 +201,9 @@ export default async function OnboardingPage() {
         <section className="grid flex-1 items-end gap-8 py-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div className="mb-2 lg:mb-0">
             <div className="mb-5 flex gap-2">
-              <span className="h-1.5 flex-1 rounded-full bg-zinc-950" />
-              <span className="h-1.5 flex-1 rounded-full bg-zinc-300" />
-              <span className="h-1.5 flex-1 rounded-full bg-zinc-300" />
+              <span className="h-1.5 flex-1 rounded-full bg-[#33d6a6] shadow-[0_0_18px_rgba(51,214,166,0.34)]" />
+              <span className="h-1.5 flex-1 rounded-full bg-white/10" />
+              <span className="h-1.5 flex-1 rounded-full bg-white/10" />
             </div>
             <p className="text-sm font-semibold text-zinc-500">
               Welcome{providerNames.firstName ? `, ${providerNames.firstName}` : ""}
