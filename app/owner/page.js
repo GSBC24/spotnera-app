@@ -12,6 +12,7 @@ import { HeaderLogout } from "@/components/header-logout";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
+import { getBusinessPath } from "@/lib/business-url";
 import { PROMOTION_TYPES, PROMOTION_TYPE_VALUES } from "@/lib/promotions";
 import {
   DEAL_STATUS,
@@ -25,6 +26,7 @@ import { createClient } from "@/utils/supabase/server";
 
 const BUSINESS_FIELDS = `
   id,
+  slug,
   owner_id,
   name,
   category,
@@ -659,7 +661,7 @@ async function uploadBusinessImages(supabase, userId, businessId, formData) {
 async function verifyOwnedBusiness(supabase, userId, businessId) {
   const { data, error } = await supabase
     .from("businesses")
-    .select("id")
+    .select("id, slug")
     .eq("id", businessId)
     .eq("owner_id", userId)
     .maybeSingle();
@@ -698,6 +700,14 @@ function logServerActionError(label, error) {
   }
 }
 
+function revalidateBusinessProfile(business) {
+  revalidatePath(getBusinessPath(business));
+
+  if (business?.slug && business?.id) {
+    revalidatePath(getBusinessPath({ id: business.id }));
+  }
+}
+
 async function createBusiness(formData) {
   "use server";
 
@@ -712,7 +722,7 @@ async function createBusiness(formData) {
   const { data: business, error } = await supabase
     .from("businesses")
     .insert(getBusinessSavePayload(payload))
-    .select("id")
+    .select("id, slug")
     .single();
 
   if (error) {
@@ -761,21 +771,23 @@ async function updateBusiness(formData) {
     redirectWithError("Unable to upload business images. Please try again.");
   }
 
-  const { error } = await supabase
+  const { data: business, error } = await supabase
     .from("businesses")
     .update({
       ...getBusinessSavePayload(payload),
       ...uploaded.urls,
     })
     .eq("id", businessId)
-    .eq("owner_id", user.id);
+    .eq("owner_id", user.id)
+    .select("id, slug")
+    .single();
 
   if (error) {
     logServerActionError("Business update failed", error);
     redirectWithError("Unable to update business. Please try again.");
   }
 
-  revalidatePath(`/business/${businessId}`);
+  revalidateBusinessProfile(business);
   revalidatePath("/owner");
   redirect("/owner");
 }
@@ -808,7 +820,7 @@ async function createDeal(formData) {
     redirectWithError("Unable to create deal. Please try again.");
   }
 
-  revalidatePath(`/business/${payload.business_id}`);
+  revalidateBusinessProfile(ownedBusiness.business);
   revalidatePath("/owner");
   redirect("/owner");
 }
@@ -846,7 +858,7 @@ async function updateDeal(formData) {
     redirectWithError("Unable to update deal. Please try again.");
   }
 
-  revalidatePath(`/business/${payload.business_id}`);
+  revalidateBusinessProfile(ownedBusiness.business);
   revalidatePath("/owner");
   redirect("/owner");
 }
@@ -874,7 +886,8 @@ async function deleteDeal(formData) {
   }
 
   if (businessId) {
-    revalidatePath(`/business/${businessId}`);
+    const ownedBusiness = await verifyOwnedBusiness(supabase, user.id, businessId);
+    revalidateBusinessProfile(ownedBusiness.business ?? { id: businessId });
   }
   revalidatePath("/owner");
   redirect("/owner");
@@ -1618,13 +1631,14 @@ export default async function OwnerDashboardPage({ searchParams }) {
                     ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link
-                        href={`/business/${business.id}`}
+                        href={getBusinessPath(business)}
                         className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
                       >
                         View public profile
                       </Link>
                       <CopyProfileLinkButton
                         businessId={business.id}
+                        businessSlug={business.slug}
                         businessCategory={business.category}
                         city={business.city}
                         country={business.country}

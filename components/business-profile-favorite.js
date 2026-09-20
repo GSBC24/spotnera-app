@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
+import { getBusinessPath } from "@/lib/business-url";
 import { createClient } from "@/utils/supabase/browser";
 
 export function BusinessProfileFavorite({
   businessId,
+  businessSlug,
   businessCategory,
   city,
   country,
@@ -77,7 +79,9 @@ export function BusinessProfileFavorite({
   if (!isAuthenticated) {
     return (
       <Link
-        href={`/?auth=1&next=${encodeURIComponent(`/business/${businessId}`)}`}
+        href={`/?auth=1&next=${encodeURIComponent(
+          getBusinessPath({ id: businessId, slug: businessSlug }),
+        )}`}
         className="spotnera-secondary-action inline-flex min-h-12 items-center justify-center px-5 text-sm"
       >
         Sign in to save

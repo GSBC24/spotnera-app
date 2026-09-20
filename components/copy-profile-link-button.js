@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { getBusinessPath } from "@/lib/business-url";
 
 export function CopyProfileLinkButton({
   businessCategory,
   businessId,
+  businessSlug,
   city,
   country,
   label = "Copy profile link",
@@ -14,7 +16,8 @@ export function CopyProfileLinkButton({
   const [message, setMessage] = useState(null);
 
   async function copyLink() {
-    const link = url || `${window.location.origin}/business/${businessId}`;
+    const link =
+      url || `${window.location.origin}${getBusinessPath({ id: businessId, slug: businessSlug })}`;
 
     try {
       await navigator.clipboard.writeText(link);

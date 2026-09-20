@@ -14,6 +14,7 @@ import {
 import { getPromotionTypeLabel, PROMOTION_TYPES } from "@/lib/promotions";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
+import { getBusinessPath } from "@/lib/business-url";
 import {
   DEAL_STATUS_META,
   getLiveDeals,
@@ -1186,7 +1187,7 @@ export function SpotneraDashboard({
   const handleToggleFavorite = useCallback(
     async (business) => {
       if (!userId) {
-        requestAuth(`/business/${business.id}`);
+        requestAuth(getBusinessPath(business));
         return;
       }
       if (pendingFavoriteId) {
@@ -1243,7 +1244,7 @@ export function SpotneraDashboard({
 
       if (!userId) {
         event.preventDefault();
-        if (selectedBusiness) requestAuth(`/business/${selectedBusiness.id}`);
+        if (selectedBusiness) requestAuth(getBusinessPath(selectedBusiness));
         return;
       }
       if (!selectedBusiness || isSavingReview) {
@@ -1631,7 +1632,7 @@ export function SpotneraDashboard({
                   View details
                 </button>
                 <Link
-                  href={`/business/${selectedBusiness.id}`}
+                  href={getBusinessPath(selectedBusiness)}
                   className="shrink-0 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-center text-xs font-bold text-white/78 transition hover:bg-white/16"
                 >
                   Full profile
@@ -1800,7 +1801,7 @@ export function SpotneraDashboard({
                   </button>
                 </div>
                 <Link
-                  href={`/business/${selectedBusiness.id}`}
+                  href={getBusinessPath(selectedBusiness)}
                   className="mt-3 inline-flex min-h-10 items-center rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/78 transition hover:bg-white/14"
                 >
                   View public profile

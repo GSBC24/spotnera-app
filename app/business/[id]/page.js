@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { BusinessEventLink } from "@/components/business-event-link";
 import { BusinessProfileAnalytics } from "@/components/business-profile-analytics";
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
@@ -8,16 +8,17 @@ import { BusinessProfileMap } from "@/components/business-profile-map";
 import { BusinessShareActions } from "@/components/business-share-actions";
 import { LocalDealDateTime } from "@/components/deal-time-label";
 import { getPrimaryLiveDeal } from "@/lib/deals";
+import { getBusinessPath, getBusinessUrl } from "@/lib/business-url";
 import { getPromotionTypeLabel } from "@/lib/promotions";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
-const APP_URL = "https://app.spotnera.com";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const BUSINESS_SELECT = `
   id,
+  slug,
   owner_id,
   name,
   category,
@@ -94,10 +95,6 @@ const SOCIAL_PROFILES = [
 function getDisplayValue(value) {
   const normalizedValue = String(value ?? "").trim();
   return normalizedValue || null;
-}
-
-function getBusinessUrl(id) {
-  return `${APP_URL}/business/${id}`;
 }
 
 function getAverageRating(reviews = []) {
@@ -244,8 +241,14 @@ function getContactActions(business) {
   ].filter(Boolean);
 }
 
-async function getPublicBusiness(id) {
-  if (!hasSupabaseEnv() || !UUID_PATTERN.test(id)) {
+function applyBusinessIdentifier(query, identifier) {
+  return UUID_PATTERN.test(identifier)
+    ? query.eq("id", identifier)
+    : query.eq("slug", identifier);
+}
+
+async function getPublicBusiness(identifier) {
+  if (!hasSupabaseEnv()) {
     return { business: null, error: null };
   }
 
@@ -254,12 +257,14 @@ async function getPublicBusiness(id) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: business, error: businessError } = await supabase
+  const businessQuery = supabase
     .from("businesses")
     .select(BUSINESS_SELECT)
-    .eq("id", id)
-    .eq("is_active", true)
-    .maybeSingle();
+    .eq("is_active", true);
+  const { data: business, error: businessError } = await applyBusinessIdentifier(
+    businessQuery,
+    identifier,
+  ).maybeSingle();
 
   if (businessError) {
     if (process.env.NODE_ENV !== "production") {
@@ -272,13 +277,19 @@ async function getPublicBusiness(id) {
     return { business: null, error: null };
   }
 
+  if (UUID_PATTERN.test(identifier)) {
+    permanentRedirect(getBusinessPath(business));
+  }
+
+  const businessId = business.id;
+
   const now = new Date();
   const [{ data: deals, error: dealsError }, { data: reviews, error: reviewsError }] =
     await Promise.all([
       supabase
         .from("deals")
         .select(DEAL_SELECT)
-        .eq("business_id", id)
+        .eq("business_id", businessId)
         .eq("is_active", true)
         .or(`starts_at.is.null,starts_at.lte.${now.toISOString()}`)
         .or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`)
@@ -286,7 +297,7 @@ async function getPublicBusiness(id) {
       supabase
         .from("reviews")
         .select(REVIEW_SELECT)
-        .eq("business_id", id)
+        .eq("business_id", businessId)
         .order("created_at", { ascending: false }),
     ]);
 
@@ -308,7 +319,7 @@ async function getPublicBusiness(id) {
     const { data: favorite } = await supabase
       .from("favorites")
       .select("business_id")
-      .eq("business_id", id)
+      .eq("business_id", businessId)
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -331,7 +342,7 @@ async function getPublicBusiness(id) {
 export async function generateMetadata({ params }) {
   const { id } = await params;
 
-  if (!UUID_PATTERN.test(id) || !hasSupabaseEnv()) {
+  if (!hasSupabaseEnv()) {
     return {
       title: "Business not found | Spotnera",
       description: "This Spotnera business profile is not available.",
@@ -339,12 +350,11 @@ export async function generateMetadata({ params }) {
   }
 
   const supabase = await createClient();
-  const { data: business } = await supabase
+  const metadataQuery = supabase
     .from("businesses")
-    .select("id, name, category, city, country, description, logo_url, cover_image_url, is_active")
-    .eq("id", id)
-    .eq("is_active", true)
-    .maybeSingle();
+    .select("id, slug, name, category, city, country, description, logo_url, cover_image_url, is_active")
+    .eq("is_active", true);
+  const { data: business } = await applyBusinessIdentifier(metadataQuery, id).maybeSingle();
 
   if (!business) {
     return {
@@ -359,7 +369,7 @@ export async function generateMetadata({ params }) {
     [business.category, business.city, business.country].filter(Boolean).join(" in ") ||
     "Discover this business on Spotnera.";
   const image = business.cover_image_url || business.logo_url || "/icons/spotnera-icon-512.png";
-  const url = getBusinessUrl(business.id);
+  const url = getBusinessUrl(business);
 
   return {
     title,
@@ -416,10 +426,6 @@ function BrandedUnavailable({ title, message }) {
 
 export default async function BusinessProfilePage({ params }) {
   const { id } = await params;
-
-  if (!UUID_PATTERN.test(id)) {
-    notFound();
-  }
 
   const { business, error } = await getPublicBusiness(id);
 
@@ -520,6 +526,7 @@ export default async function BusinessProfilePage({ params }) {
                   <div className="flex flex-wrap gap-2 sm:justify-end">
                     <BusinessProfileFavorite
                       businessId={business.id}
+                      businessSlug={business.slug}
                       businessCategory={business.category}
                       city={business.city}
                       country={business.country}

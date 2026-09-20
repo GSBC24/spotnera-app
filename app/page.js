@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 
 const BUSINESS_SELECT = `
   id,
+  slug,
   owner_id,
   name,
   category,
