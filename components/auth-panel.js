@@ -186,7 +186,6 @@ export function AuthPanel({ successRedirect = "/" } = {}) {
   const providerButtons = [
     { provider: "google", label: "Continue with Google", mark: "G" },
     { provider: "facebook", label: "Continue with Facebook", mark: "f" },
-    { provider: "apple", label: "Continue with Apple", mark: "Apple" },
   ];
 
   return (
