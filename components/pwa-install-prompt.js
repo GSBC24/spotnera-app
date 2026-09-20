@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 const DISMISSED_KEY = "spotnera-install-dismissed";
+const CONTROLLER_RELOAD_KEY = "spotnera-sw-controller-reloaded";
+const UPDATE_THROTTLE_MS = 15 * 60 * 1000;
+const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
 
 function isStandaloneMode() {
   return (
@@ -30,21 +33,119 @@ export function PwaInstallPrompt() {
       return undefined;
     }
 
-    const registerServiceWorker = () => {
-      navigator.serviceWorker.register("/sw.js").catch((error) => {
-        console.error("Spotnera service worker registration failed", error);
-      });
+    let registration;
+    let updateInProgress = false;
+    let lastUpdateCheckAt = 0;
+    let hasController = Boolean(navigator.serviceWorker.controller);
+    let isReloading = false;
+    let isDisposed = false;
+
+    const checkForUpdate = async ({ force = false } = {}) => {
+      if (isDisposed || !registration?.active || updateInProgress) {
+        return;
+      }
+
+      const now = Date.now();
+
+      if (!force && now - lastUpdateCheckAt < UPDATE_THROTTLE_MS) {
+        return;
+      }
+
+      updateInProgress = true;
+      lastUpdateCheckAt = now;
+
+      try {
+        await registration.update();
+      } catch (error) {
+        console.error("Spotnera service worker update check failed", error);
+      } finally {
+        updateInProgress = false;
+      }
     };
 
+    const registerServiceWorker = async () => {
+      try {
+        const nextRegistration = await navigator.serviceWorker.register("/sw.js", {
+          updateViaCache: "none",
+        });
+
+        if (isDisposed) {
+          return;
+        }
+
+        registration = nextRegistration;
+        await checkForUpdate({ force: true });
+      } catch (error) {
+        if (isDisposed) {
+          return;
+        }
+
+        console.error("Spotnera service worker registration failed", error);
+      }
+    };
+
+    const reserveControllerReload = () => {
+      try {
+        if (window.sessionStorage.getItem(CONTROLLER_RELOAD_KEY) === "true") {
+          return false;
+        }
+
+        window.sessionStorage.setItem(CONTROLLER_RELOAD_KEY, "true");
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const handleControllerChange = () => {
+      if (!hasController) {
+        hasController = true;
+        return;
+      }
+
+      if (isReloading || !reserveControllerReload()) {
+        return;
+      }
+
+      isReloading = true;
+      window.location.reload();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void checkForUpdate();
+      }
+    };
+
+    const handleOnline = () => void checkForUpdate();
+    const updateInterval = window.setInterval(
+      () => void checkForUpdate(),
+      UPDATE_INTERVAL_MS,
+    );
+
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      handleControllerChange,
+    );
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
+
     if (document.readyState === "complete") {
-      registerServiceWorker();
-      return undefined;
+      void registerServiceWorker();
+    } else {
+      window.addEventListener("load", registerServiceWorker);
     }
 
-    window.addEventListener("load", registerServiceWorker);
-
     return () => {
+      isDisposed = true;
       window.removeEventListener("load", registerServiceWorker);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        handleControllerChange,
+      );
+      window.clearInterval(updateInterval);
     };
   }, []);
 

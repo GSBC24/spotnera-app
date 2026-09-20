@@ -1,4 +1,5 @@
-const CACHE_NAME = "spotnera-static-v1";
+const CACHE_PREFIX = "spotnera-static-";
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const PRECACHE_URLS = [
   "/offline.html",
   "/icons/logo.png",
@@ -26,7 +27,10 @@ self.addEventListener("activate", (event) => {
       .then((cacheNames) =>
         Promise.all(
           cacheNames
-            .filter((cacheName) => cacheName !== CACHE_NAME)
+            .filter(
+              (cacheName) =>
+                cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME,
+            )
             .map((cacheName) => caches.delete(cacheName)),
         ),
       )
@@ -49,31 +53,36 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html")),
+      fetch(request).catch(() =>
+        caches
+          .open(CACHE_NAME)
+          .then((cache) => cache.match("/offline.html")),
+      ),
     );
     return;
   }
 
-  const isStaticAsset =
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/icons/") ||
-    url.pathname === "/manifest.webmanifest";
+  const isSpotneraPrecacheAsset = PRECACHE_URLS.includes(url.pathname);
 
-  if (!isStaticAsset) {
+  if (!isSpotneraPrecacheAsset) {
     return;
   }
 
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cachedResponse = await cache.match(request);
+
       if (cachedResponse) {
         return cachedResponse;
       }
 
-      return fetch(request).then((networkResponse) => {
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
-        return networkResponse;
-      });
+      const networkResponse = await fetch(request);
+
+      if (networkResponse.ok && networkResponse.type === "basic") {
+        await cache.put(request, networkResponse.clone());
+      }
+
+      return networkResponse;
     }),
   );
 });
