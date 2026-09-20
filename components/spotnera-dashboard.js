@@ -11,7 +11,6 @@ import {
   businessCategoryMatches,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
-import { getPromotionTypeLabel } from "@/lib/promotions";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import { getBusinessPath } from "@/lib/business-url";
@@ -1304,8 +1303,7 @@ export function SpotneraDashboard({
             .map((deal) => ({
               id: deal.id,
               title: business.name,
-              detail: `${getPromotionTypeLabel(deal.promotion_type)} - ${deal.title}`,
-              promotionType: deal.promotion_type,
+              detail: deal.title,
               time: getDealAvailabilityLabel(deal),
               color: DEAL_STATUS_META.LIVE.color,
             })),

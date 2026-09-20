@@ -2006,7 +2006,6 @@ export default async function OwnerDashboardPage({ searchParams }) {
                     <div className="min-w-0">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/48">{business?.name ?? "Business"}</p>
                       <h3 className="mt-1 text-lg font-bold">{deal.title}</h3>
-                      <p className="mt-1 text-sm text-white/54">{deal.promotion_type || "Promotion"}</p>
                     </div>
                     <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${DEAL_STATUS_META[status].background} ${DEAL_STATUS_META[status].text}`}>
                       {DEAL_STATUS_META[status].label}
