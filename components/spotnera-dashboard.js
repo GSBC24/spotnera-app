@@ -484,7 +484,7 @@ function RatingLine({ averageRating, reviewCount }) {
         <Icon path={STAR_PATH} />
       </span>
       <span>{formatRating(averageRating)}</span>
-      <span className="text-white/42">({getReviewLabel(reviewCount)})</span>
+      <span className="text-white/60">({getReviewLabel(reviewCount)})</span>
     </span>
   );
 }
@@ -1367,18 +1367,23 @@ export function SpotneraDashboard({
           </div>
         </header>
         {isAuthOpen ? (
+          <>
+          <div className="spotnera-dialog-backdrop fixed inset-0 z-[89]" aria-hidden="true" />
           <section role="dialog" aria-modal="true" aria-labelledby="auth-gate-title" className="fixed inset-x-3 bottom-24 z-[90] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-md overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/98 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
             <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button type="button" aria-label="Close sign in" onClick={handleCloseAuth} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
             <div className="spotnera-auth-panel mt-5 rounded-2xl border border-white/10 p-4"><AuthPanel successRedirect={authIntent} /></div>
           </section>
+          </>
         ) : null}
         {activeTab === "map" ? (
         <>
         {isSearchOpen ? (
-        <section role="dialog" aria-modal="true" aria-labelledby="search-panel-title" className="fixed inset-x-3 bottom-24 z-[80] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-2xl overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/96 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(92vw,560px)] sm:-translate-x-1/2">
+        <>
+        <div className="spotnera-dialog-backdrop fixed inset-0 z-[86]" aria-hidden="true" />
+        <section role="dialog" aria-modal="true" aria-labelledby="search-panel-title" className="fixed inset-x-3 bottom-24 z-[87] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-2xl overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/96 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(92vw,560px)] sm:-translate-x-1/2">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">Discovery</p>
+              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/60">Discovery</p>
               <h2 id="search-panel-title" className="mt-1 text-xl font-semibold">Search</h2>
             </div>
             <button type="button" onClick={() => setIsSearchOpen(false)} aria-label="Close search" className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80 transition hover:bg-white/16">&times;</button>
@@ -1389,7 +1394,7 @@ export function SpotneraDashboard({
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search businesses..."
-              className="h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/38 focus:border-white/30"
+              className="h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/52 focus:border-white/30"
             />
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto]">
@@ -1459,6 +1464,7 @@ export function SpotneraDashboard({
             <button type="button" onClick={() => setIsSearchOpen(false)} className="spotnera-brand-action min-h-10 rounded-2xl px-4 text-xs font-bold transition">Show results</button>
           </div>
         </section>
+        </>
         ) : null}
 
         <div className="relative isolate mt-4 h-[68vh] min-h-[520px] overflow-hidden rounded-[32px] border border-white/12 bg-zinc-950 shadow-[0_28px_90px_rgba(0,0,0,0.38)] sm:min-h-[560px] lg:h-[72vh]">
@@ -1522,7 +1528,7 @@ export function SpotneraDashboard({
 
           <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/35 to-transparent" />
           {token && mappedBusinesses.length && !filteredBusinesses.length ? (
-            <div className="absolute bottom-4 left-4 right-4 z-10 rounded-[24px] border border-white/12 bg-zinc-950/62 p-4 text-sm font-semibold text-white/78 shadow-[0_22px_70px_rgba(0,0,0,0.36)] backdrop-blur-2xl">
+            <div className="absolute bottom-4 left-4 right-4 z-10 rounded-[24px] border border-white/12 bg-zinc-950/88 p-4 text-sm font-semibold text-white/78 shadow-[0_22px_70px_rgba(0,0,0,0.36)] backdrop-blur-2xl">
               No businesses match your filters.
             </div>
           ) : null}
@@ -1532,7 +1538,7 @@ export function SpotneraDashboard({
               initial={{ y: 28, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 130, damping: 18 }}
-              className="absolute bottom-4 left-4 right-4 z-10 rounded-[28px] border border-white/14 bg-zinc-950/68 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:left-auto sm:max-w-md"
+              className="absolute bottom-4 left-4 right-4 z-10 rounded-[28px] border border-white/14 bg-zinc-950/88 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:left-auto sm:max-w-md"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
@@ -1634,7 +1640,7 @@ export function SpotneraDashboard({
               </div>
 
               <div className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
                   Active deal
                 </p>
                 <p className="mt-1 text-base font-semibold text-white">
@@ -1657,7 +1663,7 @@ export function SpotneraDashboard({
 
               {selectedBusiness.description ? (
                 <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
                     About
                   </p>
                   <p className="mt-1 text-sm leading-6 text-white/62">
@@ -1668,7 +1674,7 @@ export function SpotneraDashboard({
 
               {getBusinessAddressLines(selectedBusiness).length ? (
                 <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
                     Location
                   </p>
                   <BusinessAddress business={selectedBusiness} />
@@ -1679,7 +1685,7 @@ export function SpotneraDashboard({
               getBusinessEmail(selectedBusiness) ||
               getWebsiteUrl(selectedBusiness.website_url) ? (
                 <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
                     Contact
                   </p>
                   <ContactActions business={selectedBusiness} />
@@ -1688,7 +1694,7 @@ export function SpotneraDashboard({
 
               {getBusinessSocialLinks(selectedBusiness).length ? (
                 <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
                     Social media
                   </p>
                   <SocialLinks business={selectedBusiness} />
@@ -1773,7 +1779,7 @@ export function SpotneraDashboard({
                   maxLength={1000}
                   rows={3}
                   placeholder="Share a quick note"
-                  className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-white/34 focus:border-white/28"
+                  className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-white/52 focus:border-white/28"
                 />
               </form>
             </motion.section>
@@ -1787,7 +1793,7 @@ export function SpotneraDashboard({
         <section className="mx-auto mt-4 w-full max-w-3xl">
           <div className="mb-3 flex items-end justify-between px-1">
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">
+              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/60">
                 Live activity
               </p>
               <h2 className="mt-1 text-lg font-semibold tracking-tight">
@@ -1817,7 +1823,7 @@ export function SpotneraDashboard({
                       <h3 className="truncate text-sm font-semibold">
                         {item.title}
                       </h3>
-                      <span className="text-xs font-medium text-white/42">
+                      <span className="text-xs font-medium text-white/60">
                         {item.time}
                       </span>
                     </div>
@@ -1840,7 +1846,7 @@ export function SpotneraDashboard({
         <section className="mx-auto mt-4 w-full max-w-3xl">
           <div className="mb-3 flex items-end justify-between px-1">
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/42">
+              <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/60">
                 Saved
               </p>
               <h2 className="mt-1 text-lg font-semibold tracking-tight">
@@ -1874,7 +1880,7 @@ export function SpotneraDashboard({
                       <h3 className="truncate text-sm font-semibold">
                         {business.name}
                       </h3>
-                      <span className="text-xs font-medium text-white/42">
+                      <span className="text-xs font-medium text-white/60">
                         {business.deals.length} deals
                       </span>
                     </div>

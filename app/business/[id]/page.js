@@ -445,7 +445,7 @@ export default async function BusinessProfilePage({ params }) {
   const reviewCount = reviews.length;
 
   return (
-    <main className="spotnera-app-shell min-h-screen overflow-x-hidden">
+    <main className="spotnera-app-shell spotnera-functional-area min-h-screen overflow-x-hidden">
       <BusinessProfileAnalytics
         businessId={business.id}
         businessCategory={business.category}

@@ -48,14 +48,14 @@ export function DeleteBusinessButton({ businessId, businessName, businessCategor
         Delete business
       </button>
       {isOpen ? (
-        <div className="fixed inset-0 z-[90] flex items-end bg-black/50 px-4 pb-4 pt-16 sm:items-center sm:justify-center">
-          <section role="dialog" aria-modal="true" aria-labelledby="delete-business-title" className="max-h-[86vh] w-full max-w-md overflow-y-auto rounded-[30px] border border-red-200 bg-white p-5 text-zinc-950 shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-red-600">Permanent deletion</p>
+        <div className="spotnera-dialog-backdrop fixed inset-0 z-[90] flex items-end px-4 pb-4 pt-16 sm:items-center sm:justify-center">
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-business-title" className="spotnera-dialog-panel max-h-[86vh] w-full max-w-md overflow-y-auto rounded-[30px] p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-red-200">Permanent deletion</p>
             <h2 id="delete-business-title" className="mt-2 text-2xl font-semibold">Delete &quot;{businessName}&quot;?</h2>
-            <p className="mt-3 text-sm leading-6 text-zinc-600">This will permanently remove the business and associated deals, reviews, favorites, analytics, and owned media. This action cannot be undone.</p>
-            <label className="mt-4 grid gap-2"><span className="text-sm font-bold">Type DELETE to confirm</span><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="off" placeholder="DELETE" className="h-12 rounded-2xl border border-zinc-300 px-3 text-sm font-bold outline-none focus:border-red-500" /></label>
-            {error ? <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p> : null}
-            <div className="mt-4 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setIsOpen(false)} disabled={isDeleting} className="min-h-12 rounded-2xl border border-zinc-200 bg-zinc-100 px-4 text-sm font-black text-zinc-800">Cancel</button><button type="button" onClick={deleteBusiness} disabled={!canDelete} className="min-h-12 rounded-2xl bg-red-600 px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">{isDeleting ? "Deleting..." : "Permanently delete business"}</button></div>
+            <p className="mt-3 text-sm leading-6 text-white/68">This will permanently remove the business and associated deals, reviews, favorites, analytics, and owned media. This action cannot be undone.</p>
+            <label className="mt-4 grid gap-2"><span className="text-sm font-bold">Type DELETE to confirm</span><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="off" placeholder="DELETE" className="spotnera-dialog-input h-12 rounded-2xl px-3 text-sm font-bold outline-none" /></label>
+            {error ? <p className="mt-3 rounded-2xl border border-red-300/24 bg-red-500/12 px-3 py-2 text-sm font-semibold text-red-100">{error}</p> : null}
+            <div className="mt-4 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setIsOpen(false)} disabled={isDeleting} className="min-h-12 rounded-2xl border border-white/16 bg-white/10 px-4 text-sm font-black text-white transition hover:bg-white/16">Cancel</button><button type="button" onClick={deleteBusiness} disabled={!canDelete} className="min-h-12 rounded-2xl bg-red-500 px-4 text-sm font-black text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50">{isDeleting ? "Deleting..." : "Permanently delete business"}</button></div>
           </section>
         </div>
       ) : null}

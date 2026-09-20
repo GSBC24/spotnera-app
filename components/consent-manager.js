@@ -163,7 +163,7 @@ export function ConsentManager() {
           </button>
         </div>
 
-        <p className="mt-3 text-[11px] font-semibold text-white/44">
+        <p className="mt-3 text-[11px] font-semibold text-white/60">
           Consent version {CONSENT_VERSION}
         </p>
       </section>

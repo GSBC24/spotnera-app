@@ -25,7 +25,7 @@ export function SpotneraBottomNav({ activeTab = "map", searchOpen = false, searc
         : activeTab;
 
   return (
-    <nav className="fixed bottom-4 left-1/2 z-[85] grid w-[min(97vw,620px)] -translate-x-1/2 grid-cols-6 rounded-[28px] border border-white/14 bg-zinc-950/62 p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl [padding-bottom:calc(0.375rem+env(safe-area-inset-bottom))] sm:p-2 sm:[padding-bottom:calc(0.5rem+env(safe-area-inset-bottom))]">
+    <nav className="fixed bottom-4 left-1/2 z-[85] grid w-[min(97vw,620px)] -translate-x-1/2 grid-cols-6 rounded-[28px] border border-white/14 bg-zinc-950/90 p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl [padding-bottom:calc(0.375rem+env(safe-area-inset-bottom))] sm:p-2 sm:[padding-bottom:calc(0.5rem+env(safe-area-inset-bottom))]">
       {items.map((item) => {
         const label = item.id === "search" && searchActiveCount ? `Search (${searchActiveCount})` : item.label;
         const className = `relative flex min-w-0 h-14 flex-col items-center justify-center gap-1 rounded-2xl px-0.5 text-[9px] font-semibold transition focus-visible:outline-offset-0 sm:px-1 sm:text-[11px] ${routeActiveId === item.id ? "spotnera-brand-action" : "text-white/56 hover:bg-white/10 hover:text-white"}`;

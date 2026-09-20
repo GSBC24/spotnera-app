@@ -101,7 +101,7 @@ export function DeleteAccountPanel({ ownedBusinessCount = 0 }) {
                 value={confirmation}
                 onChange={(event) => setConfirmation(event.target.value)}
                 autoComplete="off"
-                className="h-12 rounded-2xl border border-white/12 bg-white/10 px-3 text-sm font-bold text-white outline-none placeholder:text-white/34 focus:border-red-200/50"
+                className="h-12 rounded-2xl border border-white/12 bg-white/10 px-3 text-sm font-bold text-white outline-none placeholder:text-white/52 focus:border-red-200/50"
                 placeholder="DELETE"
               />
             </label>

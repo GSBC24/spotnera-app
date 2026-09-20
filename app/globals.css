@@ -125,7 +125,39 @@ button {
 }
 
 .spotnera-input::placeholder {
-  color: rgba(255, 255, 255, 0.34);
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.spotnera-dialog-backdrop {
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(6px);
+}
+
+.spotnera-dialog-panel {
+  border: 1px solid rgba(252, 165, 165, 0.24);
+  background: #151821;
+  color: #ffffff;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.54);
+}
+
+.spotnera-dialog-input {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.spotnera-dialog-input::placeholder {
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.spotnera-dialog-input:focus {
+  border-color: rgba(252, 165, 165, 0.65);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
+}
+
+.spotnera-functional-area [class~="text-white/42"],
+.spotnera-functional-area [class~="text-white/44"] {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .spotnera-input option {
@@ -203,7 +235,7 @@ button {
 
 .spotnera-owner-shell input::placeholder,
 .spotnera-owner-shell textarea::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.52);
 }
 
 .spotnera-owner-shell select option {

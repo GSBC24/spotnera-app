@@ -1559,19 +1559,19 @@ export default async function OwnerDashboardPage({ searchParams }) {
                       </span>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
-                      <div className="rounded-2xl border border-white/8 bg-white/8 p-2">
+                      <div className="rounded-2xl border border-white/14 bg-white/12 p-2">
                         <p className="font-black">{businessDeals.length}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Deals</p>
                       </div>
-                      <div className="rounded-2xl border border-white/8 bg-white/8 p-2">
+                      <div className="rounded-2xl border border-white/14 bg-white/12 p-2">
                         <p className="font-black">{formatRating(getAverageRating(businessReviews))}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Rating</p>
                       </div>
-                      <div className="rounded-2xl border border-white/8 bg-white/8 p-2">
+                      <div className="rounded-2xl border border-white/14 bg-white/12 p-2">
                         <p className="font-black">{businessReviews.length}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Reviews</p>
                       </div>
-                      <div className="rounded-2xl border border-white/8 bg-white/8 p-2">
+                      <div className="rounded-2xl border border-white/14 bg-white/12 p-2">
                         <p className="font-black">{favoriteCount}</p>
                         <p className="text-[10px] font-bold uppercase text-zinc-400">Saved</p>
                       </div>
