@@ -387,7 +387,7 @@ export default function AddressAutocomplete({
             <div
               id={listboxId}
               role="listbox"
-              className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 max-h-72 overflow-y-auto rounded-3xl border border-zinc-200 bg-white p-1.5 shadow-[0_24px_60px_rgba(24,24,27,0.16)]"
+              className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-72 overflow-y-auto rounded-3xl border border-white/14 bg-[#15181d] p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.58)]"
             >
               {suggestions.map((suggestion) => (
                 <button
@@ -395,13 +395,13 @@ export default function AddressAutocomplete({
                   type="button"
                   role="option"
                   aria-selected="false"
-                  className="grid w-full gap-0.5 rounded-2xl px-3 py-2.5 text-left transition hover:bg-zinc-100 focus:bg-zinc-100 focus:outline-none"
+                  className="grid w-full gap-0.5 rounded-2xl px-3 py-2.5 text-left transition hover:bg-white/12 focus:bg-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
                   onClick={() => handleSelectSuggestion(suggestion)}
                 >
-                  <span className="text-sm font-bold text-zinc-950">
+                  <span className="text-sm font-bold text-white">
                     {getSuggestionLabel(suggestion)}
                   </span>
-                  <span className="text-xs font-medium leading-5 text-zinc-500">
+                  <span className="text-xs font-medium leading-5 text-white/64">
                     {getSuggestionContext(suggestion)}
                   </span>
                 </button>

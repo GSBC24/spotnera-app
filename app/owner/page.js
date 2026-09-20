@@ -11,7 +11,11 @@ import {
 import { DealTimeLabel } from "@/components/deal-time-label";
 import { HeaderLogout } from "@/components/header-logout";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
-import { AnalyticsForm, OwnerDashboardAnalytics } from "@/components/owner-analytics";
+import {
+  AnalyticsForm,
+  LockedFormSubmitButton,
+  OwnerDashboardAnalytics,
+} from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
 import { getBusinessPath } from "@/lib/business-url";
 import { PROMOTION_TYPES, PROMOTION_TYPE_VALUES } from "@/lib/promotions";
@@ -599,31 +603,54 @@ async function uploadBusinessImage(supabase, userId, businessId, file, slot) {
   }
 
   if (!file.type?.startsWith("image/")) {
-    return { error: "Logo and cover uploads must be image files." };
+    return {
+      error: {
+        field: slot,
+        userMessage: `${slot === "logo" ? "Logo" : "Cover image"} must be an image file.`,
+      },
+    };
   }
 
   if (file.size > 5 * 1024 * 1024) {
-    return { error: "Images must be 5 MB or smaller." };
+    return {
+      error: {
+        field: slot,
+        userMessage: `${slot === "logo" ? "Logo" : "Cover image"} must be 5 MB or smaller.`,
+      },
+    };
   }
 
   const extension = getImageExtension(file);
   const path = `${userId}/${businessId}/${slot}-${Date.now()}.${extension}`;
-  const { error } = await supabase.storage
-    .from("business-assets")
-    .upload(path, file, {
-      contentType: file.type,
-      upsert: true,
-    });
+  let uploadError = null;
 
-  if (error) {
-    return { error: error.message };
+  try {
+    const { error } = await supabase.storage
+      .from("business-assets")
+      .upload(path, file, {
+        contentType: file.type,
+        upsert: true,
+      });
+    uploadError = error;
+  } catch (error) {
+    uploadError = error;
+  }
+
+  if (uploadError) {
+    return {
+      error: {
+        field: slot,
+        technicalError: uploadError,
+        userMessage: `We couldn't upload the business ${slot === "logo" ? "logo" : "cover image"}. Check the file and try again.`,
+      },
+    };
   }
 
   const {
     data: { publicUrl },
   } = supabase.storage.from("business-assets").getPublicUrl(path);
 
-  return { url: publicUrl };
+  return { path, url: publicUrl };
 }
 
 async function uploadBusinessImages(supabase, userId, businessId, formData) {
@@ -636,7 +663,7 @@ async function uploadBusinessImages(supabase, userId, businessId, formData) {
   );
 
   if (logo?.error) {
-    return { error: logo.error };
+    return { error: logo.error, uploadedPaths: [] };
   }
 
   const cover = await uploadBusinessImage(
@@ -648,7 +675,10 @@ async function uploadBusinessImages(supabase, userId, businessId, formData) {
   );
 
   if (cover?.error) {
-    return { error: cover.error };
+    return {
+      error: cover.error,
+      uploadedPaths: logo?.path ? [logo.path] : [],
+    };
   }
 
   return {
@@ -656,7 +686,26 @@ async function uploadBusinessImages(supabase, userId, businessId, formData) {
       ...(logo?.url ? { logo_url: logo.url } : {}),
       ...(cover?.url ? { cover_image_url: cover.url } : {}),
     },
+    uploadedPaths: [logo?.path, cover?.path].filter(Boolean),
   };
+}
+
+async function removeUploadedBusinessImages(supabase, paths) {
+  if (!paths?.length) return;
+
+  const { error } = await supabase.storage.from("business-assets").remove(paths);
+  if (error) logServerActionError("Business image cleanup failed", error);
+}
+
+async function deleteIncompleteBusiness(supabase, userId, businessId) {
+  const { error } = await supabase
+    .from("businesses")
+    .delete()
+    .eq("id", businessId)
+    .eq("owner_id", userId);
+
+  if (error) logServerActionError("Incomplete business cleanup failed", error);
+  return error;
 }
 
 async function verifyOwnedBusiness(supabase, userId, businessId) {
@@ -695,6 +744,22 @@ function redirectWithError(message) {
   redirect(`/owner?error=${encodeURIComponent(message)}`);
 }
 
+function redirectWithBusinessFormError(message, { businessId, imageField } = {}) {
+  const params = new URLSearchParams({
+    section: "businesses",
+    error: message,
+  });
+
+  if (businessId) {
+    params.set("editBusiness", businessId);
+  } else {
+    params.set("createBusiness", "1");
+  }
+
+  if (imageField) params.set("imageError", imageField);
+  redirect(`/owner?${params.toString()}`);
+}
+
 function logServerActionError(label, error) {
   if (process.env.NODE_ENV !== "production") {
     console.error(label, error?.message ?? error);
@@ -717,7 +782,7 @@ async function createBusiness(formData) {
   const validationError = validateBusiness(payload);
 
   if (validationError) {
-    redirectWithError(validationError);
+    redirectWithBusinessFormError(validationError);
   }
 
   const { data: business, error } = await supabase
@@ -728,13 +793,25 @@ async function createBusiness(formData) {
 
   if (error) {
     logServerActionError("Business creation failed", error);
-    redirectWithError("Unable to create business. Please try again.");
+    redirectWithBusinessFormError("Unable to create business. Please try again.");
   }
 
   const uploaded = await uploadBusinessImages(supabase, user.id, business.id, formData);
 
   if (uploaded.error) {
-    redirectWithError("Unable to upload business images. Please try again.");
+    logServerActionError("Business image upload failed", uploaded.error.technicalError);
+    await removeUploadedBusinessImages(supabase, uploaded.uploadedPaths);
+    const cleanupError = await deleteIncompleteBusiness(supabase, user.id, business.id);
+
+    if (cleanupError) {
+      redirectWithError(
+        "The business was created, but its image could not be uploaded. Edit the existing business to try the image again.",
+      );
+    }
+
+    redirectWithBusinessFormError(uploaded.error.userMessage, {
+      imageField: uploaded.error.field,
+    });
   }
 
   if (Object.keys(uploaded.urls).length) {
@@ -746,7 +823,18 @@ async function createBusiness(formData) {
 
     if (mediaError) {
       logServerActionError("Business media save failed", mediaError);
-      redirectWithError("Unable to save business images. Please try again.");
+      await removeUploadedBusinessImages(supabase, uploaded.uploadedPaths);
+      const cleanupError = await deleteIncompleteBusiness(supabase, user.id, business.id);
+
+      if (cleanupError) {
+        redirectWithError(
+          "The business was created, but its images could not be saved. Edit the existing business to try again.",
+        );
+      }
+
+      redirectWithBusinessFormError("We couldn't save the business images. Please try again.", {
+        imageField: "images",
+      });
     }
   }
 
@@ -769,7 +857,12 @@ async function updateBusiness(formData) {
   const uploaded = await uploadBusinessImages(supabase, user.id, businessId, formData);
 
   if (uploaded.error) {
-    redirectWithError("Unable to upload business images. Please try again.");
+    logServerActionError("Business image upload failed", uploaded.error.technicalError);
+    await removeUploadedBusinessImages(supabase, uploaded.uploadedPaths);
+    redirectWithBusinessFormError(uploaded.error.userMessage, {
+      businessId,
+      imageField: uploaded.error.field,
+    });
   }
 
   const { data: business, error } = await supabase
@@ -785,7 +878,11 @@ async function updateBusiness(formData) {
 
   if (error) {
     logServerActionError("Business update failed", error);
-    redirectWithError("Unable to update business. Please try again.");
+    await removeUploadedBusinessImages(supabase, uploaded.uploadedPaths);
+    redirectWithBusinessFormError("Unable to update business. Please try again.", {
+      businessId,
+      imageField: uploaded.uploadedPaths.length ? "images" : undefined,
+    });
   }
 
   revalidateBusinessProfile(business);
@@ -976,7 +1073,7 @@ function DealStatusSummary({ deal }) {
   );
 }
 
-function BusinessForm({ action, business, submitLabel }) {
+function BusinessForm({ action, business, imageError, submitLabel }) {
   const selectedCategory = business?.category ?? "";
   const selectedCountry = business?.country ?? "";
   const hasLegacyCategory =
@@ -990,6 +1087,7 @@ function BusinessForm({ action, business, submitLabel }) {
       encType="multipart/form-data"
       eventName={business ? "business_update" : "business_create"}
       analyticsContext={{ businessId: business?.id }}
+      preventDuplicateSubmissions={!business}
       className="grid gap-3"
     >
       {business ? <input type="hidden" name="business_id" value={business.id} /> : null}
@@ -1142,11 +1240,26 @@ function BusinessForm({ action, business, submitLabel }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Logo">
           <FileInput name="logo" />
+          {imageError?.field === "logo" ? (
+            <span className="text-xs font-semibold leading-5 text-red-600" role="alert">
+              {imageError.message}
+            </span>
+          ) : null}
         </Field>
         <Field label="Cover image">
           <FileInput name="cover_image" />
+          {imageError?.field === "cover" ? (
+            <span className="text-xs font-semibold leading-5 text-red-600" role="alert">
+              {imageError.message}
+            </span>
+          ) : null}
         </Field>
       </div>
+      {imageError?.field === "images" ? (
+        <p className="rounded-2xl border border-red-300/24 bg-red-500/12 px-3 py-2 text-sm font-semibold text-red-100" role="alert">
+          {imageError.message}
+        </p>
+      ) : null}
       <label className="flex h-12 items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-800">
         Active listing
         <input
@@ -1156,7 +1269,13 @@ function BusinessForm({ action, business, submitLabel }) {
           className="h-5 w-5 accent-zinc-950"
         />
       </label>
-      <SubmitButton>{submitLabel}</SubmitButton>
+      {business ? (
+        <SubmitButton>{submitLabel}</SubmitButton>
+      ) : (
+        <LockedFormSubmitButton pendingLabel="Creating profile…">
+          {submitLabel}
+        </LockedFormSubmitButton>
+      )}
     </AnalyticsForm>
   );
 }
@@ -1253,6 +1372,12 @@ export default async function OwnerDashboardPage({ searchParams }) {
   const editingDealId = resolvedSearchParams?.editDeal ?? "";
   const showCreateBusiness = resolvedSearchParams?.createBusiness === "1";
   const showCreateDeal = resolvedSearchParams?.createDeal === "1";
+  const imageError = resolvedSearchParams?.imageError && resolvedSearchParams?.error
+    ? {
+        field: resolvedSearchParams.imageError,
+        message: resolvedSearchParams.error,
+      }
+    : null;
   const { supabase, user } = await getSignedInUser();
   const { data: profile } = await supabase
     .from("profiles")
@@ -1677,7 +1802,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                   <h2 className="text-lg font-bold">Create business profile</h2>
                   <Link href="/owner?section=businesses" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
                 </div>
-                <div className="mt-4"><BusinessForm action={createBusiness} submitLabel="Create profile" /></div>
+                <div className="mt-4"><BusinessForm action={createBusiness} imageError={imageError} submitLabel="Create profile" /></div>
               </section>
             ) : null}
             {editingBusinessId ? businesses.filter((business) => business.id === editingBusinessId).map((business) => (
@@ -1686,7 +1811,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                   <h2 className="text-lg font-bold">Edit {business.name}</h2>
                   <Link href="/owner?section=businesses" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
                 </div>
-                <div className="mt-4"><BusinessForm action={updateBusiness} business={business} submitLabel="Save business" /></div>
+                <div className="mt-4"><BusinessForm action={updateBusiness} business={business} imageError={imageError} submitLabel="Save business" /></div>
               </section>
             )) : null}
           </section>

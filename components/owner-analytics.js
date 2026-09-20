@@ -1,8 +1,48 @@
 "use client";
 
-import { useEffect } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { trackEvent } from "@/lib/analytics";
 import { DEAL_STATUS, getDealStatus } from "@/lib/deals";
+
+const SubmissionLockContext = createContext(false);
+
+function SubmissionCompletion({ onComplete }) {
+  const { pending } = useFormStatus();
+  const wasPendingRef = useRef(false);
+
+  useEffect(() => {
+    if (pending) {
+      wasPendingRef.current = true;
+      return;
+    }
+
+    if (wasPendingRef.current) {
+      wasPendingRef.current = false;
+      onComplete();
+    }
+  }, [onComplete, pending]);
+
+  return null;
+}
+
+export function LockedFormSubmitButton({ children, pendingLabel }) {
+  const { pending } = useFormStatus();
+  const isLocked = useContext(SubmissionLockContext);
+  const isSubmitting = pending || isLocked;
+
+  return (
+    <button
+      type="submit"
+      data-analytics-submit="true"
+      disabled={isSubmitting}
+      aria-disabled={isSubmitting}
+      className="spotnera-primary-action px-4 text-sm disabled:cursor-wait disabled:opacity-55"
+    >
+      {isSubmitting ? pendingLabel : children}
+    </button>
+  );
+}
 
 export function OwnerDashboardAnalytics({
   businessCount = 0,
@@ -25,7 +65,16 @@ export function AnalyticsForm({
   className,
   encType,
   eventName,
+  preventDuplicateSubmissions = false,
 }) {
+  const submissionLockRef = useRef(false);
+  const [isSubmissionLocked, setIsSubmissionLocked] = useState(false);
+
+  function releaseSubmissionLock() {
+    submissionLockRef.current = false;
+    setIsSubmissionLocked(false);
+  }
+
   function getEventParameters(formData) {
     if (eventName === "business_create" || eventName === "business_update") {
       return {
@@ -60,9 +109,22 @@ export function AnalyticsForm({
       className={className}
       onSubmit={(event) => {
         const submitter = event.nativeEvent.submitter;
+        const isTrackedSubmission =
+          submitter?.dataset.analyticsSubmit === "true" ||
+          (preventDuplicateSubmissions && !submitter);
 
-        if (!event.currentTarget.checkValidity() || submitter?.dataset.analyticsSubmit !== "true") {
+        if (!event.currentTarget.checkValidity() || !isTrackedSubmission) {
           return;
+        }
+
+        if (preventDuplicateSubmissions && submissionLockRef.current) {
+          event.preventDefault();
+          return;
+        }
+
+        if (preventDuplicateSubmissions) {
+          submissionLockRef.current = true;
+          setIsSubmissionLocked(true);
         }
 
         const formData = new FormData(event.currentTarget);
@@ -77,7 +139,12 @@ export function AnalyticsForm({
         }
       }}
     >
-      {children}
+      <SubmissionLockContext.Provider value={isSubmissionLocked}>
+        {children}
+        {preventDuplicateSubmissions ? (
+          <SubmissionCompletion onComplete={releaseSubmissionLock} />
+        ) : null}
+      </SubmissionLockContext.Provider>
     </form>
   );
 }
