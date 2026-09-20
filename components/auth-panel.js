@@ -28,7 +28,20 @@ function getFriendlyAuthError(error) {
     return "This sign-in provider is not configured yet.";
   }
 
-  if (message.includes("email")) {
+  if (
+    message.includes("smtp") ||
+    message.includes("error sending confirmation email") ||
+    message.includes("failed to send confirmation email") ||
+    message.includes("unable to send confirmation email")
+  ) {
+    return "We couldn't send the confirmation email. Please try again in a moment.";
+  }
+
+  if (
+    message.includes("invalid email") ||
+    message.includes("email address is invalid") ||
+    message.includes("unable to validate email address")
+  ) {
     return "Enter a valid email address.";
   }
 
