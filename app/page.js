@@ -37,6 +37,15 @@ const DEAL_SELECT = `
   is_active,
   starts_at,
   ends_at,
+  availability_mode,
+  availability_timezone,
+  deal_schedules (
+    id,
+    day_of_week,
+    start_time,
+    end_time,
+    spans_midnight
+  ),
   businesses!inner (
     is_active
   )
@@ -203,6 +212,9 @@ export default async function Home({ searchParams }) {
         is_active: deal.is_active,
         starts_at: deal.starts_at,
         ends_at: deal.ends_at,
+        availability_mode: deal.availability_mode,
+        availability_timezone: deal.availability_timezone,
+        deal_schedules: deal.deal_schedules ?? [],
       });
       dealsByBusinessId.set(deal.business_id, businessDeals);
     }

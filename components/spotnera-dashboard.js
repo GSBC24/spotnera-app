@@ -23,6 +23,7 @@ import {
 } from "@/lib/supported-countries";
 import {
   DEAL_STATUS_META,
+  getDealAvailabilityLabel,
   getLiveDeals,
   getPrimaryLiveDeal,
   isLiveDeal,
@@ -1305,7 +1306,7 @@ export function SpotneraDashboard({
               title: business.name,
               detail: `${getPromotionTypeLabel(deal.promotion_type)} - ${deal.title}`,
               promotionType: deal.promotion_type,
-              time: "Active",
+              time: getDealAvailabilityLabel(deal),
               color: DEAL_STATUS_META.LIVE.color,
             })),
         )
@@ -1354,7 +1355,7 @@ export function SpotneraDashboard({
     activeTab === "saved"
         ? "Saved businesses"
         : activeTab === "pulse"
-          ? "Live deals"
+          ? "Active deals"
           : cityHeading;
 
   return (
@@ -1662,6 +1663,11 @@ export function SpotneraDashboard({
                 <p className="mt-1 text-base font-semibold text-white">
                   {getActiveDeal(selectedBusiness.deals)?.title ?? "No active deal"}
                 </p>
+                {getActiveDeal(selectedBusiness.deals) ? (
+                  <p className="mt-1 text-xs font-bold text-[#72f0cc]">
+                    {getDealAvailabilityLabel(getActiveDeal(selectedBusiness.deals))}
+                  </p>
+                ) : null}
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1813,7 +1819,7 @@ export function SpotneraDashboard({
                 Live activity
               </p>
               <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                Live deals
+                Active deals
               </h2>
             </div>
             <span className="spotnera-live-badge rounded-full px-3 py-1 text-xs font-semibold">

@@ -6,7 +6,10 @@ import { BusinessProfileAnalytics } from "@/components/business-profile-analytic
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
 import { BusinessProfileMap } from "@/components/business-profile-map";
 import { BusinessShareActions } from "@/components/business-share-actions";
-import { LocalDealDateTime } from "@/components/deal-time-label";
+import {
+  DealAvailabilityLabel,
+  LocalDealDateTime,
+} from "@/components/deal-time-label";
 import { getPrimaryLiveDeal } from "@/lib/deals";
 import { getBusinessPath, getBusinessUrl } from "@/lib/business-url";
 import { getPromotionTypeLabel } from "@/lib/promotions";
@@ -49,7 +52,16 @@ const DEAL_SELECT = `
   status,
   is_active,
   starts_at,
-  ends_at
+  ends_at,
+  availability_mode,
+  availability_timezone,
+  deal_schedules (
+    id,
+    day_of_week,
+    start_time,
+    end_time,
+    spans_midnight
+  )
 `;
 
 const REVIEW_SELECT = `
@@ -550,7 +562,7 @@ export default async function BusinessProfilePage({ params }) {
 
         <div className="grid gap-5">
           <section className="spotnera-surface rounded-[30px] p-4 sm:p-5">
-            <p className="spotnera-kicker text-[#72f0cc]">Live deal</p>
+            <p className="spotnera-kicker text-[#72f0cc]">Active deal</p>
             {activeDeal ? (
               <div className="mt-4 rounded-[26px] border border-[#33d6a6]/24 bg-[#33d6a6]/14 p-4">
                 <h2 className="text-2xl font-semibold">{activeDeal.title}</h2>
@@ -564,8 +576,11 @@ export default async function BusinessProfilePage({ params }) {
                     {activeDeal.description}
                   </p>
                 ) : null}
+                <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#72f0cc]">
+                  <DealAvailabilityLabel deal={activeDeal} />
+                </p>
                 {activeDeal.ends_at ? (
-                  <p className="mt-4 text-xs font-bold uppercase text-white/48">
+                  <p className="mt-2 text-xs font-bold uppercase text-white/48">
                     <LocalDealDateTime prefix="Valid until " value={activeDeal.ends_at} />
                   </p>
                 ) : null}
@@ -583,7 +598,7 @@ export default async function BusinessProfilePage({ params }) {
               </div>
             ) : (
               <p className="mt-4 rounded-[26px] border border-white/10 bg-white/8 p-4 text-sm font-semibold text-white/62">
-                No live deals right now.
+                No active deals right now.
               </p>
             )}
           </section>

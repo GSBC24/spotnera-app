@@ -4,11 +4,15 @@ import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
 import { CopyProfileLinkButton } from "@/components/copy-profile-link-button";
 import { BusinessQrCode } from "@/components/business-qr-code";
+import { DealAvailabilityFields } from "@/components/deal-availability-fields";
 import { DeleteBusinessButton } from "@/components/delete-business-button";
 import {
   DealDateTimeInput,
 } from "@/components/deal-date-time-input";
-import { DealTimeLabel } from "@/components/deal-time-label";
+import {
+  DealAvailabilityLabel,
+  DealTimeLabel,
+} from "@/components/deal-time-label";
 import { HeaderLogout } from "@/components/header-logout";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import {
@@ -26,6 +30,9 @@ import {
 import {
   DEAL_STATUS,
   DEAL_STATUS_META,
+  DEAL_AVAILABILITY_MODE,
+  DEAL_WEEKDAYS,
+  DEFAULT_DEAL_AVAILABILITY_TIMEZONE,
   getDealStatus,
   getLiveDeals,
   sortDealsByComputedStatus,
@@ -70,8 +77,17 @@ const DEAL_FIELDS = `
   is_active,
   starts_at,
   ends_at,
+  availability_mode,
+  availability_timezone,
   created_at,
-  updated_at
+  updated_at,
+  deal_schedules (
+    id,
+    day_of_week,
+    start_time,
+    end_time,
+    spans_midnight
+  )
 `;
 
 const REVIEW_FIELDS = `
@@ -451,6 +467,11 @@ function buildDealPayload(formData, userId) {
     is_active: isActive,
     starts_at: startsAt?.value ?? null,
     ends_at: endsAt?.value ?? null,
+    availability_mode:
+      getString(formData, "availability_mode") || DEAL_AVAILABILITY_MODE.CONTINUOUS,
+    availability_timezone:
+      getString(formData, "availability_timezone") ||
+      DEFAULT_DEAL_AVAILABILITY_TIMEZONE,
     updated_at: new Date().toISOString(),
     fieldErrors: [startsAt?.error, endsAt?.error].filter(Boolean),
   };
@@ -467,6 +488,46 @@ function buildDealPayload(formData, userId) {
             ? "ended"
             : "active",
   };
+}
+
+function isValidIanaTimezone(value) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function buildDealSchedules(formData) {
+  const schedules = [];
+
+  for (const weekday of DEAL_WEEKDAYS) {
+    if (formData.get(`schedule_${weekday.value}_enabled`) !== "on") {
+      continue;
+    }
+
+    const startTime = getString(formData, `schedule_${weekday.value}_start`);
+    const endTime = getString(formData, `schedule_${weekday.value}_end`);
+    const validTimePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+
+    if (!validTimePattern.test(startTime) || !validTimePattern.test(endTime)) {
+      return { error: `Enter valid start and end times for ${weekday.label}.` };
+    }
+
+    if (startTime === endTime) {
+      return { error: `${weekday.label}'s start and end times must be different.` };
+    }
+
+    schedules.push({
+      day_of_week: weekday.value,
+      start_time: startTime,
+      end_time: endTime,
+      spans_midnight: endTime < startTime,
+    });
+  }
+
+  return { schedules };
 }
 
 function validateBusiness(payload, { supportedCountriesOnly = false } = {}) {
@@ -522,7 +583,7 @@ function getBusinessSavePayload(payload) {
   return savePayload;
 }
 
-function validateDeal(payload) {
+function validateDeal(payload, scheduleResult) {
   if (payload.fieldErrors.length) {
     return payload.fieldErrors[0];
   }
@@ -533,6 +594,25 @@ function validateDeal(payload) {
 
   if (payload.promotion_type && !PROMOTION_TYPE_VALUES.includes(payload.promotion_type)) {
     return "Choose a valid promotion type.";
+  }
+
+  if (!Object.values(DEAL_AVAILABILITY_MODE).includes(payload.availability_mode)) {
+    return "Choose a valid deal availability option.";
+  }
+
+  if (!isValidIanaTimezone(payload.availability_timezone)) {
+    return "Choose a valid availability timezone.";
+  }
+
+  if (scheduleResult.error) {
+    return scheduleResult.error;
+  }
+
+  if (
+    payload.availability_mode === DEAL_AVAILABILITY_MODE.WEEKLY &&
+    scheduleResult.schedules.length === 0
+  ) {
+    return "Select at least one day for weekly availability.";
   }
 
   if (payload.starts_at && payload.ends_at && payload.starts_at >= payload.ends_at) {
@@ -866,7 +946,8 @@ async function createDeal(formData) {
 
   const { supabase, user } = await getSignedInUser();
   const payload = buildDealPayload(formData, user.id);
-  const validationError = validateDeal(payload);
+  const scheduleResult = buildDealSchedules(formData);
+  const validationError = validateDeal(payload, scheduleResult);
 
   if (validationError) {
     redirectWithError(validationError);
@@ -882,11 +963,42 @@ async function createDeal(formData) {
     redirectWithError(ownedBusiness.error);
   }
 
-  const { error } = await supabase.from("deals").insert(getDealSavePayload(payload));
+  const { data: deal, error } = await supabase
+    .from("deals")
+    .insert(getDealSavePayload(payload))
+    .select("id")
+    .single();
 
   if (error) {
     logServerActionError("Deal creation failed", error);
     redirectWithError("Unable to create deal. Please try again.");
+  }
+
+  if (payload.availability_mode === DEAL_AVAILABILITY_MODE.WEEKLY) {
+    const { error: scheduleError } = await supabase.from("deal_schedules").insert(
+      scheduleResult.schedules.map((schedule) => ({
+        ...schedule,
+        deal_id: deal.id,
+      })),
+    );
+
+    if (scheduleError) {
+      logServerActionError("Deal schedule creation failed", scheduleError);
+      const { error: cleanupError } = await supabase
+        .from("deals")
+        .delete()
+        .eq("id", deal.id)
+        .eq("owner_id", user.id);
+
+      if (cleanupError) {
+        logServerActionError("Incomplete deal cleanup failed", cleanupError);
+        redirectWithError(
+          "The deal was created, but its weekly hours could not be saved. Edit the existing deal before publishing it.",
+        );
+      }
+
+      redirectWithError("Unable to save the weekly availability. Please try again.");
+    }
   }
 
   revalidateBusinessProfile(ownedBusiness.business);
@@ -900,7 +1012,8 @@ async function updateDeal(formData) {
   const { supabase, user } = await getSignedInUser();
   const dealId = getString(formData, "deal_id");
   const payload = buildDealPayload(formData, user.id);
-  const validationError = validateDeal(payload);
+  const scheduleResult = buildDealSchedules(formData);
+  const validationError = validateDeal(payload, scheduleResult);
 
   if (!dealId || validationError) {
     redirectWithError(validationError ?? "Missing deal id.");
@@ -916,6 +1029,38 @@ async function updateDeal(formData) {
     redirectWithError(ownedBusiness.error);
   }
 
+  const { data: existingSchedules, error: existingSchedulesError } = await supabase
+    .from("deal_schedules")
+    .select("id")
+    .eq("deal_id", dealId);
+
+  if (existingSchedulesError) {
+    logServerActionError("Deal schedules load failed", existingSchedulesError);
+    redirectWithError("Unable to load the existing weekly availability. Please try again.");
+  }
+
+  let desiredScheduleIds = [];
+
+  if (payload.availability_mode === DEAL_AVAILABILITY_MODE.WEEKLY) {
+    const { data: savedSchedules, error: scheduleSaveError } = await supabase
+      .from("deal_schedules")
+      .upsert(
+        scheduleResult.schedules.map((schedule) => ({
+          ...schedule,
+          deal_id: dealId,
+        })),
+        { onConflict: "deal_id,day_of_week,start_time,end_time" },
+      )
+      .select("id");
+
+    if (scheduleSaveError) {
+      logServerActionError("Deal schedules save failed", scheduleSaveError);
+      redirectWithError("Unable to save the weekly availability. Please try again.");
+    }
+
+    desiredScheduleIds = (savedSchedules ?? []).map((schedule) => schedule.id);
+  }
+
   const { error } = await supabase
     .from("deals")
     .update(getDealSavePayload(payload))
@@ -924,7 +1069,41 @@ async function updateDeal(formData) {
 
   if (error) {
     logServerActionError("Deal update failed", error);
+
+    const existingScheduleIds = new Set(
+      (existingSchedules ?? []).map((schedule) => schedule.id),
+    );
+    const newlyCreatedScheduleIds = desiredScheduleIds.filter(
+      (scheduleId) => !existingScheduleIds.has(scheduleId),
+    );
+
+    if (newlyCreatedScheduleIds.length) {
+      const { error: cleanupError } = await supabase
+        .from("deal_schedules")
+        .delete()
+        .in("id", newlyCreatedScheduleIds);
+      if (cleanupError) logServerActionError("Deal schedule rollback failed", cleanupError);
+    }
+
     redirectWithError("Unable to update deal. Please try again.");
+  }
+
+  const obsoleteScheduleIds = (existingSchedules ?? [])
+    .map((schedule) => schedule.id)
+    .filter((scheduleId) => !desiredScheduleIds.includes(scheduleId));
+
+  if (obsoleteScheduleIds.length) {
+    const { error: scheduleCleanupError } = await supabase
+      .from("deal_schedules")
+      .delete()
+      .in("id", obsoleteScheduleIds);
+
+    if (scheduleCleanupError) {
+      logServerActionError("Obsolete deal schedules cleanup failed", scheduleCleanupError);
+      redirectWithError(
+        "The deal was saved, but older weekly hours could not be removed. Please try saving it again.",
+      );
+    }
   }
 
   revalidateBusinessProfile(ownedBusiness.business);
@@ -1038,6 +1217,9 @@ function DealStatusSummary({ deal }) {
         </span>
         <span className="text-xs font-semibold text-zinc-500">
           <DealTimeLabel deal={deal} fallback="Promotion timing" />
+        </span>
+        <span className="text-xs font-bold text-emerald-700">
+          <DealAvailabilityLabel deal={deal} />
         </span>
       </div>
     </div>
@@ -1288,6 +1470,13 @@ function DealForm({ action, deal, businesses, submitLabel }) {
           <DealDateTimeInput name="ends_at" defaultValue={deal?.ends_at} />
         </Field>
       </div>
+      <DealAvailabilityFields
+        initialMode={deal?.availability_mode ?? DEAL_AVAILABILITY_MODE.CONTINUOUS}
+        initialSchedules={deal?.deal_schedules ?? []}
+        initialTimezone={
+          deal?.availability_timezone ?? DEFAULT_DEAL_AVAILABILITY_TIMEZONE
+        }
+      />
       <label className="flex min-h-12 items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-800">
         Promotion enabled
         <input
@@ -1354,7 +1543,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
   const { supabase, user } = await getSignedInUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username")
+    .select("first_name")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -1457,7 +1646,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                   Manage your businesses
                 </h1>
                 <p className="mt-1 text-sm text-white/54">
-                  {profile?.username ? `${profile.username}'s portfolio` : "Your business portfolio"}
+                  {profile?.first_name ? `${profile.first_name}'s portfolio` : "Your business portfolio"}
                 </p>
               </div>
             </div>
@@ -1824,6 +2013,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                     </span>
                   </div>
                   <p className="mt-3 text-xs text-white/54"><DealTimeLabel deal={deal} fallback="Promotion timing" /></p>
+                  <p className="mt-1 text-xs font-bold text-[#72f0cc]"><DealAvailabilityLabel deal={deal} /></p>
                   {editingDealId === deal.id ? (
                     <div className="mt-4 border-t border-white/10 pt-4">
                       <DealForm action={updateDeal} deal={deal} businesses={businesses} submitLabel="Save deal" />
