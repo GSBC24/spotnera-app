@@ -1,40 +1,11 @@
 import { redirect } from "next/navigation";
 import { OnboardingForm } from "@/components/onboarding-form";
+import {
+  SUPPORTED_COUNTRY_NAMES,
+  isSupportedCountry,
+} from "@/lib/supported-countries";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
-
-const PROFILE_COUNTRIES = [
-  "Norway",
-  "Sweden",
-  "Denmark",
-  "Finland",
-  "Iceland",
-  "United Kingdom",
-  "Ireland",
-  "Germany",
-  "France",
-  "Spain",
-  "Italy",
-  "Netherlands",
-  "Belgium",
-  "Switzerland",
-  "Austria",
-  "Poland",
-  "Portugal",
-  "Greece",
-  "United States",
-  "Canada",
-  "Australia",
-  "New Zealand",
-  "Japan",
-  "South Korea",
-  "Singapore",
-  "India",
-  "Brazil",
-  "Mexico",
-  "South Africa",
-  "Other",
-];
 
 function isCompleteProfile(profile) {
   return Boolean(profile?.onboarding_completed && profile?.city && profile?.country);
@@ -137,7 +108,7 @@ export default async function OnboardingPage() {
       return { error: "First name, last name, country, and city are required." };
     }
 
-    if (!PROFILE_COUNTRIES.includes(country)) {
+    if (!isSupportedCountry(country)) {
       return { error: "Choose a valid country." };
     }
 
@@ -220,7 +191,7 @@ export default async function OnboardingPage() {
             <OnboardingForm
               action={saveProfile}
               defaultValues={defaultValues}
-              countries={PROFILE_COUNTRIES}
+              countries={SUPPORTED_COUNTRY_NAMES}
             />
           </div>
         </section>

@@ -11,7 +11,7 @@ import {
   businessCategoryMatches,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
-import { getPromotionTypeLabel, PROMOTION_TYPES } from "@/lib/promotions";
+import { getPromotionTypeLabel } from "@/lib/promotions";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import { getBusinessPath } from "@/lib/business-url";
@@ -314,11 +314,6 @@ function businessMatchesFilters(business, filters) {
   const matchesCategory =
     filters.selectedCategories.length === 0 ||
     filters.selectedCategories.some((category) => businessCategoryMatches(business.category, category));
-  const matchesPromotion =
-    !filters.selectedPromotionType ||
-    business.deals.some((deal) =>
-      isLiveDeal(deal) && (deal.promotion_type || "other") === filters.selectedPromotionType,
-    );
   const matchesSearch =
     !normalizedSearch ||
     normalizeSearchValue(business.name).includes(normalizedSearch);
@@ -328,7 +323,7 @@ function businessMatchesFilters(business, filters) {
     !SUPPORTED_COUNTRY_NAMES.length || SUPPORTED_COUNTRY_NAMES.includes(businessCountry);
   const matchesCity = !filters.selectedCity || businessCity === filters.selectedCity;
 
-  return matchesCategory && matchesSearch && matchesSupportedCountry && matchesCountry && matchesCity && matchesPromotion;
+  return matchesCategory && matchesSearch && matchesSupportedCountry && matchesCountry && matchesCity;
 }
 
 function normalizeBusinesses(businesses) {
@@ -904,7 +899,6 @@ export function SpotneraDashboard({
   const [isSavingReview, setIsSavingReview] = useState(false);
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedPromotionType, setSelectedPromotionType] = useState("");
   const [selectedCountry, setSelectedCountry] = useState(
     HAS_MULTIPLE_SUPPORTED_COUNTRIES ? "" : DEFAULT_SUPPORTED_COUNTRY?.name ?? "",
   );
@@ -973,7 +967,6 @@ export function SpotneraDashboard({
     const filters = {
       searchQuery,
       selectedCategories,
-      selectedPromotionType,
       selectedCountry,
       selectedCity,
     };
@@ -981,7 +974,7 @@ export function SpotneraDashboard({
     return mappedBusinesses.filter((business) =>
       businessMatchesFilters(business, filters),
     );
-  }, [mappedBusinesses, searchQuery, selectedCategories, selectedCity, selectedCountry, selectedPromotionType]);
+  }, [mappedBusinesses, searchQuery, selectedCategories, selectedCity, selectedCountry]);
 
   useEffect(() => {
     const normalizedSearch = searchQuery.trim();
@@ -1007,8 +1000,7 @@ export function SpotneraDashboard({
   const activeFilterCount =
     selectedCategoryCount +
     (HAS_MULTIPLE_SUPPORTED_COUNTRIES && selectedCountry ? 1 : 0) +
-    (selectedCity ? 1 : 0) +
-    (selectedPromotionType ? 1 : 0);
+    (selectedCity ? 1 : 0);
   const totalBusinessLabel = getCountLabel(supabaseBusinessCount, "Business", "Businesses");
   const totalActiveDealLabel = getCountLabel(
     supabaseDealCount,
@@ -1039,7 +1031,6 @@ export function SpotneraDashboard({
       clearSelectedBusinessIfExcluded({
         searchQuery: nextSearchQuery,
         selectedCategories,
-        selectedPromotionType,
         selectedCountry,
         selectedCity,
       });
@@ -1047,7 +1038,6 @@ export function SpotneraDashboard({
     [
       clearSelectedBusinessIfExcluded,
       selectedCategories,
-      selectedPromotionType,
       selectedCity,
       selectedCountry,
     ],
@@ -1076,7 +1066,6 @@ export function SpotneraDashboard({
       clearSelectedBusinessIfExcluded({
         searchQuery,
         selectedCategories: nextCategories,
-        selectedPromotionType,
         selectedCountry,
         selectedCity,
       });
@@ -1085,7 +1074,6 @@ export function SpotneraDashboard({
       clearSelectedBusinessIfExcluded,
       searchQuery,
       selectedCategories,
-      selectedPromotionType,
       selectedCity,
       selectedCountry,
     ],
@@ -1099,11 +1087,10 @@ export function SpotneraDashboard({
     clearSelectedBusinessIfExcluded({
       searchQuery,
       selectedCategories: [],
-      selectedPromotionType,
       selectedCountry,
       selectedCity,
     });
-  }, [clearSelectedBusinessIfExcluded, searchQuery, selectedCity, selectedCountry, selectedPromotionType]);
+  }, [clearSelectedBusinessIfExcluded, searchQuery, selectedCity, selectedCountry]);
   const handleSelectCountry = useCallback(
     (event) => {
       const nextCountry = event.target.value;
@@ -1127,7 +1114,6 @@ export function SpotneraDashboard({
         selectedCategories,
         selectedCountry: nextCountry,
         selectedCity: nextCity,
-        selectedPromotionType,
       });
     },
     [
@@ -1135,7 +1121,6 @@ export function SpotneraDashboard({
       mappedBusinesses,
       searchQuery,
       selectedCategories,
-      selectedPromotionType,
       selectedCity,
     ],
   );
@@ -1153,7 +1138,6 @@ export function SpotneraDashboard({
         selectedCategories,
         selectedCountry,
         selectedCity: nextCity,
-        selectedPromotionType,
       });
     },
     [
@@ -1161,24 +1145,8 @@ export function SpotneraDashboard({
       searchQuery,
       selectedCategories,
       selectedCountry,
-      selectedPromotionType,
     ],
   );
-
-  const handleSelectPromotionType = useCallback((event) => {
-    const nextPromotionType = event.target.value;
-    setSelectedPromotionType(nextPromotionType);
-    trackEvent("filter_promotion_type", {
-      promotion_type: nextPromotionType || "all",
-    });
-    clearSelectedBusinessIfExcluded({
-      searchQuery,
-      selectedCategories,
-      selectedPromotionType: nextPromotionType,
-      selectedCountry,
-      selectedCity,
-    });
-  }, [clearSelectedBusinessIfExcluded, searchQuery, selectedCategories, selectedCountry, selectedCity]);
 
   const currentUserReview = selectedBusiness?.reviews.find(
     (review) => review.user_id === userId,
@@ -1353,12 +1321,10 @@ export function SpotneraDashboard({
     setSelectedCountry(defaultCountry);
     setSelectedCity("");
     setSelectedCategories([]);
-    setSelectedPromotionType("");
     setAreFiltersOpen(false);
     clearSelectedBusinessIfExcluded({
       searchQuery: "",
       selectedCategories: [],
-      selectedPromotionType: "",
       selectedCountry: defaultCountry,
       selectedCity: "",
     });
@@ -1439,30 +1405,24 @@ export function SpotneraDashboard({
               className="h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/52 focus:border-white/30"
             />
           </div>
-          {!HAS_MULTIPLE_SUPPORTED_COUNTRIES && DEFAULT_SUPPORTED_COUNTRY ? (
-            <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-white/66">
-              <span aria-hidden="true" className="text-[#72f0cc]"><Icon path={LOCATION_PATH} /></span>
-              <span>{DEFAULT_SUPPORTED_COUNTRY.name}</span>
-            </div>
-          ) : null}
-          <div className={`mt-2 grid gap-2 ${HAS_MULTIPLE_SUPPORTED_COUNTRIES ? "sm:grid-cols-[1fr_1fr_auto]" : "sm:grid-cols-[1fr_auto]"}`}>
-            {HAS_MULTIPLE_SUPPORTED_COUNTRIES ? (
-              <label className="grid min-w-0 gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">Country</span>
-                <select
-                  value={selectedCountry}
-                  onChange={handleSelectCountry}
-                  className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
-                >
+          <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <label className="grid min-w-0 gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">Country</span>
+              <select
+                value={selectedCountry}
+                onChange={handleSelectCountry}
+                className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
+              >
+                {HAS_MULTIPLE_SUPPORTED_COUNTRIES ? (
                   <option value="">All supported countries</option>
-                  {visibleCountryOptions.map((country) => (
-                    <option key={country.code} value={country.name}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
+                ) : null}
+                {visibleCountryOptions.map((country) => (
+                  <option key={country.code} value={country.name}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="grid min-w-0 gap-1.5">
               <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">City</span>
               <select
@@ -1484,7 +1444,7 @@ export function SpotneraDashboard({
               aria-expanded={areFiltersOpen}
               className="spotnera-brand-action h-11 self-end rounded-2xl border border-[#33d6a6]/40 px-4 text-xs font-bold transition"
             >
-              Filters {activeFilterCount ? `(${activeFilterCount})` : ""}
+              Categories {activeFilterCount ? `(${activeFilterCount})` : ""}
             </button>
           </div>
           {areFiltersOpen ? (
@@ -1497,19 +1457,6 @@ export function SpotneraDashboard({
                   onSelectAll={handleSelectAllCategories}
                 />
               </div>
-              <label className="grid min-w-0 gap-1.5">
-                <span className="text-xs font-bold uppercase tracking-[0.16em] text-white/66">Promotion type</span>
-                <select
-                  value={selectedPromotionType}
-                  onChange={handleSelectPromotionType}
-                  className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
-                >
-                  <option value="">All promotions</option>
-                  {PROMOTION_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
-              </label>
             </div>
           ) : null}
           <div className="mt-3 flex flex-wrap justify-end gap-2">

@@ -18,10 +18,8 @@ import {
 } from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
 import { getBusinessPath } from "@/lib/business-url";
-import { PROMOTION_TYPES, PROMOTION_TYPE_VALUES } from "@/lib/promotions";
+import { PROMOTION_TYPE_VALUES } from "@/lib/promotions";
 import {
-  DEFAULT_SUPPORTED_COUNTRY,
-  HAS_MULTIPLE_SUPPORTED_COUNTRIES,
   SUPPORTED_COUNTRIES,
   isSupportedCountry,
 } from "@/lib/supported-countries";
@@ -1048,13 +1046,11 @@ function DealStatusSummary({ deal }) {
 
 function BusinessForm({ action, business, imageError, submitLabel }) {
   const selectedCategory = business?.category ?? "";
-  const selectedCountry = business?.country ?? DEFAULT_SUPPORTED_COUNTRY?.name ?? "";
+  const selectedCountry = business?.country ?? "";
   const hasLegacyCategory =
     selectedCategory && !BUSINESS_CATEGORY_LABELS.includes(selectedCategory);
   const hasUnsupportedExistingCountry =
     Boolean(business && selectedCountry && !isSupportedCountry(selectedCountry));
-  const isCountryReadOnly =
-    !HAS_MULTIPLE_SUPPORTED_COUNTRIES || hasUnsupportedExistingCountry;
 
   return (
     <AnalyticsForm
@@ -1110,28 +1106,17 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Country">
-          {isCountryReadOnly ? (
-            <>
-              <input type="hidden" name="country" value={selectedCountry} />
-              <select
-                value={selectedCountry}
-                disabled
-                aria-label="Country"
-                className="spotnera-input w-full cursor-not-allowed text-sm font-bold opacity-80"
-              >
-                <option value={selectedCountry}>{selectedCountry}</option>
-              </select>
-            </>
-          ) : (
-            <Select name="country" required defaultValue={selectedCountry}>
-              <option value="" disabled>Choose country</option>
-              {SUPPORTED_COUNTRIES.map((country) => (
-                <option key={country.code} value={country.name}>
-                  {country.name}
-                </option>
-              ))}
-            </Select>
-          )}
+          <Select name="country" required defaultValue={selectedCountry}>
+            <option value="" disabled>Choose country</option>
+            {hasUnsupportedExistingCountry ? (
+              <option value={selectedCountry}>{selectedCountry}</option>
+            ) : null}
+            {SUPPORTED_COUNTRIES.map((country) => (
+              <option key={country.code} value={country.name}>
+                {country.name}
+              </option>
+            ))}
+          </Select>
         </Field>
         <Field label="City">
           <TextInput name="city" required minLength={2} maxLength={120} defaultValue={business?.city ?? ""} />
@@ -1276,6 +1261,9 @@ function DealForm({ action, deal, businesses, submitLabel }) {
       className="grid gap-3"
     >
       {deal ? <input type="hidden" name="deal_id" value={deal.id} /> : null}
+      {deal?.promotion_type ? (
+        <input type="hidden" name="promotion_type" value={deal.promotion_type} />
+      ) : null}
       {deal ? <DealStatusSummary deal={deal} /> : null}
       <Field label="Business">
         <Select name="business_id" required defaultValue={deal?.business_id ?? businesses[0]?.id ?? ""}>
@@ -1291,14 +1279,6 @@ function DealForm({ action, deal, businesses, submitLabel }) {
       </Field>
       <Field label="Description">
         <TextArea name="description" defaultValue={deal?.description ?? ""} />
-      </Field>
-      <Field label="Promotion type">
-        <Select name="promotion_type" defaultValue={deal?.promotion_type ?? ""}>
-          <option value="">No type selected</option>
-          {PROMOTION_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>{type.label}</option>
-          ))}
-        </Select>
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Starts">

@@ -3,15 +3,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { DeleteAccountPanel } from "@/components/delete-account-panel";
 import { PrivacySettingsLink } from "@/components/privacy-settings-link";
+import {
+  SUPPORTED_COUNTRY_NAMES,
+  isSupportedCountry,
+} from "@/lib/supported-countries";
 import { createClient } from "@/utils/supabase/browser";
-
-const PROFILE_COUNTRIES = [
-  "Norway", "Sweden", "Denmark", "Finland", "Iceland", "United Kingdom",
-  "Ireland", "Germany", "France", "Spain", "Italy", "Netherlands", "Belgium",
-  "Switzerland", "Austria", "Poland", "Portugal", "Greece", "United States",
-  "Canada", "Australia", "New Zealand", "Japan", "South Korea", "Singapore",
-  "India", "Brazil", "Mexico", "South Africa", "Other",
-];
 
 const GENDER_OPTIONS = [
   "Prefer not to say",
@@ -36,6 +32,11 @@ export function ProfileAccountView({ profile, userId, ownedBusinessCount = 0 }) 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
+  const storedCountry = String(localProfile.country ?? "").trim();
+  const hasLegacyCountry = Boolean(storedCountry && !isSupportedCountry(storedCountry));
+  const countryOptions = hasLegacyCountry
+    ? [storedCountry, ...SUPPORTED_COUNTRY_NAMES]
+    : SUPPORTED_COUNTRY_NAMES;
 
   const handleSaveProfile = useCallback(async (event) => {
     event.preventDefault();
@@ -56,7 +57,12 @@ export function ProfileAccountView({ profile, userId, ownedBusinessCount = 0 }) 
       setError("First name, last name, country, and city are required.");
       return;
     }
-    if (!PROFILE_COUNTRIES.includes(country)) {
+    const existingCountry = String(localProfile.country ?? "").trim();
+    const preservesLegacyCountry =
+      Boolean(existingCountry) &&
+      !isSupportedCountry(existingCountry) &&
+      country === existingCountry;
+    if (!isSupportedCountry(country) && !preservesLegacyCountry) {
       setError("Choose a valid country.");
       return;
     }
@@ -111,7 +117,7 @@ export function ProfileAccountView({ profile, userId, ownedBusinessCount = 0 }) 
           <label className="grid gap-1.5"><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">Last name</span><input name="last_name" required maxLength={80} defaultValue={localProfile.last_name ?? ""} className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30" /></label>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1.5"><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">Country</span><select name="country" required defaultValue={localProfile.country ?? ""} className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"><option value="" disabled>Choose country</option>{PROFILE_COUNTRIES.map((country) => <option key={country} value={country}>{country}</option>)}</select></label>
+          <label className="grid gap-1.5"><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">Country</span><select name="country" required defaultValue={localProfile.country ?? ""} className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30"><option value="" disabled>Choose country</option>{countryOptions.map((country) => <option key={country} value={country}>{country}</option>)}</select></label>
           <label className="grid gap-1.5"><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">City</span><input name="city" required maxLength={120} defaultValue={localProfile.city ?? ""} className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30" /></label>
         </div>
         <label className="grid gap-1.5"><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/42">Phone optional</span><input type="tel" name="phone" maxLength={32} defaultValue={localProfile.phone ?? ""} className="h-11 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none focus:border-white/30" /></label>
