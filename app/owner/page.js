@@ -1272,6 +1272,7 @@ function DealForm({ action, deal, businesses, submitLabel }) {
       action={action}
       eventName={deal ? "deal_update" : "deal_create"}
       analyticsContext={{ dealId: deal?.id }}
+      preventDuplicateSubmissions={!deal}
       className="grid gap-3"
     >
       {deal ? <input type="hidden" name="deal_id" value={deal.id} /> : null}
@@ -1317,7 +1318,13 @@ function DealForm({ action, deal, businesses, submitLabel }) {
         />
       </label>
       <div className="grid gap-2 sm:grid-cols-2">
-        <SubmitButton>{submitLabel}</SubmitButton>
+        {deal ? (
+          <SubmitButton>{submitLabel}</SubmitButton>
+        ) : (
+          <LockedFormSubmitButton pendingLabel="Creating deal…">
+            {submitLabel}
+          </LockedFormSubmitButton>
+        )}
         {deal ? (
           <button
             type="submit"
@@ -1504,7 +1511,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
             <Link
               key={key}
               href={`/owner?section=${key}`}
-              className={`min-h-10 shrink-0 rounded-2xl px-3 text-xs font-black transition sm:px-4 ${
+              className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-2xl px-3 text-xs font-black leading-none transition sm:px-4 ${
                 ownerSection === key
                   ? "spotnera-brand-action"
                   : "text-white/58 hover:bg-white/10 hover:text-white"

@@ -84,12 +84,17 @@ export function ConsentManager() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[80] px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-4">
-      <section className="mx-auto w-full max-w-2xl rounded-[28px] border border-white/14 bg-zinc-950/92 p-4 text-white shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:p-5">
+    <div className="spotnera-dialog-backdrop fixed inset-0 z-[100] flex items-end px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-16 sm:items-center sm:justify-center sm:p-4">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="privacy-choices-title"
+        className="max-h-[calc(100vh-5rem)] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821] p-4 text-white shadow-[0_28px_90px_rgba(0,0,0,0.54)] sm:max-h-[calc(100vh-2rem)] sm:p-5"
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="spotnera-kicker text-[#72f0cc]">Privacy choices</p>
-            <h2 className="mt-2 text-xl font-semibold">Choose analytics settings</h2>
+            <h2 id="privacy-choices-title" className="mt-2 text-xl font-semibold">Choose analytics settings</h2>
           </div>
           {isSettingsOpen ? (
             <button
