@@ -376,7 +376,7 @@ function buildMarkerElement(business, isSelected) {
   );
   marker.dataset.markerId = String(business.id);
   marker.className =
-    "spotnera-map-marker relative grid h-11 w-11 cursor-pointer place-items-center rounded-full border bg-white/20 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:scale-105";
+    "spotnera-map-marker relative grid h-11 w-11 cursor-pointer place-items-center rounded-full border bg-white/20 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition";
   marker.classList.add(isSelected ? "border-white" : "border-white/70");
 
   const pulse = document.createElement("span");
@@ -783,9 +783,12 @@ function StableMapboxMap({
         business,
         selectedBusiness?.id === business.id,
       );
-      const stopMapDrag = (event) => event.stopPropagation();
-      element.addEventListener("pointerdown", stopMapDrag);
-      element.addEventListener("mousedown", stopMapDrag);
+      const stopMapDrag = (event) => {
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+      };
+      element.addEventListener("pointerdown", stopMapDrag, { capture: true });
+      element.addEventListener("mousedown", stopMapDrag, { capture: true });
       element.addEventListener("touchstart", stopMapDrag, { passive: true });
       element.addEventListener("click", (event) => {
         event.stopPropagation();
