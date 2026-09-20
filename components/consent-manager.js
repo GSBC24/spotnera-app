@@ -40,6 +40,14 @@ export function ConsentManager() {
   const analyticsEnabled = consent?.analytics === true;
 
   useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("spotnera-consent-dialog-visibility", {
+        detail: { visible: shouldShowBanner || isSettingsOpen },
+      }),
+    );
+  }, [isSettingsOpen, shouldShowBanner]);
+
+  useEffect(() => {
     const loadConsentId = window.setTimeout(() => {
       const storedConsent = getStoredConsent();
       setConsent(storedConsent);

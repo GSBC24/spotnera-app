@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { DeleteAccountPanel } from "@/components/delete-account-panel";
 import { NotificationPreferences } from "@/components/notification-preferences";
 import { PrivacySettingsLink } from "@/components/privacy-settings-link";
+import { PwaInstallAction } from "@/components/pwa-install-prompt";
 import {
   SUPPORTED_COUNTRY_NAMES,
   isSupportedCountry,
@@ -142,6 +143,7 @@ export function ProfileAccountView({
         initialPreferences={notificationPreferences}
         loadError={notificationPreferencesLoadError}
       />
+      <PwaInstallAction />
       <section className="mt-4 rounded-[24px] border border-white/14 bg-white/10 p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">Privacy</p><PrivacySettingsLink className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16" /></section>
       <DeleteAccountPanel ownedBusinessCount={ownedBusinessCount} />
     </section>
