@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
 import { CopyProfileLinkButton } from "@/components/copy-profile-link-button";
+import { BusinessQrCode } from "@/components/business-qr-code";
 import { DeleteBusinessButton } from "@/components/delete-business-button";
 import {
   DealDateTimeInput,
@@ -1643,6 +1644,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         city={business.city}
                         country={business.country}
                       />
+                      <BusinessQrCode business={business} />
                       <Link
                         href={`/owner?section=businesses&editBusiness=${business.id}`}
                         className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
