@@ -877,6 +877,7 @@ export function SpotneraDashboard({
   const [isSearchOpen, setIsSearchOpen] = useState(initialSearchOpen);
   const [requestedAuthIntent, setRequestedAuthIntent] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isSelectedCardOpen, setIsSelectedCardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(
     ["map", "pulse", "saved"].includes(initialTab) ? initialTab : "map",
   );
@@ -1021,6 +1022,7 @@ export function SpotneraDashboard({
   const handleSelectBusiness = useCallback((business) => {
     setSelectedBusinessId(business.id);
     setIsDetailOpen(false);
+    setIsSelectedCardOpen(true);
     trackEvent("business_select", getBusinessEventParameters(business));
   }, []);
   const handleToggleCategory = useCallback(
@@ -1533,14 +1535,25 @@ export function SpotneraDashboard({
             </div>
           ) : null}
 
-          {selectedBusiness ? (
+          {selectedBusiness && isSelectedCardOpen ? (
             <motion.div
               initial={{ y: 28, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 130, damping: 18 }}
               className="absolute bottom-4 left-4 right-4 z-10 rounded-[28px] border border-white/14 bg-zinc-950/88 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:left-auto sm:max-w-md"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <button
+                type="button"
+                aria-label="Close business details"
+                onClick={() => {
+                  setIsSelectedCardOpen(false);
+                  setIsDetailOpen(false);
+                }}
+                className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-white/14 bg-black/40 text-xl font-bold text-white/82 transition hover:border-white/24 hover:bg-black/60 hover:text-white"
+              >
+                &times;
+              </button>
+              <div className="flex flex-col gap-3 pr-12 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <CategoryDot category={selectedBusiness.category} />
@@ -1631,11 +1644,11 @@ export function SpotneraDashboard({
                 </div>
                 <button
                   type="button"
-                  aria-label="Close details"
+                  aria-label="Close business details"
                   onClick={() => setIsDetailOpen(false)}
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/8 text-lg font-bold text-white/72 transition hover:bg-white/14"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/14 bg-black/40 text-xl font-bold text-white/82 transition hover:border-white/24 hover:bg-black/60 hover:text-white"
                 >
-                  X
+                  &times;
                 </button>
               </div>
 
