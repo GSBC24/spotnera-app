@@ -16,6 +16,12 @@ import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import { getBusinessPath } from "@/lib/business-url";
 import {
+  DEFAULT_SUPPORTED_COUNTRY,
+  HAS_MULTIPLE_SUPPORTED_COUNTRIES,
+  SUPPORTED_COUNTRIES,
+  SUPPORTED_COUNTRY_NAMES,
+} from "@/lib/supported-countries";
+import {
   DEAL_STATUS_META,
   getLiveDeals,
   getPrimaryLiveDeal,
@@ -318,9 +324,11 @@ function businessMatchesFilters(business, filters) {
     normalizeSearchValue(business.name).includes(normalizedSearch);
   const matchesCountry =
     !filters.selectedCountry || businessCountry === filters.selectedCountry;
+  const matchesSupportedCountry =
+    !SUPPORTED_COUNTRY_NAMES.length || SUPPORTED_COUNTRY_NAMES.includes(businessCountry);
   const matchesCity = !filters.selectedCity || businessCity === filters.selectedCity;
 
-  return matchesCategory && matchesSearch && matchesCountry && matchesCity && matchesPromotion;
+  return matchesCategory && matchesSearch && matchesSupportedCountry && matchesCountry && matchesCity && matchesPromotion;
 }
 
 function normalizeBusinesses(businesses) {
@@ -373,7 +381,7 @@ function buildMarkerElement(business, isSelected) {
   );
   marker.dataset.markerId = String(business.id);
   marker.className =
-    "spotnera-map-marker relative grid h-11 w-11 place-items-center rounded-full border bg-white/20 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:scale-105";
+    "spotnera-map-marker relative grid h-11 w-11 cursor-pointer place-items-center rounded-full border bg-white/20 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:scale-105";
   marker.classList.add(isSelected ? "border-white" : "border-white/70");
 
   const pulse = document.createElement("span");
@@ -667,7 +675,7 @@ function CategoryFilters({
           onChange={onSelectAll}
           className="h-4 w-4 accent-[#33d6a6]"
         />
-        <span>All businesses</span>
+        <span>All categories</span>
       </label>
       <div className="grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
         {visibleCategories.map((category) => {
@@ -780,10 +788,18 @@ function StableMapboxMap({
         business,
         selectedBusiness?.id === business.id,
       );
-      element.addEventListener("click", () => onSelectBusiness(business));
+      const stopMapDrag = (event) => event.stopPropagation();
+      element.addEventListener("pointerdown", stopMapDrag);
+      element.addEventListener("mousedown", stopMapDrag);
+      element.addEventListener("touchstart", stopMapDrag, { passive: true });
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        onSelectBusiness(business);
+      });
 
       const marker = new mapboxgl.Marker({
         anchor: "center",
+        draggable: false,
         element,
       })
         .setLngLat([business.longitude, business.latitude])
@@ -889,7 +905,9 @@ export function SpotneraDashboard({
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedPromotionType, setSelectedPromotionType] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(
+    HAS_MULTIPLE_SUPPORTED_COUNTRIES ? "" : DEFAULT_SUPPORTED_COUNTRY?.name ?? "",
+  );
   const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
@@ -935,14 +953,7 @@ export function SpotneraDashboard({
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
   );
-  const countryOptions = useMemo(
-    () => getUniqueDisplayValues(mappedBusinesses.map((business) => business.country)),
-    [mappedBusinesses],
-  );
-  const visibleCountryOptions = useMemo(
-    () => getUniqueDisplayValues([selectedCountry, ...countryOptions]),
-    [countryOptions, selectedCountry],
-  );
+  const visibleCountryOptions = SUPPORTED_COUNTRIES;
   const cityOptions = useMemo(() => {
     const countryFilteredBusinesses = selectedCountry
       ? mappedBusinesses.filter(
@@ -994,7 +1005,10 @@ export function SpotneraDashboard({
     filteredBusinesses.find((business) => business.id === selectedBusinessId) ?? null;
   const selectedCategoryCount = selectedCategories.length;
   const activeFilterCount =
-    selectedCategoryCount + (selectedCountry ? 1 : 0) + (selectedCity ? 1 : 0) + (selectedPromotionType ? 1 : 0);
+    selectedCategoryCount +
+    (HAS_MULTIPLE_SUPPORTED_COUNTRIES && selectedCountry ? 1 : 0) +
+    (selectedCity ? 1 : 0) +
+    (selectedPromotionType ? 1 : 0);
   const totalBusinessLabel = getCountLabel(supabaseBusinessCount, "Business", "Businesses");
   const totalActiveDealLabel = getCountLabel(
     supabaseDealCount,
@@ -1333,7 +1347,10 @@ export function SpotneraDashboard({
 
   const handleClearFilters = useCallback(() => {
     setSearchQuery("");
-    setSelectedCountry("");
+    const defaultCountry = HAS_MULTIPLE_SUPPORTED_COUNTRIES
+      ? ""
+      : DEFAULT_SUPPORTED_COUNTRY?.name ?? "";
+    setSelectedCountry(defaultCountry);
     setSelectedCity("");
     setSelectedCategories([]);
     setSelectedPromotionType("");
@@ -1342,7 +1359,7 @@ export function SpotneraDashboard({
       searchQuery: "",
       selectedCategories: [],
       selectedPromotionType: "",
-      selectedCountry: "",
+      selectedCountry: defaultCountry,
       selectedCity: "",
     });
   }, [clearSelectedBusinessIfExcluded]);
@@ -1422,24 +1439,32 @@ export function SpotneraDashboard({
               className="h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/52 focus:border-white/30"
             />
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto]">
-            <label className="min-w-0">
-              <span className="sr-only">Country</span>
-              <select
-                value={selectedCountry}
-                onChange={handleSelectCountry}
-                className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
-              >
-                <option value="">All countries</option>
-                {visibleCountryOptions.map((country) => (
-                  <option key={country} value={country}>
-                    {country}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="min-w-0">
-              <span className="sr-only">City</span>
+          {!HAS_MULTIPLE_SUPPORTED_COUNTRIES && DEFAULT_SUPPORTED_COUNTRY ? (
+            <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-white/66">
+              <span aria-hidden="true" className="text-[#72f0cc]"><Icon path={LOCATION_PATH} /></span>
+              <span>{DEFAULT_SUPPORTED_COUNTRY.name}</span>
+            </div>
+          ) : null}
+          <div className={`mt-2 grid gap-2 ${HAS_MULTIPLE_SUPPORTED_COUNTRIES ? "sm:grid-cols-[1fr_1fr_auto]" : "sm:grid-cols-[1fr_auto]"}`}>
+            {HAS_MULTIPLE_SUPPORTED_COUNTRIES ? (
+              <label className="grid min-w-0 gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">Country</span>
+                <select
+                  value={selectedCountry}
+                  onChange={handleSelectCountry}
+                  className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
+                >
+                  <option value="">All supported countries</option>
+                  {visibleCountryOptions.map((country) => (
+                    <option key={country.code} value={country.name}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label className="grid min-w-0 gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">City</span>
               <select
                 value={selectedCity}
                 onChange={handleSelectCity}
@@ -1457,31 +1482,34 @@ export function SpotneraDashboard({
               type="button"
               onClick={() => setAreFiltersOpen((isOpen) => !isOpen)}
               aria-expanded={areFiltersOpen}
-              className="spotnera-brand-action col-span-2 h-11 rounded-2xl border border-[#33d6a6]/40 px-4 text-xs font-bold transition sm:col-span-1"
+              className="spotnera-brand-action h-11 self-end rounded-2xl border border-[#33d6a6]/40 px-4 text-xs font-bold transition"
             >
               Filters {activeFilterCount ? `(${activeFilterCount})` : ""}
             </button>
           </div>
-          <label className="mt-2 block min-w-0">
-            <span className="sr-only">Promotion type</span>
-            <select
-              value={selectedPromotionType}
-              onChange={handleSelectPromotionType}
-              className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
-            >
-              <option value="">All promotions</option>
-              {PROMOTION_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>{type.label}</option>
-              ))}
-            </select>
-          </label>
           {areFiltersOpen ? (
-            <div className="mt-3 rounded-[24px] border border-white/10 bg-zinc-950/54 p-3">
-              <CategoryFilters
-                selectedCategories={selectedCategories}
-                onToggleCategory={handleToggleCategory}
-                onSelectAll={handleSelectAllCategories}
-              />
+            <div className="mt-3 grid gap-4 rounded-[24px] border border-white/10 bg-zinc-950/54 p-3">
+              <div className="grid gap-2">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/66">Category</p>
+                <CategoryFilters
+                  selectedCategories={selectedCategories}
+                  onToggleCategory={handleToggleCategory}
+                  onSelectAll={handleSelectAllCategories}
+                />
+              </div>
+              <label className="grid min-w-0 gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-white/66">Promotion type</span>
+                <select
+                  value={selectedPromotionType}
+                  onChange={handleSelectPromotionType}
+                  className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
+                >
+                  <option value="">All promotions</option>
+                  {PROMOTION_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+              </label>
             </div>
           ) : null}
           <div className="mt-3 flex flex-wrap justify-end gap-2">

@@ -20,6 +20,12 @@ import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCat
 import { getBusinessPath } from "@/lib/business-url";
 import { PROMOTION_TYPES, PROMOTION_TYPE_VALUES } from "@/lib/promotions";
 import {
+  DEFAULT_SUPPORTED_COUNTRY,
+  HAS_MULTIPLE_SUPPORTED_COUNTRIES,
+  SUPPORTED_COUNTRIES,
+  isSupportedCountry,
+} from "@/lib/supported-countries";
+import {
   DEAL_STATUS,
   DEAL_STATUS_META,
   getDealStatus,
@@ -127,39 +133,6 @@ const BUSINESS_ANALYTICS_METRICS = [
     label: "Copy link actions",
     description: "Customers copied your profile link.",
   },
-];
-
-const BUSINESS_COUNTRIES = [
-  "Norway",
-  "Sweden",
-  "Denmark",
-  "Finland",
-  "Iceland",
-  "United Kingdom",
-  "Ireland",
-  "Germany",
-  "France",
-  "Spain",
-  "Italy",
-  "Netherlands",
-  "Belgium",
-  "Switzerland",
-  "Austria",
-  "Poland",
-  "Portugal",
-  "Greece",
-  "United States",
-  "Canada",
-  "Australia",
-  "New Zealand",
-  "Japan",
-  "South Korea",
-  "Singapore",
-  "India",
-  "Brazil",
-  "Mexico",
-  "South Africa",
-  "Other",
 ];
 
 function getString(formData, key) {
@@ -498,7 +471,7 @@ function buildDealPayload(formData, userId) {
   };
 }
 
-function validateBusiness(payload) {
+function validateBusiness(payload, { supportedCountriesOnly = false } = {}) {
   if (payload.fieldErrors.length) {
     return payload.fieldErrors[0];
   }
@@ -513,8 +486,8 @@ function validateBusiness(payload) {
     }
   }
 
-  if (!BUSINESS_COUNTRIES.includes(payload.country)) {
-    return "Choose a valid country.";
+  if (supportedCountriesOnly && !isSupportedCountry(payload.country)) {
+    return "Choose a currently supported country.";
   }
 
   if (!payload.address || payload.address !== payload.selected_address) {
@@ -779,7 +752,7 @@ async function createBusiness(formData) {
 
   const { supabase, user } = await getSignedInUser();
   const payload = buildBusinessPayload(formData, user.id);
-  const validationError = validateBusiness(payload);
+  const validationError = validateBusiness(payload, { supportedCountriesOnly: true });
 
   if (validationError) {
     redirectWithBusinessFormError(validationError);
@@ -1075,11 +1048,13 @@ function DealStatusSummary({ deal }) {
 
 function BusinessForm({ action, business, imageError, submitLabel }) {
   const selectedCategory = business?.category ?? "";
-  const selectedCountry = business?.country ?? "";
+  const selectedCountry = business?.country ?? DEFAULT_SUPPORTED_COUNTRY?.name ?? "";
   const hasLegacyCategory =
     selectedCategory && !BUSINESS_CATEGORY_LABELS.includes(selectedCategory);
-  const hasLegacyCountry =
-    selectedCountry && !BUSINESS_COUNTRIES.includes(selectedCountry);
+  const hasUnsupportedExistingCountry =
+    Boolean(business && selectedCountry && !isSupportedCountry(selectedCountry));
+  const isCountryReadOnly =
+    !HAS_MULTIPLE_SUPPORTED_COUNTRIES || hasUnsupportedExistingCountry;
 
   return (
     <AnalyticsForm
@@ -1135,17 +1110,28 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Country">
-          <Select name="country" required defaultValue={selectedCountry}>
-            <option value="" disabled>Choose country</option>
-            {hasLegacyCountry ? (
-              <option value={selectedCountry}>{selectedCountry}</option>
-            ) : null}
-            {BUSINESS_COUNTRIES.map((country) => (
-              <option key={country} value={country}>
-                {country}
-              </option>
-            ))}
-          </Select>
+          {isCountryReadOnly ? (
+            <>
+              <input type="hidden" name="country" value={selectedCountry} />
+              <select
+                value={selectedCountry}
+                disabled
+                aria-label="Country"
+                className="spotnera-input w-full cursor-not-allowed text-sm font-bold opacity-80"
+              >
+                <option value={selectedCountry}>{selectedCountry}</option>
+              </select>
+            </>
+          ) : (
+            <Select name="country" required defaultValue={selectedCountry}>
+              <option value="" disabled>Choose country</option>
+              {SUPPORTED_COUNTRIES.map((country) => (
+                <option key={country.code} value={country.name}>
+                  {country.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </Field>
         <Field label="City">
           <TextInput name="city" required minLength={2} maxLength={120} defaultValue={business?.city ?? ""} />
