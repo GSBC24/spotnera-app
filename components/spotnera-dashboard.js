@@ -407,12 +407,23 @@ function buildMarkerElement(business, isSelected) {
   return marker;
 }
 
-function buildPopupContent(business) {
+function buildPopupContent(business, onClose) {
   const status = getDealStatusMeta(business);
   const deal = getPrimaryDeal(business.deals);
   const addressLines = getBusinessAddressLines(business);
   const content = document.createElement("div");
-  content.className = "min-w-40";
+  content.className = "relative min-w-40 pr-12";
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.setAttribute("aria-label", "Close business details");
+  closeButton.className =
+    "absolute right-0 top-0 grid h-11 w-11 place-items-center rounded-full border border-white/14 bg-zinc-950 text-xl font-bold text-white transition hover:bg-zinc-800";
+  closeButton.textContent = "×";
+  closeButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onClose();
+  });
 
   const category = document.createElement("p");
   category.className =
@@ -431,7 +442,7 @@ function buildPopupContent(business) {
   rating.className = "mt-2 text-xs font-semibold text-zinc-800";
   rating.textContent = `${formatRating(business.averageRating)} rating - ${getReviewLabel(business.reviewCount)}`;
 
-  content.append(category, name, signal, rating);
+  content.append(closeButton, category, name, signal, rating);
 
   if (addressLines.length) {
     const address = document.createElement("p");
@@ -689,7 +700,14 @@ function CategoryFilters({
   );
 }
 
-function StableMapboxMap({ businesses, token, selectedBusiness, onSelectBusiness }) {
+function StableMapboxMap({
+  businesses,
+  token,
+  selectedBusiness,
+  isSelectedBusinessUIOpen,
+  onSelectBusiness,
+  onCloseSelectedBusinessUI,
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const popupRef = useRef(null);
@@ -807,7 +825,7 @@ function StableMapboxMap({ businesses, token, selectedBusiness, onSelectBusiness
       return;
     }
 
-    if (!selectedBusiness) {
+    if (!selectedBusiness || !isSelectedBusinessUIOpen) {
       popup.remove();
       return;
     }
@@ -835,7 +853,7 @@ function StableMapboxMap({ businesses, token, selectedBusiness, onSelectBusiness
 
     popup
       .setLngLat([selectedBusiness.longitude, selectedBusiness.latitude])
-      .setDOMContent(buildPopupContent(selectedBusiness))
+      .setDOMContent(buildPopupContent(selectedBusiness, onCloseSelectedBusinessUI))
       .addTo(map);
 
     map.easeTo({
@@ -843,7 +861,7 @@ function StableMapboxMap({ businesses, token, selectedBusiness, onSelectBusiness
       duration: 650,
       essential: true,
     });
-  }, [selectedBusiness]);
+  }, [isSelectedBusinessUIOpen, onCloseSelectedBusinessUI, selectedBusiness]);
 
   return <div ref={containerRef} className="absolute inset-0 h-full min-h-[420px] w-full" />;
 }
@@ -1024,6 +1042,10 @@ export function SpotneraDashboard({
     setIsDetailOpen(false);
     setIsSelectedCardOpen(true);
     trackEvent("business_select", getBusinessEventParameters(business));
+  }, []);
+  const closeSelectedBusinessUI = useCallback(() => {
+    setIsSelectedCardOpen(false);
+    setIsDetailOpen(false);
   }, []);
   const handleToggleCategory = useCallback(
     (category) => {
@@ -1509,7 +1531,9 @@ export function SpotneraDashboard({
               businesses={filteredBusinesses}
               token={token}
               selectedBusiness={selectedBusiness}
+              isSelectedBusinessUIOpen={isSelectedCardOpen}
               onSelectBusiness={handleSelectBusiness}
+              onCloseSelectedBusinessUI={closeSelectedBusinessUI}
             />
           ) : (
             <div className="grid h-full min-h-[58vh] place-items-center bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02)),repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_1px,transparent_1px_18px)] p-6 text-center">
@@ -1545,9 +1569,9 @@ export function SpotneraDashboard({
               <button
                 type="button"
                 aria-label="Close business details"
-                onClick={() => {
-                  setIsSelectedCardOpen(false);
-                  setIsDetailOpen(false);
+                onClick={(event) => {
+                  event.stopPropagation();
+                  closeSelectedBusinessUI();
                 }}
                 className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-white/14 bg-black/40 text-xl font-bold text-white/82 transition hover:border-white/24 hover:bg-black/60 hover:text-white"
               >
@@ -1645,7 +1669,10 @@ export function SpotneraDashboard({
                 <button
                   type="button"
                   aria-label="Close business details"
-                  onClick={() => setIsDetailOpen(false)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    closeSelectedBusinessUI();
+                  }}
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/14 bg-black/40 text-xl font-bold text-white/82 transition hover:border-white/24 hover:bg-black/60 hover:text-white"
                 >
                   &times;
