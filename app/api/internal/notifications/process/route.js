@@ -8,6 +8,12 @@ export const runtime = "nodejs";
 
 const BATCH_SIZE = 10;
 
+function logRpcFailure(stage, error) {
+  const code = typeof error?.code === "string" && /^[A-Za-z0-9_-]{1,16}$/.test(error.code)
+    ? error.code : "unknown";
+  console.error(`[Spotnera notification worker] RPC failure stage=${stage} code=${code}`);
+}
+
 function authorized(request) {
   const expected = process.env.NOTIFICATION_WORKER_SECRET;
   const supplied = request.headers.get("authorization");
@@ -179,6 +185,7 @@ export async function POST(request) {
     p_limit: BATCH_SIZE,
   });
   if (expireError) {
+    logRpcFailure("expire_claims", expireError);
     return NextResponse.json({ error: "Notification processing failed." }, { status: 500 });
   }
 
@@ -186,6 +193,7 @@ export async function POST(request) {
     p_limit: BATCH_SIZE,
   });
   if (scanError) {
+    logRpcFailure("scan_audience", scanError);
     return NextResponse.json({ error: "Notification processing failed." }, { status: 500 });
   }
 
@@ -194,6 +202,7 @@ export async function POST(request) {
     { p_limit: BATCH_SIZE },
   );
   if (claimError) {
+    logRpcFailure("claim_deliveries", claimError);
     return NextResponse.json({ error: "Notification processing failed." }, { status: 500 });
   }
 
