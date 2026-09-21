@@ -768,7 +768,7 @@ async function verifyOwnedBusiness(supabase, userId, businessId) {
     .maybeSingle();
 
   if (error) {
-    return { error: error.message };
+    return { error: "Unable to verify business ownership. Please try again." };
   }
 
   if (!data) {
@@ -811,9 +811,9 @@ function redirectWithBusinessFormError(message, { businessId, imageField } = {})
   redirect(`/owner?${params.toString()}`);
 }
 
-function logServerActionError(label, error) {
+function logServerActionError(label) {
   if (process.env.NODE_ENV !== "production") {
-    console.error(label, error?.message ?? error);
+    console.error(label);
   }
 }
 

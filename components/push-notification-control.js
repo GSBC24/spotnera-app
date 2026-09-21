@@ -322,7 +322,7 @@ export function PushNotificationControl() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-white">Push on this device</p>
           <p className="mt-1 text-xs leading-5 text-white/60">
-            Enroll this browser for future deal alerts from businesses you save. Spotnera is not sending deal alerts yet.
+            Enroll this browser for New Deal alerts from businesses you save when the New Deals preference is on. Other deal alerts are not live yet.
           </p>
         </div>
         <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-bold text-white/70">
@@ -427,7 +427,7 @@ export function PushNotificationControl() {
       {status === "enabled" ? (
         <div className="mt-3 border-t border-white/10 pt-3">
           <p className="text-xs leading-5 text-white/60">
-            Send a test notification to your enrolled Spotnera devices. Deal alerts are not live yet.
+            Send a test notification to your enrolled Spotnera devices. This does not change your deal alert settings.
           </p>
           <button
             type="button"
