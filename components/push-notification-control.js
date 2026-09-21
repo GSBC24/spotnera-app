@@ -55,7 +55,10 @@ export function PushNotificationControl() {
   const [subscription, setSubscription] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [message, setMessage] = useState("");
+  const [testStatus, setTestStatus] = useState("idle");
   const actionLockRef = useRef(false);
+  const testLockRef = useRef(false);
+  const testCooldownTimerRef = useRef(null);
 
   useEffect(() => {
     let disposed = false;
@@ -112,8 +115,45 @@ export function PushNotificationControl() {
     return () => {
       disposed = true;
       window.clearTimeout(timerId);
+      if (testCooldownTimerRef.current) window.clearTimeout(testCooldownTimerRef.current);
     };
   }, []);
+
+  async function sendTestNotification() {
+    if (status !== "enabled" || !subscription || testLockRef.current || testCooldownTimerRef.current) return;
+    testLockRef.current = true;
+    setTestStatus("sending");
+
+    try {
+      const ownershipResponse = await fetch("/api/notifications/subscriptions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+        cache: "no-store",
+      });
+      if (!ownershipResponse.ok) throw new Error("Subscription ownership check failed.");
+      const ownership = await ownershipResponse.json();
+      if (ownership?.ownedByCurrentUser !== true) {
+        setStatus("unlinked");
+        throw new Error("Subscription is not linked to this account.");
+      }
+
+      const response = await fetch("/api/notifications/test", { method: "POST" });
+      if (!response.ok) throw new Error("Test send failed.");
+      const result = await response.json();
+      setTestStatus(
+        result?.sent > 0 ? "sent" : result?.noDevices === true ? "no-devices" : "error",
+      );
+    } catch {
+      setTestStatus("error");
+    } finally {
+      testLockRef.current = false;
+      testCooldownTimerRef.current = window.setTimeout(() => {
+        testCooldownTimerRef.current = null;
+        setTestStatus("idle");
+      }, 10000);
+    }
+  }
 
   function beginEnable() {
     setMessage("");
@@ -382,6 +422,27 @@ export function PushNotificationControl() {
         >
           {status === "disabling" ? "Disabling..." : "Disable push on this device"}
         </button>
+      ) : null}
+
+      {status === "enabled" ? (
+        <div className="mt-3 border-t border-white/10 pt-3">
+          <p className="text-xs leading-5 text-white/60">
+            Send a test notification to your enrolled Spotnera devices. Deal alerts are not live yet.
+          </p>
+          <button
+            type="button"
+            onClick={sendTestNotification}
+            disabled={testStatus !== "idle"}
+            className="spotnera-secondary-action mt-2 min-h-11 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {testStatus === "sending" ? "Sending..." : "Send test notification"}
+          </button>
+          <p className="mt-2 text-xs text-white/70" role="status" aria-live="polite">
+            {testStatus === "sent" ? "Test notification sent." :
+              testStatus === "no-devices" ? "No enrolled push device found." :
+                testStatus === "error" ? "Could not send the test notification." : ""}
+          </p>
+        </div>
       ) : null}
 
       {status === "unlinked" || status === "resetting" ? (

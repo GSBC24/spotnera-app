@@ -86,3 +86,72 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+function safeNotificationPath(value) {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return "/me";
+  }
+
+  try {
+    const destination = new URL(value, self.location.origin);
+    return destination.origin === self.location.origin ? `${destination.pathname}${destination.search}${destination.hash}` : "/me";
+  } catch {
+    return "/me";
+  }
+}
+
+self.addEventListener("push", (event) => {
+  event.waitUntil((async () => {
+    let payload = {};
+    try {
+      payload = event.data?.json() ?? {};
+    } catch {
+      // A malformed payload still produces a safe, visible notification.
+    }
+
+    const title = typeof payload?.title === "string" && payload.title.trim()
+      ? payload.title.slice(0, 120) : "Spotnera";
+    const body = typeof payload?.body === "string" && payload.body.trim()
+      ? payload.body.slice(0, 240) : "You have a notification from Spotnera.";
+    const tag = typeof payload?.tag === "string" && payload.tag.trim()
+      ? payload.tag.slice(0, 80) : "spotnera-test";
+
+    await self.registration.showNotification(title, {
+      body,
+      tag,
+      icon: "/icons/spotnera-icon-192.png",
+      badge: "/icons/spotnera-icon-192.png",
+      data: { path: safeNotificationPath(payload?.url) },
+    });
+  })());
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const path = safeNotificationPath(event.notification.data?.path);
+    const destination = new URL(path, self.location.origin);
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const existing = windows.find((client) => {
+      try {
+        return new URL(client.url).origin === self.location.origin;
+      } catch {
+        return false;
+      }
+    });
+
+    if (existing) {
+      try {
+        const navigated = await existing.navigate(destination.href);
+        if (navigated) {
+          await navigated.focus();
+          return;
+        }
+      } catch {
+        // If an existing window cannot navigate, open a safe app path instead.
+      }
+    }
+
+    await self.clients.openWindow(destination.href);
+  })());
+});
