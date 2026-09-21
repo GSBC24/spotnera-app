@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import { PushNotificationControl } from "@/components/push-notification-control";
 
 const PREFERENCE_GROUPS = [
   {
-    title: "Saved businesses",
+    title: "Push notifications",
     preferences: [
       {
         name: "saved_business_new_deals",
@@ -106,8 +107,12 @@ export function NotificationPreferences({
         </p>
         <h2 className="mt-1 text-xl font-semibold">Notification preferences</h2>
         <p className="mt-2 text-sm leading-6 text-white/62">
-          Choose future notifications about businesses you explicitly saved. Saving these settings does not request browser notification permission.
+          Choose future notifications about businesses you explicitly saved. These settings do not enable delivery or request browser permission by themselves.
         </p>
+      </div>
+
+      <div className="mt-4">
+        <PushNotificationControl />
       </div>
 
       {loadError ? (

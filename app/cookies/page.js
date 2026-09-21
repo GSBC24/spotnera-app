@@ -16,6 +16,12 @@ const rows = [
     consent: "Required or preference-based for core app behavior and remembering the user's choice.",
   },
   {
+    category: "User choice",
+    provider: "Spotnera / browser Push service",
+    purpose: "Stores private notification preferences and, only after the user explicitly enables it, a Web Push subscription endpoint and browser-generated encryption keys for future notification delivery.",
+    consent: "Optional. Browser notification permission is requested only from the Enable push action and the registered browser can be removed in Notification settings.",
+  },
+  {
     category: "Service request",
     provider: "Mapbox",
     purpose: "Map display, map tiles/styles, and business-owner address search. Mapbox receives technical request information when map/search features load.",

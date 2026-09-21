@@ -6,8 +6,8 @@ import { HeaderLogout } from "@/components/header-logout";
 import { createClient } from "@/utils/supabase/server";
 
 const DEFAULT_NOTIFICATION_PREFERENCES = {
-  saved_business_new_deals: true,
-  saved_business_deal_starting_soon: true,
+  saved_business_new_deals: false,
+  saved_business_deal_starting_soon: false,
   saved_business_deal_ending_soon: false,
   weekly_deals_email: false,
   new_deal_email: false,
@@ -73,10 +73,6 @@ export default async function MePage() {
       .upsert(preferences, { onConflict: "user_id" });
 
     if (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Notification preferences save failed", error);
-      }
-
       return { error: "Unable to save notification preferences. Please try again." };
     }
 

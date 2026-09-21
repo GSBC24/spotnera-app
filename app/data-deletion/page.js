@@ -67,7 +67,7 @@ export default function DataDeletionPage() {
             <p className="spotnera-kicker text-zinc-500">Account data</p>
             <h2 className="mt-2 text-xl font-semibold text-zinc-950">What is deleted</h2>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
-              Permanent account deletion removes your Spotnera authentication account and profile, favorites saved by you, and reviews written by you.
+              Permanent account deletion removes your Spotnera authentication account and profile, favorites saved by you, reviews written by you, notification preferences, and registered notification devices.
             </p>
           </article>
 

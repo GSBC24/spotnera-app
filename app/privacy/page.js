@@ -40,8 +40,12 @@ function getSections() {
     body: "Reviews and favorites are connected to signed-in accounts so users can manage their own saved businesses and review content. Public business pages show review content without exposing private account details.",
   },
   {
+    title: "Notification Preferences And Devices",
+    body: "Signed-in users may save private notification preferences and explicitly register a browser for future Web Push delivery. A Web Push registration includes the subscription endpoint and browser-generated encryption keys needed for delivery. Spotnera does not create a registration from searches, map activity, profile visits, or saved businesses alone. Users can disable a registered browser from Notification settings, and notification preferences and device registrations are removed with account deletion.",
+  },
+  {
     title: "Account Deletion",
-    body: "Signed-in users can request permanent account deletion from the Profile/Me danger zone. Deletion removes the account profile, favorites saved by the user, and reviews written by the user. If the user owns businesses, deletion also removes those business listings and dependent deals, reviews and favorites about those businesses, and business engagement events tied to those deleted businesses. Anonymous aggregate business engagement events are not tied to a user account and are retained unless the related business is deleted.",
+    body: "Signed-in users can request permanent account deletion from the Profile/Me danger zone. Deletion removes the account profile, favorites saved by the user, reviews written by the user, notification preferences, and registered notification devices. If the user owns businesses, deletion also removes those business listings and dependent deals, reviews and favorites about those businesses, and business engagement events tied to those deleted businesses. Anonymous aggregate business engagement events are not tied to a user account and are retained unless the related business is deleted.",
   },
   {
     title: "Business Engagement Analytics",
