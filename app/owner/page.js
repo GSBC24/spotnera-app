@@ -1030,7 +1030,7 @@ async function updateDeal(formData) {
 
   revalidateBusinessProfile(ownedBusiness.business);
   revalidatePath("/owner");
-  redirect("/owner");
+  redirect("/owner?section=deals&dealUpdated=1");
 }
 
 async function deleteDeal(formData) {
@@ -1579,6 +1579,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
           </div>
           {resolvedSearchParams?.businessDeleted === "1" ? (
             <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Business deleted.</p>
+          ) : null}
+          {resolvedSearchParams?.dealUpdated === "1" ? (
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Deal updated.</p>
           ) : null}
           {resolvedSearchParams?.error ? (
             <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">

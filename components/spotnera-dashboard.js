@@ -31,6 +31,7 @@ import { createClient } from "@/utils/supabase/browser";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { HeaderLogout } from "@/components/header-logout";
 import { AuthPanel } from "@/components/auth-panel";
+import { DealDetailsDialog } from "@/components/deal-details-dialog";
 
 const HEART_PATH =
   "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
@@ -912,6 +913,8 @@ export function SpotneraDashboard({
   const [requestedAuthIntent, setRequestedAuthIntent] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isSelectedCardOpen, setIsSelectedCardOpen] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState(null);
+  const closeDealDetails = useCallback(() => setSelectedDeal(null), []);
   const [activeTab, setActiveTab] = useState(
     ["map", "pulse", "saved"].includes(initialTab) ? initialTab : "map",
   );
@@ -1309,6 +1312,8 @@ export function SpotneraDashboard({
               detail: deal.title,
               time: getDealAvailabilityLabel(deal),
               color: DEAL_STATUS_META.LIVE.color,
+              business,
+              deal,
             })),
         )
         .slice(0, 5),
@@ -1830,12 +1835,16 @@ export function SpotneraDashboard({
           <div className="grid gap-3">
             {activity.length ? (
               activity.map((item, index) => (
-                <motion.article
+                <motion.button
                   key={item.id}
+                  type="button"
+                  aria-haspopup="dialog"
+                  aria-label={`View details for ${item.deal.title} at ${item.business.name}`}
+                  onClick={() => setSelectedDeal({ business: item.business, deal: item.deal })}
                   initial={{ x: 24, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: index * 0.08, duration: 0.38 }}
-                  className="flex items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.2)] backdrop-blur-2xl"
+                  className="flex w-full items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 text-left shadow-[0_18px_50px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
                 >
                   <span
                     className="h-11 w-1.5 rounded-full"
@@ -1854,7 +1863,7 @@ export function SpotneraDashboard({
                       {item.detail}
                     </p>
                   </div>
-                </motion.article>
+                </motion.button>
               ))
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/10 p-4 text-sm text-white/58 backdrop-blur-2xl">
@@ -1953,6 +1962,10 @@ export function SpotneraDashboard({
           onRequireAuth={requestAuth}
         />
       </section>
+      {selectedDeal ? (
+        <DealDetailsDialog business={selectedDeal.business} deal={selectedDeal.deal}
+          onClose={closeDealDetails} />
+      ) : null}
     </main>
   );
 }
