@@ -963,42 +963,17 @@ async function createDeal(formData) {
     redirectWithError(ownedBusiness.error);
   }
 
-  const { data: deal, error } = await supabase
-    .from("deals")
-    .insert(getDealSavePayload(payload))
-    .select("id")
-    .single();
+  const { error } = await supabase.rpc("save_owner_deal", {
+    p_deal_id: null,
+    p_edit_token: null,
+    p_payload: getDealSavePayload(payload),
+    p_schedules: payload.availability_mode === DEAL_AVAILABILITY_MODE.WEEKLY
+      ? scheduleResult.schedules : [],
+  });
 
   if (error) {
     logServerActionError("Deal creation failed", error);
     redirectWithError("Unable to create deal. Please try again.");
-  }
-
-  if (payload.availability_mode === DEAL_AVAILABILITY_MODE.WEEKLY) {
-    const { error: scheduleError } = await supabase.from("deal_schedules").insert(
-      scheduleResult.schedules.map((schedule) => ({
-        ...schedule,
-        deal_id: deal.id,
-      })),
-    );
-
-    if (scheduleError) {
-      logServerActionError("Deal schedule creation failed", scheduleError);
-      const { error: cleanupError } = await supabase
-        .from("deals")
-        .delete()
-        .eq("id", deal.id)
-        .eq("owner_id", user.id);
-
-      if (cleanupError) {
-        logServerActionError("Incomplete deal cleanup failed", cleanupError);
-        redirectWithError(
-          "The deal was created, but its weekly hours could not be saved. Edit the existing deal before publishing it.",
-        );
-      }
-
-      redirectWithError("Unable to save the weekly availability. Please try again.");
-    }
   }
 
   revalidateBusinessProfile(ownedBusiness.business);
@@ -1029,81 +1004,28 @@ async function updateDeal(formData) {
     redirectWithError(ownedBusiness.error);
   }
 
-  const { data: existingSchedules, error: existingSchedulesError } = await supabase
-    .from("deal_schedules")
-    .select("id")
-    .eq("deal_id", dealId);
-
-  if (existingSchedulesError) {
-    logServerActionError("Deal schedules load failed", existingSchedulesError);
-    redirectWithError("Unable to load the existing weekly availability. Please try again.");
+  const { data: editToken, error: beginError } = await supabase.rpc(
+    "begin_owner_deal_edit", { p_deal_id: dealId },
+  );
+  if (beginError || !editToken) {
+    logServerActionError("Deal edit lease failed", beginError);
+    redirectWithError("Another save may be in progress. Please try again shortly.");
   }
 
-  let desiredScheduleIds = [];
-
-  if (payload.availability_mode === DEAL_AVAILABILITY_MODE.WEEKLY) {
-    const { data: savedSchedules, error: scheduleSaveError } = await supabase
-      .from("deal_schedules")
-      .upsert(
-        scheduleResult.schedules.map((schedule) => ({
-          ...schedule,
-          deal_id: dealId,
-        })),
-        { onConflict: "deal_id,day_of_week,start_time,end_time" },
-      )
-      .select("id");
-
-    if (scheduleSaveError) {
-      logServerActionError("Deal schedules save failed", scheduleSaveError);
-      redirectWithError("Unable to save the weekly availability. Please try again.");
-    }
-
-    desiredScheduleIds = (savedSchedules ?? []).map((schedule) => schedule.id);
-  }
-
-  const { error } = await supabase
-    .from("deals")
-    .update(getDealSavePayload(payload))
-    .eq("id", dealId)
-    .eq("owner_id", user.id);
+  const { error } = await supabase.rpc("save_owner_deal", {
+    p_deal_id: dealId,
+    p_edit_token: editToken,
+    p_payload: getDealSavePayload(payload),
+    p_schedules: payload.availability_mode === DEAL_AVAILABILITY_MODE.WEEKLY
+      ? scheduleResult.schedules : [],
+  });
 
   if (error) {
     logServerActionError("Deal update failed", error);
 
-    const existingScheduleIds = new Set(
-      (existingSchedules ?? []).map((schedule) => schedule.id),
-    );
-    const newlyCreatedScheduleIds = desiredScheduleIds.filter(
-      (scheduleId) => !existingScheduleIds.has(scheduleId),
-    );
-
-    if (newlyCreatedScheduleIds.length) {
-      const { error: cleanupError } = await supabase
-        .from("deal_schedules")
-        .delete()
-        .in("id", newlyCreatedScheduleIds);
-      if (cleanupError) logServerActionError("Deal schedule rollback failed", cleanupError);
-    }
-
-    redirectWithError("Unable to update deal. Please try again.");
-  }
-
-  const obsoleteScheduleIds = (existingSchedules ?? [])
-    .map((schedule) => schedule.id)
-    .filter((scheduleId) => !desiredScheduleIds.includes(scheduleId));
-
-  if (obsoleteScheduleIds.length) {
-    const { error: scheduleCleanupError } = await supabase
-      .from("deal_schedules")
-      .delete()
-      .in("id", obsoleteScheduleIds);
-
-    if (scheduleCleanupError) {
-      logServerActionError("Obsolete deal schedules cleanup failed", scheduleCleanupError);
-      redirectWithError(
-        "The deal was saved, but older weekly hours could not be removed. Please try saving it again.",
-      );
-    }
+    redirectWithError(error.code === "55P03"
+      ? "The save could not finish. Please try again shortly."
+      : "Unable to update deal. Please try again.");
   }
 
   revalidateBusinessProfile(ownedBusiness.business);
@@ -1557,15 +1479,16 @@ export default async function OwnerDashboardPage({ searchParams }) {
   const businessIds = businesses.map((business) => business.id);
   let deals = [];
   let reviews = [];
-  let favorites = [];
+  let favoriteCounts = [];
   let eventRows = [];
   let analyticsError = null;
+  let favoriteCountsError = null;
 
   if (businessIds.length) {
     const [
       { data: dealRows },
       { data: reviewRows },
-      { data: favoriteRows },
+      { data: favoriteCountRows, error: favoriteCountQueryError },
       { data: eventCountRows, error: eventCountsError },
     ] = await Promise.all([
       supabase
@@ -1578,10 +1501,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
         .select(REVIEW_FIELDS)
         .in("business_id", businessIds)
         .order("created_at", { ascending: false }),
-      supabase
-        .from("favorites")
-        .select("business_id")
-        .in("business_id", businessIds),
+      supabase.rpc("get_owner_business_favorite_counts"),
       supabase.rpc("get_owner_business_event_counts", {
         range_key: analyticsRange.key,
       }),
@@ -1589,9 +1509,10 @@ export default async function OwnerDashboardPage({ searchParams }) {
 
     deals = dealRows ?? [];
     reviews = reviewRows ?? [];
-    favorites = favoriteRows ?? [];
+    favoriteCounts = favoriteCountRows ?? [];
     eventRows = eventCountRows ?? [];
     analyticsError = eventCountsError;
+    favoriteCountsError = favoriteCountQueryError;
   }
 
   const dealsByBusinessId = new Map();
@@ -1611,17 +1532,19 @@ export default async function OwnerDashboardPage({ searchParams }) {
   }
 
   const favoriteCountsByBusinessId = new Map();
-  for (const favorite of favorites) {
+  for (const favorite of favoriteCounts) {
     favoriteCountsByBusinessId.set(
       favorite.business_id,
-      (favoriteCountsByBusinessId.get(favorite.business_id) ?? 0) + 1,
+      Number(favorite.favorite_count),
     );
   }
 
   const now = new Date();
   const eventAnalyticsByBusinessId = buildEventAnalytics(eventRows);
   const sortedDeals = sortDealsByComputedStatus(deals, now);
-  const totalFavorites = favorites.length;
+  const totalFavorites = favoriteCountsError
+    ? "—"
+    : [...favoriteCountsByBusinessId.values()].reduce((sum, count) => sum + count, 0);
   const activeDealCount = getLiveDeals(deals, now).length;
   const selectedAnalyticsBusinessId =
     resolvedSearchParams?.analyticsBusinessId &&
@@ -1756,6 +1679,11 @@ export default async function OwnerDashboardPage({ searchParams }) {
               Business analytics will appear after the business events migration is applied.
             </p>
           ) : null}
+          {favoriteCountsError ? (
+            <p className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+              Favorite counts are unavailable. Please try again later.
+            </p>
+          ) : null}
 
           {ownerSection === "analytics" ? (
             <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -1778,7 +1706,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 .map((business) => {
                 const businessDeals = dealsByBusinessId.get(business.id) ?? [];
                 const businessReviews = reviewsByBusinessId.get(business.id) ?? [];
-                const favoriteCount = favoriteCountsByBusinessId.get(business.id) ?? 0;
+                const favoriteCount = favoriteCountsError
+                  ? "—"
+                  : favoriteCountsByBusinessId.get(business.id) ?? 0;
                 const eventAnalytics = eventAnalyticsByBusinessId.get(business.id) ?? {
                   counts: getEmptyEventCounts(),
                   dailyTotals: new Map(),

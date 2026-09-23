@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { PushNotificationControl } from "@/components/push-notification-control";
 
 const PREFERENCE_GROUPS = [
@@ -11,16 +11,6 @@ const PREFERENCE_GROUPS = [
         name: "saved_business_new_deals",
         label: "New deals",
         description: "Get notified when a business you saved publishes a new deal.",
-      },
-      {
-        name: "saved_business_deal_starting_soon",
-        label: "Deals starting soon",
-        description: "Get notified when a deal from a saved business is about to start.",
-      },
-      {
-        name: "saved_business_deal_ending_soon",
-        label: "Deals ending soon",
-        description: "Get notified before a deal from a saved business ends.",
       },
     ],
   },
@@ -71,6 +61,55 @@ function PreferenceToggle({ name, label, description, defaultChecked }) {
         />
       </span>
     </label>
+  );
+}
+
+function TimedPreference({ kind, initialPreferences }) {
+  const starting = kind === "starting";
+  const name = starting ? "saved_business_deal_starting_soon" :
+    "saved_business_deal_ending_soon";
+  const minutesName = starting ? "starting_soon_minutes" : "ending_soon_minutes";
+  const choices = starting ? [[30, "30 min"], [60, "1 hour"], [120, "2 hours"]] :
+    [[30, "30 min"], [60, "1 hour"]];
+  const [enabled, setEnabled] = useState(Boolean(initialPreferences[name]));
+  const initialMinutes = Number(initialPreferences[minutesName]);
+  const [minutes, setMinutes] = useState(choices.some(([value]) => value === initialMinutes)
+    ? initialMinutes : starting ? 60 : 30);
+  const descriptionId = `${name}-description`;
+  return (
+    <div className="rounded-[20px] border border-white/10 bg-black/20 px-4 py-3">
+      <label className="flex min-h-14 cursor-pointer items-center justify-between gap-4">
+        <span className="min-w-0">
+          <span className="block text-sm font-bold text-white">{starting ? "Starting soon" : "Ending soon"}</span>
+          <span id={descriptionId} className="mt-1 block text-xs leading-5 text-white/60">
+            {starting ? "Before a deal at a saved business starts." :
+              "Before an available deal at a saved business ends."}
+          </span>
+        </span>
+        <span className="relative shrink-0">
+          <input type="checkbox" role="switch" name={name} checked={enabled}
+            onChange={(event) => setEnabled(event.target.checked)}
+            aria-describedby={descriptionId} className="peer sr-only" />
+          <span aria-hidden="true" className="block h-7 w-12 rounded-full border border-white/16 bg-white/10 transition peer-checked:border-[#33d6a6]/55 peer-checked:bg-[#33d6a6]/80 peer-focus-visible:ring-2 peer-focus-visible:ring-[#72f0cc] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[#16191f]" />
+          <span aria-hidden="true" className="pointer-events-none absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5" />
+        </span>
+      </label>
+      {enabled ? (
+        <fieldset className="mt-3 border-t border-white/10 pt-3">
+          <legend className="text-xs font-semibold text-white/70">Notify me</legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {choices.map(([value, label]) => (
+              <label key={value} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-white/14 bg-white/8 px-3 text-sm font-semibold text-white">
+                <input type="radio" name={minutesName} value={value}
+                  checked={minutes === value} onChange={() => setMinutes(value)}
+                  className="h-4 w-4 accent-[#33d6a6]" />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+    </div>
   );
 }
 
@@ -134,6 +173,12 @@ export function NotificationPreferences({
                 defaultChecked={Boolean(initialPreferences[preference.name])}
               />
             ))}
+            {group.title === "Push notifications" ? (
+              <>
+                <TimedPreference kind="starting" initialPreferences={initialPreferences} />
+                <TimedPreference kind="ending" initialPreferences={initialPreferences} />
+              </>
+            ) : null}
           </fieldset>
         ))}
 

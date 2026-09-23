@@ -41,7 +41,7 @@ function getSections() {
   },
   {
     title: "Notification Preferences And Devices",
-    body: "Signed-in users may save private notification preferences and explicitly register a browser for Web Push delivery, including user-requested test notifications. New Deal push notifications are sent only for businesses the user explicitly saved and only while the New Deals preference is enabled. A Web Push registration includes the subscription endpoint and browser-generated encryption keys needed for delivery. Spotnera does not create a registration from searches, map activity, profile visits, or saved businesses alone. Users can turn off the preference or disable a registered browser from Notification settings, and notification preferences and device registrations are removed with account deletion.",
+    body: "Signed-in users may save private notification preferences and explicitly register a browser for Web Push delivery, including user-requested test notifications. Deal notifications concern businesses the user explicitly saved and require the corresponding New Deals, Starting Soon, or Ending Soon preference to be enabled. Starting Soon and Ending Soon also require a selected lead time. A Web Push registration includes the subscription endpoint and browser-generated encryption keys needed for delivery. Spotnera does not create a registration from searches, map activity, profile visits, or saved businesses alone. Users can turn off a preference or disable a registered browser from Notification settings, and notification preferences and device registrations are removed with account deletion.",
   },
   {
     title: "Account Deletion",

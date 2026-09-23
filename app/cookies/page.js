@@ -18,7 +18,7 @@ const rows = [
   {
     category: "User choice",
     provider: "Spotnera / browser Push service",
-    purpose: "Stores private notification preferences and, only after the user explicitly enables it, a Web Push subscription endpoint and browser-generated encryption keys for user-requested test notifications and future notification delivery.",
+    purpose: "Stores private notification preferences, including optional deal alert lead times, and, only after the user explicitly enables it, a Web Push subscription endpoint and browser-generated encryption keys for test and enabled deal notifications.",
     consent: "Optional. Browser notification permission is requested only from the Enable push action and the registered browser can be removed in Notification settings.",
   },
   {
