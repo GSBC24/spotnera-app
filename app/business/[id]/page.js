@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound, permanentRedirect } from "next/navigation";
 import { BusinessEventLink } from "@/components/business-event-link";
 import { BusinessProfileAnalytics } from "@/components/business-profile-analytics";
+import { BusinessProfileBottomNav } from "@/components/business-profile-bottom-nav";
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
 import { BusinessProfileMap } from "@/components/business-profile-map";
 import { BusinessShareActions } from "@/components/business-share-actions";
@@ -484,12 +485,6 @@ export default async function BusinessProfilePage({ params }) {
               <p className="truncate text-sm font-bold text-white/82">Public business profile</p>
             </div>
           </Link>
-          <Link
-            href="/"
-            className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white/78 transition hover:bg-white/16 sm:px-4"
-          >
-            Explore Spotnera
-          </Link>
         </header>
 
         <section className="overflow-hidden rounded-[32px] border border-white/12 bg-white/10 shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:col-span-2">
@@ -715,6 +710,7 @@ export default async function BusinessProfilePage({ params }) {
           </section>
         </aside>
       </section>
+      <BusinessProfileBottomNav isAuthenticated={business.isAuthenticated} />
     </main>
   );
 }

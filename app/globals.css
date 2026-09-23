@@ -45,6 +45,10 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+body:has([data-spotnera-bottom-nav]) > footer {
+  margin-bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+
 html,
 body {
   min-height: 100%;
