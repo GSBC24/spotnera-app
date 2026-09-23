@@ -501,11 +501,11 @@ export default async function BusinessProfilePage({ params }) {
                 : "linear-gradient(135deg,rgba(255,122,89,0.42),rgba(51,214,166,0.26) 48%,rgba(16,18,23,0.95))",
             }}
           >
-            <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 lg:p-8">
+            <div className="relative min-w-0 bg-gradient-to-b from-black/45 via-[#151821]/85 to-[#151821] p-5 sm:absolute sm:inset-x-0 sm:bottom-0 sm:bg-none sm:p-6 lg:p-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <div
-                    className="mb-4 grid h-20 w-20 place-items-center rounded-[24px] border border-white/18 bg-white/14 bg-cover bg-center text-2xl font-black text-white shadow-[0_18px_50px_rgba(0,0,0,0.32)] backdrop-blur-xl"
+                    className="mb-5 grid h-20 w-20 shrink-0 place-items-center rounded-[24px] border border-white/18 bg-white/14 bg-cover bg-center text-2xl font-black text-white shadow-[0_18px_50px_rgba(0,0,0,0.32)] backdrop-blur-xl sm:mb-4"
                     style={{
                       backgroundImage: business.logo_url ? `url(${business.logo_url})` : undefined,
                     }}
@@ -513,20 +513,20 @@ export default async function BusinessProfilePage({ params }) {
                   >
                     {business.logo_url ? null : business.name.slice(0, 2).toUpperCase()}
                   </div>
-                  <p className="spotnera-kicker text-[#72f0cc]">{business.category}</p>
-                  <h1 className="mt-2 max-w-3xl text-4xl font-semibold leading-[1.02] tracking-normal sm:text-5xl lg:text-6xl">
+                  <p className="spotnera-kicker text-[#72f0cc] [overflow-wrap:anywhere]">{business.category}</p>
+                  <h1 className="mt-2 max-w-3xl text-3xl font-semibold leading-tight tracking-normal [overflow-wrap:anywhere] sm:text-5xl sm:leading-[1.02] lg:text-6xl">
                     {business.name}
                   </h1>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-white/72">
-                    {locationLine ? <span>{locationLine}</span> : null}
-                    {locationLine ? <span className="text-white/32">/</span> : null}
-                    <span>
+                  <div className="mt-4 flex min-w-0 flex-col items-start gap-2 text-sm font-semibold text-white/72 sm:mt-3 sm:flex-row sm:flex-wrap sm:items-center">
+                    {locationLine ? <span className="[overflow-wrap:anywhere]">{locationLine}</span> : null}
+                    {locationLine ? <span className="hidden text-white/32 sm:inline">/</span> : null}
+                    <span className="[overflow-wrap:anywhere]">
                       {formatRating(averageRating)} rating
                       <span className="text-white/44"> ({getReviewLabel(reviewCount)})</span>
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 sm:items-end">
+                <div className="flex min-w-0 flex-col gap-2 sm:items-end">
                   <BusinessShareActions
                     businessId={business.id}
                     businessCategory={business.category}

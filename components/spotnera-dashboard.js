@@ -523,7 +523,7 @@ function BusinessAddress({ business, compact = false }) {
       </span>
       <div className="min-w-0">
         {addressLines.map((line, index) => (
-          <p key={`${line}-${index}`} className={compact ? "truncate" : ""}>
+          <p key={`${line}-${index}`} className={compact ? "truncate" : "[overflow-wrap:anywhere]"}>
             {line}
           </p>
         ))}
@@ -586,7 +586,7 @@ function ContactActions({ business, compact = false }) {
               eventType: `${action.method}_click`,
             });
           }}
-          className={`rounded-full border border-white/10 bg-white/10 font-bold text-white/76 transition hover:bg-white/16 hover:text-white ${
+          className={`max-w-full break-all rounded-full border border-white/10 bg-white/10 font-bold text-white/76 transition hover:bg-white/16 hover:text-white ${
             compact ? "px-3 py-1.5 text-xs" : "px-3 py-2 text-sm"
           }`}
         >
@@ -912,6 +912,7 @@ export function SpotneraDashboard({
   const [isSearchOpen, setIsSearchOpen] = useState(initialSearchOpen);
   const [requestedAuthIntent, setRequestedAuthIntent] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const detailBackdropRef = useRef(null);
   const [isSelectedCardOpen, setIsSelectedCardOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState(null);
   const closeDealDetails = useCallback(() => setSelectedDeal(null), []);
@@ -1002,6 +1003,31 @@ export function SpotneraDashboard({
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim();
   const selectedBusiness =
     filteredBusinesses.find((business) => business.id === selectedBusinessId) ?? null;
+  useEffect(() => {
+    if (!selectedBusiness || !isDetailOpen || !detailBackdropRef.current) return undefined;
+    const backdrop = detailBackdropRef.current;
+    const previousOverflow = document.body.style.overflow;
+    const viewport = window.visualViewport;
+    document.body.style.overflow = "hidden";
+
+    function fitVisibleViewport() {
+      if (!viewport) return;
+      backdrop.style.top = `${viewport.offsetTop}px`;
+      backdrop.style.height = `${viewport.height}px`;
+      if (backdrop.contains(document.activeElement)) {
+        document.activeElement.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    fitVisibleViewport();
+    viewport?.addEventListener("resize", fitVisibleViewport);
+    viewport?.addEventListener("scroll", fitVisibleViewport);
+    return () => {
+      viewport?.removeEventListener("resize", fitVisibleViewport);
+      viewport?.removeEventListener("scroll", fitVisibleViewport);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isDetailOpen, selectedBusiness]);
   const selectedCategoryCount = selectedCategories.length;
   const activeFilterCount =
     selectedCategoryCount +
@@ -1625,26 +1651,26 @@ export function SpotneraDashboard({
         </div>
 
         {selectedBusiness && isDetailOpen ? (
-          <div className="fixed inset-0 z-40 flex items-end bg-black/56 px-4 pb-4 pt-16 backdrop-blur-sm sm:items-center sm:justify-center">
+          <div ref={detailBackdropRef} className="fixed inset-x-0 top-0 z-[90] flex h-screen min-h-0 items-end justify-center bg-black/56 px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-sm [height:100dvh] sm:items-center sm:px-4 sm:py-6">
             <motion.section
               initial={{ y: 32, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="max-h-[86vh] w-full max-w-[480px] overflow-y-auto rounded-[32px] border border-white/14 bg-[#151821] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.5)]"
+              className="max-h-full min-h-0 w-full min-w-0 max-w-[480px] overflow-y-auto overscroll-contain rounded-[32px] border border-white/14 bg-[#151821] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.5)]"
               role="dialog"
               aria-modal="true"
               aria-labelledby="selected-business-title"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-start justify-between gap-3 rounded-t-[32px] bg-[#151821] px-4 pb-3 pt-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <CategoryDot category={selectedBusiness.category} />
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/48">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/48 [overflow-wrap:anywhere]">
                       {selectedBusiness.category}
                     </p>
                   </div>
                   <h2
                     id="selected-business-title"
-                    className="mt-2 text-2xl font-semibold tracking-tight"
+                    className="mt-2 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]"
                   >
                     {selectedBusiness.name}
                   </h2>
@@ -1748,9 +1774,9 @@ export function SpotneraDashboard({
                 ) : null}
               </div>
 
-              <form onSubmit={handleSubmitReview} className="mt-4 border-t border-white/10 pt-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex gap-1" aria-label="Rating">
+              <form onSubmit={handleSubmitReview} className="mt-4 min-w-0 border-t border-white/10 pt-4">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex max-w-full flex-wrap gap-1" aria-label="Rating">
                     {[1, 2, 3, 4, 5].map((rating) => (
                       <button
                         key={rating}
@@ -1778,7 +1804,7 @@ export function SpotneraDashboard({
                   <button
                     type="submit"
                     disabled={isSavingReview}
-                    className="spotnera-brand-action rounded-2xl px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60"
+                    className="spotnera-brand-action w-full rounded-2xl px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   >
                     {isSavingReview
                       ? "Saving"
@@ -1807,7 +1833,7 @@ export function SpotneraDashboard({
                   maxLength={1000}
                   rows={3}
                   placeholder="Share a quick note"
-                  className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-white/52 focus:border-white/28"
+                  className="mt-3 block w-full min-w-0 max-w-full resize-none rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-white/52 focus:border-white/28"
                 />
               </form>
             </motion.section>
