@@ -65,6 +65,9 @@ export function DealAvailabilityFields({
 
       {mode === DEAL_AVAILABILITY_MODE.WEEKLY ? (
         <div className="grid gap-2">
+          <p className="text-xs font-semibold leading-5 text-white/58">
+            Choose when this deal is available during its validity period.
+          </p>
           {DEAL_WEEKDAYS.map((weekday) => {
             const schedule = scheduleByDay.get(weekday.value);
             const defaultStart = toTimeInputValue(schedule?.start_time, "09:00");
@@ -130,7 +133,7 @@ export function DealAvailabilityFields({
         </div>
       ) : (
         <p className="text-xs font-semibold leading-5 text-white/58">
-          Available throughout the deal&apos;s overall start and end period.
+          Available throughout the deal&apos;s overall validity period.
         </p>
       )}
     </fieldset>

@@ -890,7 +890,7 @@ async function createBusiness(formData) {
   }
 
   revalidatePath("/owner");
-  redirect("/owner");
+  redirect("/owner?section=businesses&businessCreated=1");
 }
 
 async function updateBusiness(formData) {
@@ -1065,7 +1065,7 @@ async function deleteDeal(formData) {
 
 function Field({ label, children }) {
   return (
-    <label className="grid gap-1.5">
+    <label className="grid min-w-0 gap-1.5">
       <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
         {label}
       </span>
@@ -1089,7 +1089,7 @@ function FileInput(props) {
       {...props}
       type="file"
       accept="image/png,image/jpeg,image/webp,image/gif"
-      className="rounded-2xl border border-dashed border-zinc-300 bg-white/86 px-3 py-3 text-sm font-medium text-zinc-600 file:mr-3 file:rounded-xl file:border-0 file:bg-[#33d6a6] file:px-3 file:py-2 file:text-xs file:font-bold file:text-zinc-950"
+      className="min-w-0 w-full rounded-2xl border border-dashed border-zinc-300 bg-white/86 px-3 py-3 text-sm font-medium text-zinc-600 file:mr-3 file:rounded-xl file:border-0 file:bg-[#33d6a6] file:px-3 file:py-2 file:text-xs file:font-bold file:text-zinc-950"
     />
   );
 }
@@ -1384,14 +1384,22 @@ function DealForm({ action, deal, businesses, submitLabel }) {
       <Field label="Description">
         <TextArea name="description" defaultValue={deal?.description ?? ""} />
       </Field>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Starts">
-          <DealDateTimeInput name="starts_at" defaultValue={deal?.starts_at} />
-        </Field>
-        <Field label="Ends">
-          <DealDateTimeInput name="ends_at" defaultValue={deal?.ends_at} />
-        </Field>
-      </div>
+      <fieldset className="grid min-w-0 gap-3 rounded-[24px] border border-white/12 bg-black/18 p-3 sm:p-4">
+        <legend className="px-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">
+          Deal validity
+        </legend>
+        <p className="text-xs font-semibold leading-5 text-white/58">
+          The overall period when this deal exists. Availability below controls when it can be used within this period.
+        </p>
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+          <Field label="Start date and time">
+            <DealDateTimeInput name="starts_at" defaultValue={deal?.starts_at} />
+          </Field>
+          <Field label="End date and time">
+            <DealDateTimeInput name="ends_at" defaultValue={deal?.ends_at} />
+          </Field>
+        </div>
+      </fieldset>
       <DealAvailabilityFields
         initialMode={deal?.availability_mode ?? DEAL_AVAILABILITY_MODE.CONTINUOUS}
         initialSchedules={deal?.deal_schedules ?? []}
@@ -1580,6 +1588,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
           {resolvedSearchParams?.businessDeleted === "1" ? (
             <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Business deleted.</p>
           ) : null}
+          {resolvedSearchParams?.businessCreated === "1" ? (
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Business created.</p>
+          ) : null}
           {resolvedSearchParams?.dealUpdated === "1" ? (
             <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Deal updated.</p>
           ) : null}
@@ -1679,6 +1690,15 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 + Create business
               </Link>
             </div>
+          ) : null}
+          {ownerSection === "businesses" && showCreateBusiness ? (
+            <section className="mb-4 min-w-0 rounded-[30px] border border-white/10 bg-white/8 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-bold">Create business profile</h2>
+                <Link href="/owner?section=businesses" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
+              </div>
+              <div className="mt-4"><BusinessForm action={createBusiness} imageError={imageError} submitLabel="Create profile" /></div>
+            </section>
           ) : null}
           {analyticsError ? (
             <p className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
@@ -1894,15 +1914,6 @@ export default async function OwnerDashboardPage({ searchParams }) {
 
         {ownerSection === "businesses" ? (
           <section className="grid gap-4">
-            {showCreateBusiness ? (
-              <section className="spotnera-card rounded-[30px] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-bold">Create business profile</h2>
-                  <Link href="/owner?section=businesses" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
-                </div>
-                <div className="mt-4"><BusinessForm action={createBusiness} imageError={imageError} submitLabel="Create profile" /></div>
-              </section>
-            ) : null}
             {editingBusinessId ? businesses.filter((business) => business.id === editingBusinessId).map((business) => (
               <section key={business.id} className="spotnera-card rounded-[30px] p-4">
                 <div className="flex items-center justify-between gap-3">
