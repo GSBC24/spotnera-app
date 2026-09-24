@@ -25,13 +25,13 @@ import {
   getDealAvailabilityLabel,
   getLiveDeals,
   getPrimaryLiveDeal,
-  isLiveDeal,
 } from "@/lib/deals";
 import { createClient } from "@/utils/supabase/browser";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { HeaderLogout } from "@/components/header-logout";
 import { AuthPanel } from "@/components/auth-panel";
 import { DealDetailsDialog } from "@/components/deal-details-dialog";
+import { getDiscoverableDeals, partitionDiscoveryDeals } from "@/lib/deal-discovery.mjs";
 
 const HEART_PATH =
   "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
@@ -98,6 +98,24 @@ function formatRating(rating) {
 
 function getPrimaryDeal(deals = []) {
   return getPrimaryLiveDeal(deals);
+}
+
+function DiscoveryDealCard({ item, onOpen }) {
+  return (
+    <button type="button" aria-haspopup="dialog"
+      aria-label={`View details for ${item.deal.title} at ${item.business.name}`}
+      onClick={() => onOpen(item)}
+      className="flex w-full min-w-0 items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 text-left shadow-[0_18px_50px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
+      <span className="h-11 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: item.business.color }} />
+      <span className="min-w-0 flex-1">
+        <span className="block break-words text-sm font-semibold">{item.business.name}</span>
+        <span className="mt-1 block break-words text-sm leading-5 text-white/70">{item.deal.title}</span>
+      </span>
+      <span className="max-w-[42%] shrink-0 text-right text-xs font-medium leading-4 text-white/60">
+        {getDealAvailabilityLabel(item.deal)}
+      </span>
+    </button>
+  );
 }
 
 function getActiveDeal(deals = []) {
@@ -915,6 +933,7 @@ export function SpotneraDashboard({
   const detailBackdropRef = useRef(null);
   const [isSelectedCardOpen, setIsSelectedCardOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState(null);
+  const [expandedSavedBusinessId, setExpandedSavedBusinessId] = useState(null);
   const closeDealDetails = useCallback(() => setSelectedDeal(null), []);
   const [activeTab, setActiveTab] = useState(
     ["map", "pulse", "saved"].includes(initialTab) ? initialTab : "map",
@@ -1326,24 +1345,9 @@ export function SpotneraDashboard({
     ],
   );
 
-  const activity = useMemo(
-    () =>
-      mappedBusinesses
-        .flatMap((business) =>
-          business.deals
-            .filter((deal) => isLiveDeal(deal))
-            .map((deal) => ({
-              id: deal.id,
-              title: business.name,
-              detail: deal.title,
-              time: getDealAvailabilityLabel(deal),
-              color: DEAL_STATUS_META.LIVE.color,
-              business,
-              deal,
-            })),
-        )
-        .slice(0, 5),
-    [mappedBusinesses],
+  const discoveryDeals = useMemo(
+    () => partitionDiscoveryDeals(mappedBusinesses, userId),
+    [mappedBusinesses, userId],
   );
 
   const handleClearFilters = useCallback(() => {
@@ -1382,7 +1386,7 @@ export function SpotneraDashboard({
       count + getLiveDeals(business.deals).length,
     0,
   );
-  const savedBusinesses = mappedBusinesses.filter((business) => business.isFavorite);
+  const savedBusinesses = userId ? mappedBusinesses.filter((business) => business.isFavorite) : [];
   const activeHeading =
     activeTab === "saved"
         ? "Saved businesses"
@@ -1858,45 +1862,26 @@ export function SpotneraDashboard({
               {activeDeals} active
             </span>
           </div>
+          {discoveryDeals.saved.length ? (
+            <section aria-labelledby="saved-deals-heading" className="mb-5 rounded-[26px] border border-[#33d6a6]/20 bg-[#33d6a6]/6 p-3 sm:p-4">
+              <h3 id="saved-deals-heading" className="mb-3 px-1 text-base font-semibold text-[#72f0cc]">From businesses you saved</h3>
+              <div className="grid gap-3">
+                {discoveryDeals.saved.map((item) => <DiscoveryDealCard key={item.deal.id} item={item} onOpen={setSelectedDeal} />)}
+              </div>
+            </section>
+          ) : null}
+          <section aria-labelledby="general-deals-heading">
+            <h3 id="general-deals-heading" className="mb-3 px-1 text-base font-semibold">Explore more deals</h3>
           <div className="grid gap-3">
-            {activity.length ? (
-              activity.map((item, index) => (
-                <motion.button
-                  key={item.id}
-                  type="button"
-                  aria-haspopup="dialog"
-                  aria-label={`View details for ${item.deal.title} at ${item.business.name}`}
-                  onClick={() => setSelectedDeal({ business: item.business, deal: item.deal })}
-                  initial={{ x: 24, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: index * 0.08, duration: 0.38 }}
-                  className="flex w-full items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 text-left shadow-[0_18px_50px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
-                >
-                  <span
-                    className="h-11 w-1.5 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="truncate text-sm font-semibold">
-                        {item.title}
-                      </h3>
-                      <span className="text-xs font-medium text-white/60">
-                        {item.time}
-                      </span>
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-white/58">
-                      {item.detail}
-                    </p>
-                  </div>
-                </motion.button>
-              ))
+            {discoveryDeals.general.length ? (
+              discoveryDeals.general.map((item) => <DiscoveryDealCard key={item.deal.id} item={item} onOpen={setSelectedDeal} />)
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/10 p-4 text-sm text-white/58 backdrop-blur-2xl">
-                No live business activity yet.
+                {discoveryDeals.saved.length ? "No other active deals right now." : "No live business activity yet."}
               </div>
             )}
           </div>
+          </section>
         </section>
         ) : null}
 
@@ -1917,33 +1902,28 @@ export function SpotneraDashboard({
           </div>
           <div className="grid gap-3">
             {savedBusinesses.length ? (
-              savedBusinesses.map((business, index) => (
-                <motion.article
+              savedBusinesses.map((business, index) => {
+                const liveDeals = getDiscoverableDeals(business);
+                const isExpanded = expandedSavedBusinessId === business.id;
+                return <motion.article
                   key={business.id}
                   initial={{ x: 24, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: index * 0.04, duration: 0.32 }}
-                  onClick={() => {
-                    handleSelectTab("map");
-                    handleSelectBusiness(business);
-                  }}
-                  className="flex cursor-pointer items-center gap-3 rounded-[24px] border border-white/10 bg-white/10 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition hover:bg-white/14"
+                  className="min-w-0 rounded-[24px] border border-white/10 bg-white/10 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl"
                 >
+                  <div className="flex min-w-0 items-start gap-3">
                   <span
-                    className="h-12 w-1.5 rounded-full"
+                    className="h-12 w-1.5 shrink-0 rounded-full"
                     style={{ backgroundColor: business.color }}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="truncate text-sm font-semibold">
-                        {business.name}
-                      </h3>
-                      <span className="text-xs font-medium text-white/60">
-                        {business.deals.length} deals
-                      </span>
-                    </div>
-                    <p className="mt-1 truncate text-sm text-white/54">
-                      {getBusinessSignal(business)}
+                    <h3 className="break-words text-sm font-semibold">{business.name}</h3>
+                    <p className="mt-1 text-xs font-medium text-white/60">
+                      {liveDeals.length ? `${liveDeals.length} active ${liveDeals.length === 1 ? "deal" : "deals"}` : "No active deals"}
+                    </p>
+                    <p className="mt-1 break-words text-sm text-white/54">
+                      {[business.category, business.city].filter(Boolean).join(" · ")}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <RatingPill
@@ -1960,13 +1940,31 @@ export function SpotneraDashboard({
                     size="sm"
                     isFavorite={business.isFavorite}
                     disabled={pendingFavoriteId === business.id}
-                    onClick={(event) => {
-                      event.stopPropagation();
+                    onClick={() => {
                       handleToggleFavorite(business);
                     }}
                   />
-                </motion.article>
-              ))
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 pl-4">
+                    <Link href={getBusinessPath(business)} className="inline-flex min-h-11 items-center rounded-xl border border-white/16 px-3 text-xs font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">View business</Link>
+                    {liveDeals.length ? <button type="button" aria-expanded={isExpanded}
+                      onClick={() => setExpandedSavedBusinessId(isExpanded ? null : business.id)}
+                      className="inline-flex min-h-11 items-center rounded-xl border border-[#33d6a6]/30 bg-[#33d6a6]/10 px-3 text-xs font-semibold text-[#72f0cc] transition hover:bg-[#33d6a6]/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">View deals</button> : null}
+                  </div>
+                  {liveDeals.length && isExpanded ? (
+                    <div id={`saved-deals-${business.id}`} className="mt-3 min-w-0 border-t border-white/10 pt-3 pl-4">
+                      <h4 className="mb-2 break-words text-sm font-semibold">Deals from {business.name}</h4>
+                      <ul className="grid gap-2">
+                        {liveDeals.map((deal) => <li key={deal.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl bg-black/20 p-3">
+                          <span className="min-w-0 flex-1 break-words"><span className="block break-words text-sm font-semibold">{deal.title}</span><span className="mt-1 block text-xs text-white/60">{getDealAvailabilityLabel(deal)}</span></span>
+                          <button type="button" aria-haspopup="dialog" onClick={() => setSelectedDeal({ business, deal })}
+                            className="min-h-11 rounded-xl border border-white/16 px-3 text-xs font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">View deal</button>
+                        </li>)}
+                      </ul>
+                    </div>
+                  ) : null}
+                </motion.article>;
+              })
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/10 p-4 text-sm text-white/58 backdrop-blur-2xl">
                 Saved businesses will appear here.
