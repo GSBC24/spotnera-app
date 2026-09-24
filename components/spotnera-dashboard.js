@@ -35,6 +35,7 @@ import { BusinessOpeningStatus } from "@/components/business-opening-hours";
 import { BusinessLocationActions } from "@/components/business-location-actions";
 import { getBusinessAddressLines } from "@/lib/business-address.mjs";
 import { getDiscoverableDeals, partitionDiscoveryDeals } from "@/lib/deal-discovery.mjs";
+import { saveBusinessDealNotificationPreference } from "@/lib/saved-business-notifications.mjs";
 
 const HEART_PATH =
   "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
@@ -128,6 +129,11 @@ function MapBusinessDeals({ business }) {
       <p className="text-xs font-semibold text-white/66">
         {deals.length ? `${deals.length} active ${deals.length === 1 ? "deal" : "deals"}` : "No active deals"}
       </p>
+      {business.upcomingDealCount > 0 ? (
+        <p className="mt-1 text-xs font-semibold text-white/66">
+          {business.upcomingDealCount} upcoming {business.upcomingDealCount === 1 ? "deal" : "deals"}
+        </p>
+      ) : null}
       {deals.slice(0, 2).map((deal) => (
         <div key={deal.id} className="mt-2 min-w-0 rounded-xl bg-white/8 px-3 py-2">
           <p className="break-words text-sm font-semibold text-white">{deal.title}</p>
@@ -849,6 +855,10 @@ export function SpotneraDashboard({
   const localProfile = profile ?? {};
   const [localBusinesses, setLocalBusinesses] = useState(() => businesses);
   const [pendingFavoriteId, setPendingFavoriteId] = useState(null);
+  const favoriteWriteRef = useRef(null);
+  const [pendingNotificationBusinessId, setPendingNotificationBusinessId] = useState(null);
+  const notificationWriteRef = useRef(null);
+  const [notificationToggleError, setNotificationToggleError] = useState(null);
   const [reviewDrafts, setReviewDrafts] = useState({});
   const [isSavingReview, setIsSavingReview] = useState(false);
   const [dashboardError, setDashboardError] = useState(null);
@@ -1155,53 +1165,82 @@ export function SpotneraDashboard({
         requestAuth(getBusinessPath(business));
         return;
       }
-      if (pendingFavoriteId) {
+      if (pendingFavoriteId || favoriteWriteRef.current ||
+          notificationWriteRef.current === business.id) {
         return;
       }
 
       const nextFavoriteState = !business.isFavorite;
       setDashboardError(null);
+      favoriteWriteRef.current = business.id;
       setPendingFavoriteId(business.id);
-      updateBusiness(business.id, (item) => ({
-        ...item,
-        isFavorite: nextFavoriteState,
-      }));
-
-      const { error } = nextFavoriteState
-        ? await supabase.from("favorites").insert({
-            business_id: business.id,
-            user_id: userId,
-          })
-        : await supabase
-            .from("favorites")
-            .delete()
-            .eq("business_id", business.id)
-            .eq("user_id", userId);
-
-      if (error) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Favorite update failed", error);
+      let updated = false;
+      try {
+        const { data, error } = nextFavoriteState
+          ? await supabase.from("favorites").insert({
+              business_id: business.id,
+              user_id: userId,
+            }).select("business_id")
+          : await supabase.from("favorites")
+              .delete()
+              .eq("business_id", business.id)
+              .eq("user_id", userId)
+              .select("business_id");
+        if (error || data?.length !== 1 || data[0].business_id !== business.id) {
+          throw error ?? new Error("Favorite change was not confirmed.");
         }
         updateBusiness(business.id, (item) => ({
           ...item,
-          isFavorite: !nextFavoriteState,
+          isFavorite: nextFavoriteState,
+          dealNotificationsEnabled: nextFavoriteState ? true : null,
         }));
+        updated = true;
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Favorite update failed", error);
+        }
         setDashboardError("Unable to update saved businesses.");
-      } else {
+      } finally {
+        favoriteWriteRef.current = null;
+        setPendingFavoriteId(null);
+      }
+      if (updated) {
         const eventType = nextFavoriteState ? "favorite_add" : "favorite_remove";
         trackEvent(eventType, {
           ...getBusinessEventParameters(business),
         });
-        recordBusinessEvent({
-          businessId: business.id,
-          eventType,
-        });
+        recordBusinessEvent({ businessId: business.id, eventType });
       }
-
-      setPendingFavoriteId(null);
     },
     [pendingFavoriteId, requestAuth, supabase, updateBusiness, userId],
   );
+
+  const handleToggleBusinessDealNotifications = useCallback(async (business) => {
+    if (!userId || !business.isFavorite || notificationWriteRef.current ||
+        favoriteWriteRef.current === business.id ||
+        pendingFavoriteId === business.id) return;
+    const enabled = business.dealNotificationsEnabled !== true;
+    notificationWriteRef.current = business.id;
+    setPendingNotificationBusinessId(business.id);
+    setNotificationToggleError(null);
+    try {
+      await saveBusinessDealNotificationPreference(supabase, {
+        businessId: business.id, userId, enabled,
+      });
+      updateBusiness(business.id, (item) => ({
+        ...item,
+        dealNotificationsEnabled: enabled,
+      }));
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Saved business notification update failed", error);
+      }
+      setNotificationToggleError(business.id);
+    } finally {
+      notificationWriteRef.current = null;
+      setPendingNotificationBusinessId(null);
+    }
+  }, [pendingFavoriteId, supabase, updateBusiness, userId]);
 
   const handleSubmitReview = useCallback(
     async (event) => {
@@ -1538,6 +1577,16 @@ export function SpotneraDashboard({
               <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-2" />
               <MapBusinessDeals business={selectedBusiness} />
               <div className="mt-3 flex min-w-0 flex-wrap gap-2">
+                <div className="flex min-h-11 items-center gap-2">
+                  <FavoriteButton
+                    isFavorite={selectedBusiness.isFavorite}
+                    disabled={pendingFavoriteId === selectedBusiness.id || pendingNotificationBusinessId === selectedBusiness.id}
+                    onClick={() => handleToggleFavorite(selectedBusiness)}
+                  />
+                  <span className="text-xs font-semibold text-white/78" aria-live="polite">
+                    {pendingFavoriteId === selectedBusiness.id ? "Saving..." : selectedBusiness.isFavorite ? "Saved" : "Save"}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -1870,11 +1919,25 @@ export function SpotneraDashboard({
                   <FavoriteButton
                     size="sm"
                     isFavorite={business.isFavorite}
-                    disabled={pendingFavoriteId === business.id}
+                    disabled={pendingFavoriteId === business.id || pendingNotificationBusinessId === business.id}
                     onClick={() => {
                       handleToggleFavorite(business);
                     }}
                   />
+                  </div>
+                  <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                    <span className="min-w-0 text-xs font-medium text-white/75">Deal notifications from this business</span>
+                    <button type="button" role="switch"
+                      aria-label={`Deal notifications from ${business.name}`}
+                      aria-checked={business.dealNotificationsEnabled === true}
+                      disabled={pendingNotificationBusinessId === business.id || pendingFavoriteId === business.id}
+                      onClick={() => handleToggleBusinessDealNotifications(business)}
+                      className="min-h-11 shrink-0 rounded-full border border-white/20 px-4 text-xs font-semibold text-white transition hover:bg-white/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
+                      {pendingNotificationBusinessId === business.id ? "Saving…" : business.dealNotificationsEnabled === true ? "On" : "Off"}
+                    </button>
+                    {notificationToggleError === business.id ? (
+                      <span role="alert" className="w-full text-xs text-red-200">Could not save this setting. Please try again.</span>
+                    ) : null}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 pl-4">
                     <Link href={getBusinessPath(business)} className="inline-flex min-h-11 items-center rounded-xl border border-white/16 px-3 text-xs font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">View business</Link>

@@ -58,7 +58,7 @@ async function loadEligibleContext(admin, delivery) {
         .select("id, business_id, title, is_active, status, availability_mode")
         .eq("id", event.deal_id).maybeSingle(),
       admin.from("businesses").select("id, slug, name, is_active").eq("id", event.business_id).maybeSingle(),
-      admin.from("favorites").select("id").eq("business_id", event.business_id)
+      admin.from("favorites").select("id, deal_notifications_enabled").eq("business_id", event.business_id)
         .eq("user_id", delivery.user_id).maybeSingle(),
       admin.from("notification_preferences").select("saved_business_new_deals")
         .eq("user_id", delivery.user_id).maybeSingle(),
@@ -78,7 +78,7 @@ async function loadEligibleContext(admin, delivery) {
   const business = businessResult.data;
   const device = deviceResult.data;
   if (!deal || deal.business_id !== event.business_id ||
-      !business || !favoriteResult.data ||
+      !business || favoriteResult.data?.deal_notifications_enabled !== true ||
       preferenceResult.data?.saved_business_new_deals !== true ||
       !device || !device.enabled || device.disabled_at ||
       (device.expires_at && Date.parse(device.expires_at) <= Date.now()) ||
@@ -122,7 +122,7 @@ async function loadTimedContext(admin, delivery) {
       .eq("id", event.deal_id).maybeSingle(),
     admin.from("businesses").select("id, slug, name, is_active")
       .eq("id", event.business_id).maybeSingle(),
-    admin.from("favorites").select("id").eq("business_id", event.business_id)
+    admin.from("favorites").select("id, deal_notifications_enabled").eq("business_id", event.business_id)
       .eq("user_id", delivery.user_id).maybeSingle(),
     admin.from("notification_preferences")
       .select("saved_business_deal_starting_soon, starting_soon_minutes, saved_business_deal_ending_soon, ending_soon_minutes")
@@ -146,7 +146,7 @@ async function loadTimedContext(admin, delivery) {
       deal.timed_edit_token_hash ||
       deal.timed_edit_generation !== event.timed_edit_generation ||
       deal.status === "paused" || deal.status === "ended" ||
-      !business?.is_active || !favoriteResult.data || !device || !persisted ||
+      !business?.is_active || favoriteResult.data?.deal_notifications_enabled !== true || !device || !persisted ||
       !device.enabled || device.disabled_at ||
       (device.expires_at && Date.parse(device.expires_at) <= Date.now())) {
     return { kind: "skip" };
