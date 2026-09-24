@@ -32,7 +32,8 @@ import { HeaderLogout } from "@/components/header-logout";
 import { AuthPanel } from "@/components/auth-panel";
 import { DealDetailsDialog } from "@/components/deal-details-dialog";
 import { BusinessOpeningStatus } from "@/components/business-opening-hours";
-import { getBusinessOpeningStatus } from "@/lib/business-opening-hours.mjs";
+import { BusinessLocationActions } from "@/components/business-location-actions";
+import { getBusinessAddressLines } from "@/lib/business-address.mjs";
 import { getDiscoverableDeals, partitionDiscoveryDeals } from "@/lib/deal-discovery.mjs";
 
 const HEART_PATH =
@@ -120,6 +121,24 @@ function DiscoveryDealCard({ item, onOpen }) {
   );
 }
 
+function MapBusinessDeals({ business }) {
+  const deals = getDiscoverableDeals(business);
+  return (
+    <div className="mt-3 border-t border-white/10 pt-3">
+      <p className="text-xs font-semibold text-white/66">
+        {deals.length ? `${deals.length} active ${deals.length === 1 ? "deal" : "deals"}` : "No active deals"}
+      </p>
+      {deals.slice(0, 2).map((deal) => (
+        <div key={deal.id} className="mt-2 min-w-0 rounded-xl bg-white/8 px-3 py-2">
+          <p className="break-words text-sm font-semibold text-white">{deal.title}</p>
+          <p className="mt-0.5 break-words text-xs text-[#72f0cc]">{getDealAvailabilityLabel(deal)}</p>
+        </div>
+      ))}
+      {deals.length > 2 ? <p className="mt-2 text-xs text-white/54">More deals on the profile</p> : null}
+    </div>
+  );
+}
+
 function getActiveDeal(deals = []) {
   return getPrimaryLiveDeal(deals);
 }
@@ -132,16 +151,6 @@ function getDealStatusMeta(business) {
   }
 
   return DEAL_STATUS_META.LIVE;
-}
-
-function getBusinessSignal(business) {
-  const deal = getPrimaryDeal(business.deals);
-
-  if (deal) {
-    return deal.title;
-  }
-
-  return business.description || business.address || business.city;
 }
 
 function getDisplayValue(value) {
@@ -169,15 +178,6 @@ function getUniqueDisplayValues(values) {
   return [...uniqueValues.values()].sort((left, right) =>
     left.localeCompare(right, undefined, { sensitivity: "base" }),
   );
-}
-
-function getBusinessAddressLines(business) {
-  const address = getDisplayValue(business.address);
-  const city = getDisplayValue(business.city);
-  const country = getDisplayValue(business.country);
-  const locality = [city, country].filter(Boolean).join(", ");
-
-  return [address, locality].filter(Boolean);
 }
 
 function getBusinessPhone(business) {
@@ -432,58 +432,6 @@ function buildMarkerElement(business, isSelected) {
   return marker;
 }
 
-function buildPopupContent(business, onClose) {
-  const status = getDealStatusMeta(business);
-  const deal = getPrimaryDeal(business.deals);
-  const addressLines = getBusinessAddressLines(business);
-  const content = document.createElement("div");
-  content.className = "relative min-w-40 pr-12";
-
-  const closeButton = document.createElement("button");
-  closeButton.type = "button";
-  closeButton.setAttribute("aria-label", "Close business details");
-  closeButton.className =
-    "absolute right-0 top-0 grid h-11 w-11 place-items-center rounded-full border border-white/14 bg-zinc-950 text-xl font-bold text-white transition hover:bg-zinc-800";
-  closeButton.textContent = "×";
-  closeButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    onClose();
-  });
-
-  const category = document.createElement("p");
-  category.className =
-    "text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500";
-  category.textContent = business.category;
-
-  const name = document.createElement("p");
-  name.className = "mt-1 text-sm font-bold text-zinc-950";
-  name.textContent = business.name;
-
-  const signal = document.createElement("p");
-  signal.className = "mt-1 text-xs text-zinc-600";
-  signal.textContent = deal ? `${status.label}: ${deal.title}` : getBusinessSignal(business);
-
-  const openingStatus = document.createElement("p");
-  openingStatus.className = "mt-1 text-xs font-semibold text-zinc-700";
-  openingStatus.textContent = getBusinessOpeningStatus(business.business_opening_hours).label;
-
-  const rating = document.createElement("p");
-  rating.className = "mt-2 text-xs font-semibold text-zinc-800";
-  rating.textContent = `${formatRating(business.averageRating)} rating - ${getReviewLabel(business.reviewCount)}`;
-
-  content.append(closeButton, category, name, signal, openingStatus, rating);
-
-  if (addressLines.length) {
-    const address = document.createElement("p");
-    address.className = "mt-2 text-xs leading-4 text-zinc-500";
-    address.textContent = addressLines.join("\n");
-    address.style.whiteSpace = "pre-line";
-    content.append(address);
-  }
-
-  return content;
-}
-
 function FavoriteButton({ isFavorite, onClick, size = "md", disabled = false }) {
   const sizeClass = size === "sm" ? "h-10 w-10 rounded-2xl" : "h-12 w-12 rounded-2xl";
 
@@ -547,7 +495,7 @@ function BusinessAddress({ business, compact = false }) {
       </span>
       <div className="min-w-0">
         {addressLines.map((line, index) => (
-          <p key={`${line}-${index}`} className={compact ? "truncate" : "[overflow-wrap:anywhere]"}>
+          <p key={`${line}-${index}`} className="[overflow-wrap:anywhere]">
             {line}
           </p>
         ))}
@@ -735,11 +683,9 @@ function StableMapboxMap({
   selectedBusiness,
   isSelectedBusinessUIOpen,
   onSelectBusiness,
-  onCloseSelectedBusinessUI,
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
-  const popupRef = useRef(null);
   const markersRef = useRef(new Map());
 
   useEffect(() => {
@@ -765,22 +711,12 @@ function StableMapboxMap({
       "top-right",
     );
 
-    const popup = new mapboxgl.Popup({
-      anchor: "bottom",
-      closeButton: false,
-      closeOnClick: false,
-      className: "spotnera-popup",
-      offset: 34,
-    });
-    popupRef.current = popup;
-
     const resizeObserver = new ResizeObserver(() => map.resize());
     resizeObserver.observe(containerRef.current);
     map.once("load", () => map.resize());
 
     return () => {
       resizeObserver.disconnect();
-      popup.remove();
       markersRef.current.forEach(({ marker }) => marker.remove());
       markersRef.current.clear();
       markersRef.current = new Map();
@@ -859,21 +795,14 @@ function StableMapboxMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    const popup = popupRef.current;
-
-    if (!map || !popup) {
-      return;
-    }
-
-    if (!selectedBusiness || !isSelectedBusinessUIOpen) {
-      popup.remove();
+    if (!map) {
       return;
     }
 
     markersRef.current.forEach(({ element }, businessId) => {
       const label = element.querySelector(".spotnera-marker-label");
       const dot = element.querySelector(".spotnera-marker-dot");
-      const isSelected = businessId === selectedBusiness.id;
+      const isSelected = Boolean(isSelectedBusinessUIOpen && selectedBusiness?.id === businessId);
 
       if (label) {
         label.hidden = !isSelected;
@@ -891,17 +820,14 @@ function StableMapboxMap({
       element.classList.toggle("border-white/70", !isSelected);
     });
 
-    popup
-      .setLngLat([selectedBusiness.longitude, selectedBusiness.latitude])
-      .setDOMContent(buildPopupContent(selectedBusiness, onCloseSelectedBusinessUI))
-      .addTo(map);
-
-    map.easeTo({
-      center: [selectedBusiness.longitude, selectedBusiness.latitude],
-      duration: 650,
-      essential: true,
-    });
-  }, [isSelectedBusinessUIOpen, onCloseSelectedBusinessUI, selectedBusiness]);
+    if (selectedBusiness && isSelectedBusinessUIOpen) {
+      map.easeTo({
+        center: [selectedBusiness.longitude, selectedBusiness.latitude],
+        duration: 650,
+        essential: true,
+      });
+    }
+  }, [isSelectedBusinessUIOpen, selectedBusiness]);
 
   return <div ref={containerRef} className="absolute inset-0 h-full min-h-[420px] w-full" />;
 }
@@ -1552,7 +1478,6 @@ export function SpotneraDashboard({
               selectedBusiness={selectedBusiness}
               isSelectedBusinessUIOpen={isSelectedCardOpen}
               onSelectBusiness={handleSelectBusiness}
-              onCloseSelectedBusinessUI={closeSelectedBusinessUI}
             />
           ) : (
             <div className="grid h-full min-h-[58vh] place-items-center bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02)),repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_1px,transparent_1px_18px)] p-6 text-center">
@@ -1578,12 +1503,14 @@ export function SpotneraDashboard({
             </div>
           ) : null}
 
-          {selectedBusiness && isSelectedCardOpen ? (
+          {selectedBusiness && isSelectedCardOpen && !isDetailOpen ? (
             <motion.div
               initial={{ y: 28, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 130, damping: 18 }}
-              className="absolute bottom-4 left-4 right-4 z-10 rounded-[28px] border border-white/14 bg-zinc-950/88 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:left-auto sm:max-w-md"
+              role="region"
+              aria-label={`Selected business: ${selectedBusiness.name}`}
+              className="absolute bottom-4 left-4 right-4 z-10 max-h-[min(65dvh,420px)] min-w-0 overflow-y-auto overscroll-contain rounded-[28px] border border-white/14 bg-zinc-950/92 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:left-auto sm:max-w-md"
             >
               <button
                 type="button"
@@ -1596,31 +1523,21 @@ export function SpotneraDashboard({
               >
                 &times;
               </button>
-              <div className="flex flex-col gap-3 pr-12 sm:flex-row sm:items-end sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <CategoryDot category={selectedBusiness.category} />
-                    <p className="truncate text-xs font-semibold text-white/56">
-                      {selectedBusiness.category}
-                    </p>
-                  </div>
-                  <h2 className="mt-2 truncate text-xl font-semibold tracking-tight">
-                    {selectedBusiness.name}
-                  </h2>
-                  <p className="mt-1 truncate text-sm font-semibold text-white/72">
-                    {getActiveDeal(selectedBusiness.deals)?.title ?? "No active deal"}
+              <div className="min-w-0 pr-12">
+                <div className="flex items-center gap-2">
+                  <CategoryDot category={selectedBusiness.category} />
+                  <p className="break-words text-xs font-semibold text-white/56">
+                    {selectedBusiness.category}
                   </p>
-                  <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-2" />
-                  <div className="mt-2">
-                    <RatingLine
-                      averageRating={selectedBusiness.averageRating}
-                      reviewCount={selectedBusiness.reviewCount}
-                    />
-                  </div>
-                  <BusinessAddress business={selectedBusiness} compact />
-                  <ContactActions business={selectedBusiness} compact />
-                  <SocialLinks business={selectedBusiness} compact />
                 </div>
+                <h2 className="mt-2 break-words text-xl font-semibold tracking-tight">
+                  {selectedBusiness.name}
+                </h2>
+              </div>
+              <BusinessAddress business={selectedBusiness} compact />
+              <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-2" />
+              <MapBusinessDeals business={selectedBusiness} />
+              <div className="mt-3 flex min-w-0 flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -1646,17 +1563,18 @@ export function SpotneraDashboard({
                       });
                     }
                   }}
-                  className="spotnera-brand-action shrink-0 rounded-2xl px-4 py-2 text-xs font-bold transition"
+                  className="spotnera-brand-action inline-flex min-h-11 items-center rounded-xl px-3 text-xs font-bold transition"
                 >
                   View details
                 </button>
                 <Link
                   href={getBusinessPath(selectedBusiness)}
-                  className="shrink-0 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-center text-xs font-bold text-white/78 transition hover:bg-white/16"
+                  className="inline-flex min-h-11 items-center rounded-xl border border-white/10 bg-white/10 px-3 text-center text-xs font-bold text-white/78 transition hover:bg-white/16"
                 >
-                  Full profile
+                  View profile
                 </Link>
               </div>
+              <BusinessLocationActions key={selectedBusiness.id} business={selectedBusiness} className="mt-2" />
             </motion.div>
           ) : null}
         </div>
@@ -1748,6 +1666,7 @@ export function SpotneraDashboard({
                     Location
                   </p>
                   <BusinessAddress business={selectedBusiness} />
+                  <BusinessLocationActions key={selectedBusiness.id} business={selectedBusiness} className="mt-3" />
                 </div>
               ) : null}
 

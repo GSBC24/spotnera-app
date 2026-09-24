@@ -7,7 +7,9 @@ import { BusinessProfileBottomNav } from "@/components/business-profile-bottom-n
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
 import { BusinessProfileMap } from "@/components/business-profile-map";
 import { BusinessOpeningHoursPanel } from "@/components/business-opening-hours";
+import { BusinessLocationActions } from "@/components/business-location-actions";
 import { BusinessShareActions } from "@/components/business-share-actions";
+import { getBusinessAddressLines } from "@/lib/business-address.mjs";
 import {
   DealAvailabilityLabel,
   LocalDealDateTime,
@@ -462,6 +464,7 @@ export default async function BusinessProfilePage({ params }) {
   const contactActions = getContactActions(business);
   const socialLinks = getSocialLinks(business);
   const locationLine = [business.city, business.country].filter(Boolean).join(", ");
+  const addressLines = getBusinessAddressLines(business);
   const reviewCount = reviews.length;
 
   return (
@@ -669,11 +672,10 @@ export default async function BusinessProfilePage({ params }) {
                 name={business.name}
               />
             </div>
-            <div className="mt-4 text-sm leading-6 text-white/68">
-              {business.address ? <p>{business.address}</p> : null}
-              {locationLine ? <p>{locationLine}</p> : null}
-              {!business.address && !locationLine ? <p>Location details are not available yet.</p> : null}
+            <div className="mt-4 min-w-0 text-sm leading-6 text-white/68 [overflow-wrap:anywhere]">
+              {addressLines.length ? addressLines.map((line, index) => <p key={`${line}-${index}`}>{line}</p>) : <p>Location details are not available yet.</p>}
             </div>
+            <BusinessLocationActions business={business} className="mt-3" />
           </section>
 
           <section className="spotnera-surface rounded-[30px] p-4 sm:p-5">
