@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
 import { CopyProfileLinkButton } from "@/components/copy-profile-link-button";
 import { BusinessQrCode } from "@/components/business-qr-code";
+import { BusinessOpeningHoursFields } from "@/components/business-opening-hours-fields";
+import { BUSINESS_WEEKDAYS } from "@/lib/business-opening-hours.mjs";
+import { compensateFailedOpeningHoursCreate } from "@/lib/business-opening-hours-compensation.mjs";
 import { DealAvailabilityFields } from "@/components/deal-availability-fields";
 import { DeleteBusinessButton } from "@/components/delete-business-button";
 import {
@@ -63,7 +66,8 @@ const BUSINESS_FIELDS = `
   cover_image_url,
   is_active,
   created_at,
-  updated_at
+  updated_at,
+  business_opening_hours (id, day_of_week, is_closed, open_time, close_time, spans_midnight)
 `;
 
 const DEAL_FIELDS = `
@@ -583,6 +587,36 @@ function getBusinessSavePayload(payload) {
   return savePayload;
 }
 
+function buildBusinessOpeningHours(formData) {
+  if (formData.get("opening_hours_configured") !== "on") return { rows: [] };
+  const rows = [];
+  const validTime = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  for (let index = 0; index < BUSINESS_WEEKDAYS.length; index += 1) {
+    const day = index + 1;
+    if (formData.get(`opening_day_${day}_open`) !== "on") {
+      rows.push({ day_of_week: day, is_closed: true, open_time: null, close_time: null, spans_midnight: false });
+      continue;
+    }
+    const open = getString(formData, `opening_day_${day}_start`);
+    const close = getString(formData, `opening_day_${day}_end`);
+    if (!validTime.test(open) || !validTime.test(close) || open === close) {
+      return { error: `Enter different valid opening and closing times for ${BUSINESS_WEEKDAYS[index]}.` };
+    }
+    rows.push({ day_of_week: day, is_closed: false, open_time: open, close_time: close, spans_midnight: close < open });
+  }
+  return { rows };
+}
+
+async function saveBusinessOpeningHours(supabase, businessId, rows) {
+  if (!rows.length) {
+    return (await supabase.from("business_opening_hours").delete().eq("business_id", businessId)).error;
+  }
+  return (await supabase.from("business_opening_hours").upsert(
+    rows.map((row) => ({ ...row, business_id: businessId, updated_at: new Date().toISOString() })),
+    { onConflict: "business_id,day_of_week" },
+  )).error;
+}
+
 function validateDeal(payload, scheduleResult) {
   if (payload.fieldErrors.length) {
     return payload.fieldErrors[0];
@@ -831,9 +865,10 @@ async function createBusiness(formData) {
   const { supabase, user } = await getSignedInUser();
   const payload = buildBusinessPayload(formData, user.id);
   const validationError = validateBusiness(payload, { supportedCountriesOnly: true });
+  const openingHours = buildBusinessOpeningHours(formData);
 
-  if (validationError) {
-    redirectWithBusinessFormError(validationError);
+  if (validationError || openingHours.error) {
+    redirectWithBusinessFormError(validationError ?? openingHours.error);
   }
 
   const { data: business, error } = await supabase
@@ -889,6 +924,34 @@ async function createBusiness(formData) {
     }
   }
 
+  if (openingHours.rows.length) {
+    const hoursError = await saveBusinessOpeningHours(supabase, business.id, openingHours.rows);
+    if (hoursError) {
+      logServerActionError("Business opening hours save failed", hoursError);
+      const compensation = await compensateFailedOpeningHoursCreate(supabase, {
+        businessId: business.id,
+        userId: user.id,
+        uploadedPaths: uploaded.uploadedPaths,
+      });
+      if (compensation.outcome === "deletion_unconfirmed") {
+        logServerActionError("Could not confirm incomplete business deletion", compensation.error);
+        revalidatePath("/owner");
+        redirectWithBusinessFormError(
+          "The business was created, but opening hours were not saved. Removal could not be confirmed, so its images were kept. Check this existing business and use Edit to add hours; do not create another business.",
+          { businessId: business.id },
+        );
+      }
+      revalidatePath("/owner");
+      if (compensation.outcome === "deleted_images_remain") {
+        logServerActionError("Business deleted but image cleanup failed", compensation.error);
+        redirectWithBusinessFormError(
+          "Opening hours could not be saved, so the new business was removed. Some uploaded images could not be cleaned up. Please contact support if this persists.",
+        );
+      }
+      redirectWithBusinessFormError("Opening hours could not be saved, so the new business was removed. Please try again.");
+    }
+  }
+
   revalidatePath("/owner");
   redirect("/owner?section=businesses&businessCreated=1");
 }
@@ -900,9 +963,10 @@ async function updateBusiness(formData) {
   const businessId = getString(formData, "business_id");
   const payload = buildBusinessPayload(formData, user.id);
   const validationError = validateBusiness(payload);
+  const openingHours = buildBusinessOpeningHours(formData);
 
-  if (!businessId || validationError) {
-    redirectWithError(validationError ?? "Missing business id.");
+  if (!businessId || validationError || openingHours.error) {
+    redirectWithBusinessFormError(validationError ?? openingHours.error ?? "Missing business id.", { businessId });
   }
 
   const uploaded = await uploadBusinessImages(supabase, user.id, businessId, formData);
@@ -934,6 +998,12 @@ async function updateBusiness(formData) {
       businessId,
       imageField: uploaded.uploadedPaths.length ? "images" : undefined,
     });
+  }
+
+  const hoursError = await saveBusinessOpeningHours(supabase, businessId, openingHours.rows);
+  if (hoursError) {
+    logServerActionError("Business opening hours update failed", hoursError);
+    redirectWithBusinessFormError("Business details saved, but opening hours could not be updated. Please try again.", { businessId });
   }
 
   revalidateBusinessProfile(business);
@@ -1234,6 +1304,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
         defaultLatitude={business?.latitude ?? ""}
         defaultLongitude={business?.longitude ?? ""}
       />
+      <BusinessOpeningHoursFields hours={business?.business_opening_hours ?? []} />
       <section className="grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">

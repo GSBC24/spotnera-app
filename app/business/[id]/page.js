@@ -6,6 +6,7 @@ import { BusinessProfileAnalytics } from "@/components/business-profile-analytic
 import { BusinessProfileBottomNav } from "@/components/business-profile-bottom-nav";
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
 import { BusinessProfileMap } from "@/components/business-profile-map";
+import { BusinessOpeningHoursPanel } from "@/components/business-opening-hours";
 import { BusinessShareActions } from "@/components/business-share-actions";
 import {
   DealAvailabilityLabel,
@@ -40,7 +41,8 @@ const BUSINESS_SELECT = `
   longitude,
   logo_url,
   cover_image_url,
-  is_active
+  is_active,
+  business_opening_hours (id, day_of_week, is_closed, open_time, close_time, spans_midnight)
 `;
 
 const DEAL_SELECT = `
@@ -555,6 +557,7 @@ export default async function BusinessProfilePage({ params }) {
         </section>
 
         <div className="grid gap-5">
+          <BusinessOpeningHoursPanel hours={business.business_opening_hours} />
           <section className="spotnera-surface rounded-[30px] p-4 sm:p-5">
             <p className="spotnera-kicker text-[#72f0cc]">Active deal</p>
             {activeDeal ? (

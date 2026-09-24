@@ -31,6 +31,8 @@ import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { HeaderLogout } from "@/components/header-logout";
 import { AuthPanel } from "@/components/auth-panel";
 import { DealDetailsDialog } from "@/components/deal-details-dialog";
+import { BusinessOpeningStatus } from "@/components/business-opening-hours";
+import { getBusinessOpeningStatus } from "@/lib/business-opening-hours.mjs";
 import { getDiscoverableDeals, partitionDiscoveryDeals } from "@/lib/deal-discovery.mjs";
 
 const HEART_PATH =
@@ -461,11 +463,15 @@ function buildPopupContent(business, onClose) {
   signal.className = "mt-1 text-xs text-zinc-600";
   signal.textContent = deal ? `${status.label}: ${deal.title}` : getBusinessSignal(business);
 
+  const openingStatus = document.createElement("p");
+  openingStatus.className = "mt-1 text-xs font-semibold text-zinc-700";
+  openingStatus.textContent = getBusinessOpeningStatus(business.business_opening_hours).label;
+
   const rating = document.createElement("p");
   rating.className = "mt-2 text-xs font-semibold text-zinc-800";
   rating.textContent = `${formatRating(business.averageRating)} rating - ${getReviewLabel(business.reviewCount)}`;
 
-  content.append(closeButton, category, name, signal, rating);
+  content.append(closeButton, category, name, signal, openingStatus, rating);
 
   if (addressLines.length) {
     const address = document.createElement("p");
@@ -1604,6 +1610,7 @@ export function SpotneraDashboard({
                   <p className="mt-1 truncate text-sm font-semibold text-white/72">
                     {getActiveDeal(selectedBusiness.deals)?.title ?? "No active deal"}
                   </p>
+                  <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-2" />
                   <div className="mt-2">
                     <RatingLine
                       averageRating={selectedBusiness.averageRating}
@@ -1693,6 +1700,11 @@ export function SpotneraDashboard({
               </div>
 
               <div className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Business hours</p>
+                <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-1" />
+              </div>
+
+              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
                   Active deal
                 </p>
@@ -1715,7 +1727,7 @@ export function SpotneraDashboard({
                   {getDealStatusMeta(selectedBusiness).label}
                 </span>
                 <span className="rounded-full border border-white/12 bg-black/24 px-3 py-1.5 text-xs font-semibold text-white/66">
-                  {selectedBusiness.is_active ? "Open listing" : "Hidden"}
+                  {selectedBusiness.is_active ? "Public listing" : "Hidden"}
                 </span>
               </div>
 
