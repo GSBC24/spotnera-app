@@ -8,13 +8,9 @@ import { BusinessProfileFavorite } from "@/components/business-profile-favorite"
 import { BusinessProfileMap } from "@/components/business-profile-map";
 import { BusinessOpeningHoursPanel } from "@/components/business-opening-hours";
 import { BusinessLocationActions } from "@/components/business-location-actions";
+import { BusinessProfileDeals } from "@/components/business-profile-deals";
 import { BusinessShareActions } from "@/components/business-share-actions";
 import { getBusinessAddressLines } from "@/lib/business-address.mjs";
-import {
-  DealAvailabilityLabel,
-  LocalDealDateTime,
-} from "@/components/deal-time-label";
-import { getPrimaryLiveDeal } from "@/lib/deals";
 import { getBusinessPath, getBusinessUrl } from "@/lib/business-url";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
@@ -307,7 +303,6 @@ async function getPublicBusiness(identifier) {
         .select(DEAL_SELECT)
         .eq("business_id", businessId)
         .eq("is_active", true)
-        .or(`starts_at.is.null,starts_at.lte.${now.toISOString()}`)
         .or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`)
         .order("created_at", { ascending: false }),
       supabase
@@ -459,13 +454,20 @@ export default async function BusinessProfilePage({ params }) {
   }
 
   const reviews = business.reviews ?? [];
-  const activeDeal = getPrimaryLiveDeal(business.deals);
   const averageRating = getAverageRating(reviews);
   const contactActions = getContactActions(business);
   const socialLinks = getSocialLinks(business);
   const locationLine = [business.city, business.country].filter(Boolean).join(", ");
   const addressLines = getBusinessAddressLines(business);
   const reviewCount = reviews.length;
+  const profileDealBusiness = {
+    id: business.id,
+    slug: business.slug,
+    name: business.name,
+    category: business.category,
+    city: business.city,
+    country: business.country,
+  };
 
   return (
     <main className="spotnera-app-shell spotnera-functional-area min-h-screen overflow-x-hidden">
@@ -561,42 +563,7 @@ export default async function BusinessProfilePage({ params }) {
 
         <div className="grid gap-5">
           <BusinessOpeningHoursPanel hours={business.business_opening_hours} />
-          <section className="spotnera-surface rounded-[30px] p-4 sm:p-5">
-            <p className="spotnera-kicker text-[#72f0cc]">Active deal</p>
-            {activeDeal ? (
-              <div className="mt-4 rounded-[26px] border border-[#33d6a6]/24 bg-[#33d6a6]/14 p-4">
-                <h2 className="text-2xl font-semibold">{activeDeal.title}</h2>
-                {activeDeal.description ? (
-                  <p className="mt-3 text-sm leading-6 text-white/68">
-                    {activeDeal.description}
-                  </p>
-                ) : null}
-                <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#72f0cc]">
-                  <DealAvailabilityLabel deal={activeDeal} />
-                </p>
-                {activeDeal.ends_at ? (
-                  <p className="mt-2 text-xs font-bold uppercase text-white/48">
-                    <LocalDealDateTime prefix="Valid until " value={activeDeal.ends_at} />
-                  </p>
-                ) : null}
-                <BusinessEventLink
-                  business={business}
-                  dealId={activeDeal.id}
-                  eventType="deal_view"
-                  gaEventName="deal_view"
-                  gaParameters={{ deal_id: activeDeal.id }}
-                  href="#contact"
-                  className="mt-5 inline-flex min-h-11 items-center rounded-2xl bg-white px-4 text-sm font-bold text-zinc-950 transition hover:bg-white/90"
-                >
-                  View deal
-                </BusinessEventLink>
-              </div>
-            ) : (
-              <p className="mt-4 rounded-[26px] border border-white/10 bg-white/8 p-4 text-sm font-semibold text-white/62">
-                No active deals right now.
-              </p>
-            )}
-          </section>
+          <BusinessProfileDeals business={profileDealBusiness} deals={business.deals} initialNow={new Date().toISOString()} />
 
           {business.description ? (
             <section className="spotnera-surface rounded-[30px] p-4 sm:p-5">
