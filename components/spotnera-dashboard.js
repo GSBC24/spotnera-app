@@ -11,7 +11,7 @@ import {
   businessCategoryMatches,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
-import { recordBusinessEvent } from "@/lib/business-events";
+import { recordBusinessEvent, recordDealClick } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import { getBusinessPath } from "@/lib/business-url";
 import {
@@ -599,6 +599,7 @@ function ContactActions({ business, compact = false }) {
             recordBusinessEvent({
               businessId: business.id,
               eventType: `${action.method}_click`,
+              source: "map",
             });
           }}
           className={`max-w-full break-all rounded-full border border-white/10 bg-white/10 font-bold text-white/76 transition hover:bg-white/16 hover:text-white ${
@@ -914,6 +915,10 @@ export function SpotneraDashboard({
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [expandedSavedBusinessId, setExpandedSavedBusinessId] = useState(null);
   const closeDealDetails = useCallback(() => setSelectedDeal(null), []);
+  const openDealDetails = useCallback((item, source) => {
+    recordDealClick(item.business, item.deal, source);
+    setSelectedDeal({ ...item, source });
+  }, []);
   const [activeTab, setActiveTab] = useState(
     ["map", "pulse", "saved"].includes(initialTab) ? initialTab : "map",
   );
@@ -1631,23 +1636,6 @@ export function SpotneraDashboard({
                     trackEvent("view_business", {
                       ...getBusinessEventParameters(selectedBusiness),
                     });
-                    recordBusinessEvent({
-                      businessId: selectedBusiness.id,
-                      eventType: "profile_view",
-                    });
-                    const activeDeal = getActiveDeal(selectedBusiness.deals);
-
-                    if (activeDeal) {
-                      trackEvent("deal_view", {
-                        ...getBusinessEventParameters(selectedBusiness),
-                        deal_id: activeDeal.id,
-                      });
-                      recordBusinessEvent({
-                        businessId: selectedBusiness.id,
-                        eventType: "deal_view",
-                        dealId: activeDeal.id,
-                      });
-                    }
                   }}
                   className="spotnera-brand-action inline-flex min-h-11 items-center rounded-xl px-3 text-xs font-bold transition"
                 >
@@ -1724,7 +1712,7 @@ export function SpotneraDashboard({
                 ) : null}
               </div>
 
-              <MapUpcomingDeals business={selectedBusiness} onOpen={setSelectedDeal} />
+              <MapUpcomingDeals business={selectedBusiness} onOpen={(item) => openDealDetails(item, "map")} />
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <RatingLine
@@ -1887,7 +1875,7 @@ export function SpotneraDashboard({
             <section aria-labelledby="saved-deals-heading" className="mb-5 rounded-[26px] border border-[#33d6a6]/20 bg-[#33d6a6]/6 p-3 sm:p-4">
               <h3 id="saved-deals-heading" className="mb-3 px-1 text-base font-semibold text-[#72f0cc]">From businesses you saved</h3>
               <div className="grid gap-3">
-                {discoveryDeals.saved.map((item) => <DiscoveryDealCard key={item.deal.id} item={item} onOpen={setSelectedDeal} />)}
+                {discoveryDeals.saved.map((item) => <DiscoveryDealCard key={item.deal.id} item={item} onOpen={(selected) => openDealDetails(selected, "saved")} />)}
               </div>
             </section>
           ) : null}
@@ -1895,7 +1883,7 @@ export function SpotneraDashboard({
             <h3 id="general-deals-heading" className="mb-3 px-1 text-base font-semibold">Explore more deals</h3>
           <div className="grid gap-3">
             {discoveryDeals.general.length ? (
-              discoveryDeals.general.map((item) => <DiscoveryDealCard key={item.deal.id} item={item} onOpen={setSelectedDeal} />)
+              discoveryDeals.general.map((item) => <DiscoveryDealCard key={item.deal.id} item={item} onOpen={(selected) => openDealDetails(selected, "deals")} />)
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/10 p-4 text-sm text-white/58 backdrop-blur-2xl">
                 {discoveryDeals.saved.length ? "No other active deals right now." : "No live business activity yet."}
@@ -1992,7 +1980,7 @@ export function SpotneraDashboard({
                       <ul className="grid gap-2">
                         {liveDeals.map((deal) => <li key={deal.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl bg-black/20 p-3">
                           <span className="min-w-0 flex-1 break-words"><span className="block break-words text-sm font-semibold">{deal.title}</span><span className="mt-1 block text-xs text-white/60">{getDealAvailabilityLabel(deal)}</span></span>
-                          <button type="button" aria-haspopup="dialog" onClick={() => setSelectedDeal({ business, deal })}
+                          <button type="button" aria-haspopup="dialog" onClick={() => openDealDetails({ business, deal }, "saved")}
                             className="min-h-11 rounded-xl border border-white/16 px-3 text-xs font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">View deal</button>
                         </li>)}
                       </ul>
@@ -2022,7 +2010,7 @@ export function SpotneraDashboard({
         />
       </section>
       {selectedDeal ? (
-        <DealDetailsDialog business={selectedDeal.business} deal={selectedDeal.deal}
+        <DealDetailsDialog business={selectedDeal.business} deal={selectedDeal.deal} source={selectedDeal.source}
           onClose={closeDealDetails} />
       ) : null}
     </main>

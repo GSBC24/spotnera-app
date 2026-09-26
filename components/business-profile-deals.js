@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DealDetailsDialog } from "@/components/deal-details-dialog";
 import { DealAvailabilityLabel, LocalDealDateTime } from "@/components/deal-time-label";
-import { recordBusinessEvent } from "@/lib/business-events";
+import { recordDealClick } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import { partitionPublicProfileDeals } from "@/lib/public-profile-deals.mjs";
 
@@ -42,8 +42,9 @@ export function BusinessProfileDeals({ business, deals, initialNow }) {
 
   const { active, upcoming } = partitionPublicProfileDeals(deals, now);
   function openDeal(deal) {
+    recordDealClick(business, deal, "business_profile");
     setSelectedDeal(deal);
-    // Preserve the existing primary active deal's view event.
+    // Preserve consent-aware GA4 behavior separately from first-party events.
     if (deal.id === active[0]?.id) {
       trackEvent("deal_view", {
         business_id: business.id,
@@ -52,7 +53,6 @@ export function BusinessProfileDeals({ business, deals, initialNow }) {
         country: business.country,
         deal_id: deal.id,
       });
-      recordBusinessEvent({ businessId: business.id, eventType: "deal_view", dealId: deal.id });
     }
   }
 
@@ -85,7 +85,7 @@ export function BusinessProfileDeals({ business, deals, initialNow }) {
           </div>
         </section>
       ) : null}
-      {selectedDeal ? <DealDetailsDialog business={business} deal={selectedDeal} onClose={closeDealDetails} /> : null}
+      {selectedDeal ? <DealDetailsDialog business={business} deal={selectedDeal} onClose={closeDealDetails} source="business_profile" /> : null}
     </>
   );
 }

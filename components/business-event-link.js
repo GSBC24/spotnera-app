@@ -38,6 +38,7 @@ export function BusinessEventLink({
           businessId: business.id,
           eventType,
           dealId,
+          source: "business_profile",
         });
       }}
       className={className}

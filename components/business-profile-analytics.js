@@ -21,7 +21,8 @@ export function BusinessProfileAnalytics({ businessId, businessCategory, city, c
     });
     recordBusinessEvent({
       businessId,
-      eventType: "profile_view",
+      eventType: "business_view",
+      source: "business_profile",
     });
   }, [businessCategory, businessId, city, country]);
 

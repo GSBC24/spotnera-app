@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { recordBusinessEvent } from "@/lib/business-events";
 import { getBusinessPath } from "@/lib/business-url";
 import {
   DEAL_AVAILABILITY_MODE,
@@ -28,9 +29,10 @@ function formatValidity(value, timeZone) {
   }).format(instant);
 }
 
-export function DealDetailsDialog({ business, deal, onClose }) {
+export function DealDetailsDialog({ business, deal, onClose, source }) {
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
+  const viewedDealRef = useRef(null);
   const timeZone = deal.availability_timezone || DEFAULT_DEAL_AVAILABILITY_TIMEZONE;
   const status = getDealStatus(deal);
   const schedules = [...(deal.deal_schedules ?? [])].sort((left, right) =>
@@ -39,6 +41,12 @@ export function DealDetailsDialog({ business, deal, onClose }) {
   );
   const startsAt = formatValidity(deal.starts_at, timeZone);
   const endsAt = formatValidity(deal.ends_at, timeZone);
+
+  useEffect(() => {
+    if (viewedDealRef.current === deal.id) return;
+    viewedDealRef.current = deal.id;
+    recordBusinessEvent({ businessId: business.id, dealId: deal.id, eventType: "deal_view", source });
+  }, [business.id, deal.id, source]);
 
   useEffect(() => {
     const opener = document.activeElement;

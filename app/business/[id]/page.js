@@ -642,7 +642,7 @@ export default async function BusinessProfilePage({ params }) {
             <div className="mt-4 min-w-0 text-sm leading-6 text-white/68 [overflow-wrap:anywhere]">
               {addressLines.length ? addressLines.map((line, index) => <p key={`${line}-${index}`}>{line}</p>) : <p>Location details are not available yet.</p>}
             </div>
-            <BusinessLocationActions business={business} className="mt-3" />
+            <BusinessLocationActions business={business} className="mt-3" source="business_profile" />
           </section>
 
           <section className="spotnera-surface rounded-[30px] p-4 sm:p-5">
