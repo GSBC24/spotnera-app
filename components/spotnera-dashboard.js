@@ -1354,8 +1354,8 @@ export function SpotneraDashboard({
   );
 
   const discoveryDeals = useMemo(
-    () => partitionDiscoveryDeals(mappedBusinesses, userId),
-    [mappedBusinesses, userId],
+    () => partitionDiscoveryDeals(mappedBusinesses, userId, undefined, localProfile.interests ?? []),
+    [mappedBusinesses, userId, localProfile.interests],
   );
 
   const handleClearFilters = useCallback(() => {

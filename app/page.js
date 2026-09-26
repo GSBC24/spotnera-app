@@ -117,7 +117,7 @@ export default async function Home({ searchParams }) {
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("username, first_name, last_name, city, country, phone, date_of_birth, gender, address, onboarding_completed, onboarding_completed_at")
+      .select("username, first_name, last_name, city, country, phone, date_of_birth, gender, address, interests, onboarding_completed, onboarding_completed_at")
       .eq("id", user.id)
       .maybeSingle();
 

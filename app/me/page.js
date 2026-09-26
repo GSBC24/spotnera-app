@@ -33,7 +33,7 @@ export default async function MePage() {
       error: notificationPreferencesError,
     },
   ] = await Promise.all([
-    supabase.from("profiles").select("username, first_name, last_name, city, country, phone, date_of_birth, gender, address, onboarding_completed").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("username, first_name, last_name, city, country, phone, date_of_birth, gender, address, interests, age_range, onboarding_completed").eq("id", user.id).maybeSingle(),
     supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_id", user.id),
     supabase
       .from("notification_preferences")

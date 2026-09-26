@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { DeleteAccountPanel } from "@/components/delete-account-panel";
 import { NotificationPreferences } from "@/components/notification-preferences";
+import { PersonalizationSettings } from "@/components/personalization-settings";
 import { PrivacySettingsLink } from "@/components/privacy-settings-link";
 import { PwaInstallAction } from "@/components/pwa-install-prompt";
 import {
@@ -81,8 +82,7 @@ export function ProfileAccountView({
     }
 
     setIsSaving(true);
-    const nextProfile = {
-      ...localProfile,
+    const profileChanges = {
       first_name: firstName,
       last_name: lastName,
       phone: phone.value,
@@ -97,7 +97,7 @@ export function ProfileAccountView({
 
     const { error: updateError } = await supabase
       .from("profiles")
-      .update(nextProfile)
+      .update(profileChanges)
       .eq("id", userId);
 
     if (updateError) {
@@ -106,7 +106,7 @@ export function ProfileAccountView({
       }
       setError("Unable to save profile changes.");
     } else {
-      setLocalProfile(nextProfile);
+      setLocalProfile((current) => ({ ...current, ...profileChanges }));
       setMessage("Profile saved.");
     }
     setIsSaving(false);
@@ -138,6 +138,8 @@ export function ProfileAccountView({
         {message ? <p className="rounded-2xl border border-emerald-300/20 bg-emerald-500/14 px-3 py-2 text-sm font-semibold text-emerald-100">{message}</p> : null}
         <button type="submit" disabled={isSaving} className="spotnera-brand-action h-11 rounded-2xl px-4 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60">{isSaving ? "Saving..." : "Save changes"}</button>
       </form>
+      <PersonalizationSettings initialInterests={profile?.interests ?? []}
+        initialAgeRange={profile?.age_range ?? null} userId={userId} />
       <NotificationPreferences
         action={saveNotificationPreferences}
         initialPreferences={notificationPreferences}
