@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AuthPanel } from "@/components/auth-panel";
 import { SpotneraDashboard } from "@/components/spotnera-dashboard";
 import { getLiveDeals } from "@/lib/deals";
-import { countMapUpcomingDeals } from "@/lib/map-upcoming-deals.mjs";
+import { groupMapUpcomingDeals } from "@/lib/map-upcoming-deals.mjs";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
@@ -165,7 +165,7 @@ export default async function Home({ searchParams }) {
     supabaseDealCount = liveDealRows.length;
 
     const businessIds = (businessRows ?? []).map((business) => business.id);
-    let upcomingDealCounts = new Map();
+    let upcomingDealGroups = new Map();
     let reviewRows = [];
     let favoriteRows = [];
 
@@ -177,11 +177,12 @@ export default async function Home({ searchParams }) {
       while (true) {
         const { data: page, error: upcomingError } = await supabase
           .from("deals")
-          .select("id, business_id, is_active, starts_at, ends_at")
+          .select(DEAL_SELECT)
           .in("business_id", businessIds)
           .eq("is_active", true)
           .gt("starts_at", now.toISOString())
           .or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`)
+          .eq("businesses.is_active", true)
           .order("id", { ascending: true })
           .range(offset, offset + 499);
         if (upcomingError) {
@@ -189,15 +190,15 @@ export default async function Home({ searchParams }) {
           if (process.env.NODE_ENV !== "production") {
             console.error("Supabase upcoming deal count query failed", upcomingError);
           }
-          upcomingDealCounts = null;
+          upcomingDealGroups = null;
           break;
         }
         if (!page?.length) break;
         upcomingRows.push(...page);
         offset += page.length;
       }
-      if (upcomingDealCounts) {
-        upcomingDealCounts = countMapUpcomingDeals(upcomingRows, businessIds, now);
+      if (upcomingDealGroups) {
+        upcomingDealGroups = groupMapUpcomingDeals(upcomingRows, businessIds, now);
       }
 
       const { data: reviews, error: reviewsError } = await supabase
@@ -273,7 +274,8 @@ export default async function Home({ searchParams }) {
     businesses = (businessRows ?? []).map((business) => ({
       ...business,
       deals: dealsByBusinessId.get(business.id) ?? [],
-      upcomingDealCount: upcomingDealCounts?.get(business.id) ?? null,
+      upcomingDeals: upcomingDealGroups?.get(business.id) ?? [],
+      upcomingDealCount: upcomingDealGroups?.get(business.id)?.length ?? null,
       reviews: reviewsByBusinessId.get(business.id) ?? [],
       isFavorite: favoritesByBusinessId.has(business.id),
       dealNotificationsEnabled:

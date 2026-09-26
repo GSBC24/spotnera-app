@@ -35,6 +35,7 @@ import { BusinessOpeningStatus } from "@/components/business-opening-hours";
 import { BusinessLocationActions } from "@/components/business-location-actions";
 import { getBusinessAddressLines } from "@/lib/business-address.mjs";
 import { getDiscoverableDeals, partitionDiscoveryDeals } from "@/lib/deal-discovery.mjs";
+import { groupMapUpcomingDeals } from "@/lib/map-upcoming-deals.mjs";
 import { saveBusinessDealNotificationPreference } from "@/lib/saved-business-notifications.mjs";
 
 const HEART_PATH =
@@ -142,6 +143,42 @@ function MapBusinessDeals({ business }) {
       ))}
       {deals.length > 2 ? <p className="mt-2 text-xs text-white/54">More deals on the profile</p> : null}
     </div>
+  );
+}
+
+function MapUpcomingDeals({ business, onOpen }) {
+  const deals = groupMapUpcomingDeals(business.upcomingDeals ?? [], [business.id])
+    .get(business.id) ?? [];
+  if (!deals.length) return null;
+
+  return (
+    <section className="mt-3 min-w-0 rounded-[24px] border border-white/10 bg-white/8 p-3"
+      aria-labelledby="map-upcoming-deals-title">
+      <h3 id="map-upcoming-deals-title"
+        className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
+        Upcoming deals
+      </h3>
+      <div className="mt-2 grid min-w-0 gap-2">
+        {deals.map((deal) => (
+          <button key={deal.id} type="button" aria-haspopup="dialog"
+            aria-label={`View details for ${deal.title} at ${business.name}`}
+            onClick={() => onOpen({ business: {
+              id: business.id, slug: business.slug, name: business.name,
+            }, deal })}
+            className="min-w-0 rounded-xl border border-white/10 bg-black/20 p-3 text-left transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
+            <span className="block break-words text-sm font-semibold text-white">{deal.title}</span>
+            {deal.description ? (
+              <span className="mt-1 block whitespace-pre-line break-words text-xs leading-5 text-white/65">
+                {deal.description}
+              </span>
+            ) : null}
+            <span className="mt-1 block break-words text-xs font-semibold text-[#72f0cc]">
+              {getDealAvailabilityLabel(deal)}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -1637,6 +1674,8 @@ export function SpotneraDashboard({
               role="dialog"
               aria-modal="true"
               aria-labelledby="selected-business-title"
+              aria-hidden={Boolean(selectedDeal)}
+              inert={Boolean(selectedDeal)}
             >
               <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-start justify-between gap-3 rounded-t-[32px] bg-[#151821] px-4 pb-3 pt-4">
                 <div className="min-w-0">
@@ -1684,6 +1723,8 @@ export function SpotneraDashboard({
                   </p>
                 ) : null}
               </div>
+
+              <MapUpcomingDeals business={selectedBusiness} onOpen={setSelectedDeal} />
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <RatingLine
