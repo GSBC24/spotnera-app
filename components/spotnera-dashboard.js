@@ -164,6 +164,8 @@ function MapUpcomingDeals({ business, onOpen }) {
             aria-label={`View details for ${deal.title} at ${business.name}`}
             onClick={() => onOpen({ business: {
               id: business.id, slug: business.slug, name: business.name,
+              address: business.address, city: business.city, country: business.country,
+              is_active: business.is_active,
             }, deal })}
             className="min-w-0 rounded-xl border border-white/10 bg-black/20 p-3 text-left transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
             <span className="block break-words text-sm font-semibold text-white">{deal.title}</span>

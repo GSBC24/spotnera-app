@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { DealCalendarActions } from "@/components/deal-calendar-actions";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { getBusinessPath } from "@/lib/business-url";
 import {
@@ -158,6 +159,8 @@ export function DealDetailsDialog({ business, deal, onClose, source }) {
             </dl>
           </div>
         ) : null}
+
+        <DealCalendarActions business={business} deal={deal} />
 
         <Link href={getBusinessPath(business)} onNavigate={onClose}
           className="spotnera-brand-action mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
