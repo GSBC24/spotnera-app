@@ -159,7 +159,7 @@ export function DealDetailsDialog({ business, deal, onClose, source }) {
           </div>
         ) : null}
 
-        <Link href={getBusinessPath(business)}
+        <Link href={getBusinessPath(business)} onNavigate={onClose}
           className="spotnera-brand-action mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
           View business
         </Link>
