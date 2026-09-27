@@ -3,6 +3,25 @@ import { validateBusinessEvent, isEligibleEventBusiness, isEligibleEventDeal } f
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
+function safeInsertError(error) {
+  const message = typeof error?.message === "string" ? error.message : "";
+  const constraint = message.match(/\bconstraint ["'](business_events_[a-z0-9_]+)["']/i)?.[1];
+  const column = message.match(/\bcolumn ["']([a-z_]+)["'] of relation ["']business_events["']/i)?.[1]
+    ?? message.match(/\bthe ["']([a-z_]+)["'] column of ["']business_events["'] in the schema cache/i)?.[1];
+  const reason = /permission denied for (?:table|relation) business_events/i.test(message) ? "table_permission"
+    : /violates check constraint/i.test(message) ? "check_constraint"
+      : /violates not-null constraint/i.test(message) ? "not_null"
+        : /violates foreign key constraint/i.test(message) ? "foreign_key"
+          : /schema cache/i.test(message) ? "schema_cache" : "other";
+  return {
+    code: typeof error?.code === "string" && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(error.code)
+      ? error.code : "unknown",
+    reason,
+    ...(constraint && { constraint }),
+    ...(column && { column }),
+  };
+}
+
 export async function POST(request) {
   const origin = request.headers.get("origin");
   if (origin && origin !== new URL(request.url).origin) {
@@ -20,6 +39,7 @@ export async function POST(request) {
   if (!event || event.eventType === "deal_save") {
     return new NextResponse(null, { status: 400 });
   }
+  let stage = "business_lookup";
   try {
     const admin = createAdminClient();
     const { data: business, error: businessError } = await admin.from("businesses")
@@ -47,15 +67,20 @@ export async function POST(request) {
         if (!favorite) return new NextResponse(null, { status: 400 });
       }
     }
+    stage = "business_events_insert";
     const { error } = await admin.from("business_events").insert({
       business_id: event.businessId,
       event_type: event.eventType,
       deal_id: event.dealId,
       source: event.source,
     });
-    if (error) return new NextResponse(null, { status: 503 });
+    if (error) {
+      console.error("business_events insert failed", safeInsertError(error));
+      return new NextResponse(null, { status: 503 });
+    }
     return new NextResponse(null, { status: 204 });
-  } catch {
+  } catch (error) {
+    console.error("business_events route exception", { stage, ...safeInsertError(error) });
     return new NextResponse(null, { status: 503 });
   }
 }
