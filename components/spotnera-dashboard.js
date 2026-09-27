@@ -1414,7 +1414,7 @@ export function SpotneraDashboard({
           <div className="flex min-w-0 items-center gap-3">
             <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" />
             <div className="min-w-0">
-              <p className="spotnera-kicker text-white/55">Spotnera Live</p>
+              <p className="spotnera-kicker text-white/55">Spotnera™ Live</p>
               <h1 className="mt-1 truncate text-[1.35rem] font-semibold leading-tight sm:text-2xl">
                 {activeHeading}
               </h1>

@@ -488,7 +488,7 @@ export default async function BusinessProfilePage({ params }) {
               className="spotnera-brand-mark shrink-0 object-contain"
             />
             <div className="min-w-0">
-              <p className="spotnera-kicker text-white/55">Spotnera</p>
+              <p className="spotnera-kicker text-white/55">Spotnera™</p>
               <p className="truncate text-sm font-bold text-white/82">Public business profile</p>
             </div>
           </Link>

@@ -1654,7 +1654,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
             <div className="flex min-w-0 items-center gap-3">
               <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" />
               <div className="min-w-0">
-                <p className="spotnera-kicker text-white/55">Spotnera Business</p>
+                <p className="spotnera-kicker text-white/55">Spotnera™ Business</p>
                 <h1 className="mt-1 text-2xl font-semibold leading-tight sm:text-3xl">
                   Manage your businesses
                 </h1>

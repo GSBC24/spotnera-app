@@ -31,7 +31,7 @@ export default async function OwnerPremiumPage() {
         <Link href="/owner?section=businesses" className="text-sm font-semibold text-white/65 hover:text-white">← Back to businesses</Link>
         <header className="spotnera-card mt-5 overflow-hidden rounded-[32px] border border-amber-300/20 p-6 sm:p-10">
           <p className="spotnera-kicker text-amber-200">Coming soon</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Spotnera Premium</h1>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Spotnera™ Premium</h1>
           <p className="mt-4 max-w-2xl text-lg leading-7 text-white/75">More tools to understand, reach and grow your local audience.</p>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Premium is being prepared. These capabilities are planned and are not available yet.</p>
         </header>
