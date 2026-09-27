@@ -29,6 +29,7 @@ import {
 import { createClient } from "@/utils/supabase/browser";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { HeaderLogout } from "@/components/header-logout";
+import { HelpLink } from "@/components/help-link";
 import { AuthPanel } from "@/components/auth-panel";
 import { DealDetailsDialog } from "@/components/deal-details-dialog";
 import { BusinessOpeningStatus } from "@/components/business-opening-hours";
@@ -1423,6 +1424,7 @@ export function SpotneraDashboard({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <HelpLink />
             {userId ? <><Link href="/me" aria-label="Open profile" className="spotnera-brand-action grid h-12 w-12 place-items-center rounded-2xl text-sm font-bold transition">{displayName.slice(0, 2).toUpperCase()}</Link><div className="relative"><HeaderLogout /></div></> : <Link href="/?auth=1" className="spotnera-brand-action inline-flex min-h-10 items-center rounded-2xl px-3 text-xs font-bold">Sign in</Link>}
           </div>
         </header>

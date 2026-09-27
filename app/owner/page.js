@@ -18,6 +18,7 @@ import {
 } from "@/components/deal-time-label";
 import { HeaderLogout } from "@/components/header-logout";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
+import { HelpLink } from "@/components/help-link";
 import {
   AnalyticsForm,
   LockedFormSubmitButton,
@@ -1664,6 +1665,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <HelpLink light />
               <div className="relative"><HeaderLogout /></div>
             </div>
           </div>

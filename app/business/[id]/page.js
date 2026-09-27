@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { BusinessEventLink } from "@/components/business-event-link";
 import { BusinessProfileAnalytics } from "@/components/business-profile-analytics";
 import { BusinessProfileBottomNav } from "@/components/business-profile-bottom-nav";
+import { HelpLink } from "@/components/help-link";
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
 import { BusinessProfileMap } from "@/components/business-profile-map";
 import { BusinessOpeningHoursPanel } from "@/components/business-opening-hours";
@@ -492,6 +493,7 @@ export default async function BusinessProfilePage({ params }) {
               <p className="truncate text-sm font-bold text-white/82">Public business profile</p>
             </div>
           </Link>
+          <HelpLink />
         </header>
 
         <section className="overflow-hidden rounded-[32px] border border-white/12 bg-white/10 shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:col-span-2">

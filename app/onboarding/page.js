@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { OnboardingForm } from "@/components/onboarding-form";
+import { HelpLink } from "@/components/help-link";
 import {
   SUPPORTED_COUNTRY_NAMES,
   isSupportedCountry,
@@ -164,9 +165,7 @@ export default async function OnboardingPage() {
               <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
             </div>
           </div>
-          <div className="rounded-full border border-[#33d6a6]/25 bg-[#33d6a6]/10 px-3 py-1 text-xs font-semibold text-[#72f0cc] shadow-sm backdrop-blur">
-            Step 1 of 1
-          </div>
+          <div className="flex items-center gap-2"><HelpLink light /><div className="rounded-full border border-[#33d6a6]/25 bg-[#33d6a6]/10 px-3 py-1 text-xs font-semibold text-[#72f0cc] shadow-sm backdrop-blur">Step 1 of 1</div></div>
         </header>
 
         <section className="grid flex-1 items-end gap-8 py-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">

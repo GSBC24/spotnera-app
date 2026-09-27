@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { ProfileAccountView } from "@/components/profile-account-view";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
 import { HeaderLogout } from "@/components/header-logout";
+import { HelpLink } from "@/components/help-link";
 import { createClient } from "@/utils/supabase/server";
 import { parseTimedPreference, timedPreference } from "@/lib/notification-preferences.mjs";
 
@@ -91,5 +92,5 @@ export default async function MePage() {
   notificationPreferences.saved_business_deal_ending_soon =
     timedPreference(notificationPreferences, "ending") !== null;
 
-  return <main className="spotnera-app-shell"><section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8"><header className="spotnera-surface z-20 flex items-center gap-3 rounded-[28px] px-4 py-3"><img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" /><div><p className="spotnera-kicker text-white/55">Account</p><h1 className="mt-1 text-[1.35rem] font-semibold leading-tight sm:text-2xl">Me</h1></div><div className="relative ml-auto"><HeaderLogout /></div></header><ProfileAccountView profile={profile} userId={user.id} ownedBusinessCount={ownedBusinessCount ?? 0} notificationPreferences={notificationPreferences} notificationPreferencesLoadError={Boolean(notificationPreferencesError)} saveNotificationPreferences={saveNotificationPreferences} /><SpotneraBottomNav /></section></main>;
+  return <main className="spotnera-app-shell"><section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8"><header className="spotnera-surface z-20 flex items-center gap-3 rounded-[28px] px-4 py-3"><img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" /><div><p className="spotnera-kicker text-white/55">Account</p><h1 className="mt-1 text-[1.35rem] font-semibold leading-tight sm:text-2xl">Me</h1></div><div className="ml-auto flex items-center gap-2"><HelpLink /><div className="relative"><HeaderLogout /></div></div></header><ProfileAccountView profile={profile} userId={user.id} ownedBusinessCount={ownedBusinessCount ?? 0} notificationPreferences={notificationPreferences} notificationPreferencesLoadError={Boolean(notificationPreferencesError)} saveNotificationPreferences={saveNotificationPreferences} /><SpotneraBottomNav /></section></main>;
 }

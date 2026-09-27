@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { legalConfig } from "@/lib/legal-config";
 import { getPremiumContactEmail } from "@/lib/premium-contact.mjs";
 import { PremiumContactActions } from "@/components/premium-contact-actions";
+import { HelpLink } from "@/components/help-link";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
 
@@ -28,7 +29,7 @@ export default async function OwnerPremiumPage() {
   return (
     <main className="spotnera-owner-shell min-h-screen px-4 py-6 text-white sm:px-6">
       <div className="mx-auto w-full max-w-4xl">
-        <Link href="/owner?section=businesses" className="text-sm font-semibold text-white/65 hover:text-white">← Back to businesses</Link>
+        <div className="flex items-center justify-between gap-3"><Link href="/owner?section=businesses" className="text-sm font-semibold text-white/65 hover:text-white">← Back to businesses</Link><HelpLink /></div>
         <header className="spotnera-card mt-5 overflow-hidden rounded-[32px] border border-amber-300/20 p-6 sm:p-10">
           <p className="spotnera-kicker text-amber-200">Coming soon</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Spotnera™ Premium</h1>

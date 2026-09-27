@@ -28,6 +28,9 @@ export function SiteFooter() {
           <Link href="/terms" className="underline-offset-4 hover:text-white hover:underline">
             Terms
           </Link>
+          <Link href="/help" className="underline-offset-4 hover:text-white hover:underline">
+            Help
+          </Link>
           <PrivacySettingsLink className="underline-offset-4 hover:text-white hover:underline" />
         </nav>
       </div>
