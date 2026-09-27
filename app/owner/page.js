@@ -25,6 +25,7 @@ import {
 } from "@/components/owner-analytics";
 import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
 import { getBusinessPath } from "@/lib/business-url";
+import { canCreateBusiness, FREE_BUSINESS_LIMIT, isFreeBusinessLimitError } from "@/lib/owner-plan.mjs";
 import { PROMOTION_TYPE_VALUES } from "@/lib/promotions";
 import {
   SUPPORTED_COUNTRIES,
@@ -879,6 +880,9 @@ async function createBusiness(formData) {
 
   if (error) {
     logServerActionError("Business creation failed", error);
+    if (isFreeBusinessLimitError(error)) {
+      redirect("/owner?section=businesses&createLimit=1");
+    }
     redirectWithBusinessFormError("Unable to create business. Please try again.");
   }
 
@@ -1548,6 +1552,12 @@ export default async function OwnerDashboardPage({ searchParams }) {
     .eq("id", user.id)
     .maybeSingle();
 
+  const { data: accountPlan, error: accountPlanError } = await supabase
+    .from("owner_account_plans")
+    .select("plan")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
   const { data: businessRows, error: businessesError } = await supabase
     .from("businesses")
     .select(BUSINESS_FIELDS)
@@ -1555,6 +1565,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
     .order("created_at", { ascending: false });
 
   const businesses = businessRows ?? [];
+  const canCreateAnotherBusiness = !businessesError && !accountPlanError && canCreateBusiness(accountPlan?.plan, businesses.length);
   const businessIds = businesses.map((business) => business.id);
   let deals = [];
   let reviews = [];
@@ -1702,6 +1713,14 @@ export default async function OwnerDashboardPage({ searchParams }) {
           ))}
         </nav>
 
+        <Link href="/owner/premium" className="spotnera-surface group flex items-center justify-between gap-4 rounded-[22px] border border-amber-300/20 px-4 py-3 transition hover:border-amber-300/40 hover:bg-white/8">
+          <span>
+            <span className="block text-sm font-semibold text-amber-200">Spotnera Premium</span>
+            <span className="mt-0.5 block text-xs text-white/58">More tools for your local audience. Coming soon.</span>
+          </span>
+          <span className="shrink-0 text-sm font-bold text-amber-200 group-hover:translate-x-0.5">Explore →</span>
+        </Link>
+
         {ownerSection === "overview" ? (
           <>
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -1755,14 +1774,26 @@ export default async function OwnerDashboardPage({ searchParams }) {
               ))}
             </div> : null}
           </div>
-          {ownerSection === "businesses" ? (
+          {ownerSection === "businesses" && canCreateAnotherBusiness ? (
             <div className="mb-4 flex justify-end">
               <Link href="/owner?section=businesses&createBusiness=1" className="spotnera-primary-action inline-flex min-h-11 items-center justify-center px-4 text-sm">
                 + Create business
               </Link>
             </div>
           ) : null}
-          {ownerSection === "businesses" && showCreateBusiness ? (
+          {ownerSection === "businesses" && !canCreateAnotherBusiness && !businessesError && !accountPlanError ? (
+            <section className="mb-4 rounded-[24px] border border-amber-300/25 bg-amber-300/8 p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-200">Free plan</p>
+              <h3 className="mt-2 text-xl font-semibold">You&apos;ve reached your Free plan limit</h3>
+              <p className="mt-2 text-sm text-white/70">Your Free account supports up to {FREE_BUSINESS_LIMIT} businesses. You can continue to manage your existing businesses.</p>
+              <p className="mt-2 text-sm text-white/70">Need more businesses or advanced tools? Explore Spotnera Premium.</p>
+              <Link href="/owner/premium" className="spotnera-primary-action mt-4 inline-flex min-h-11 items-center justify-center px-4 text-sm">Explore Premium</Link>
+            </section>
+          ) : null}
+          {ownerSection === "businesses" && accountPlanError ? (
+            <p className="mb-4 rounded-2xl border border-amber-300/25 bg-amber-300/8 p-4 text-sm text-white/75">Business creation is temporarily unavailable. Please try again shortly.</p>
+          ) : null}
+          {ownerSection === "businesses" && showCreateBusiness && canCreateAnotherBusiness ? (
             <section className="mb-4 min-w-0 rounded-[30px] border border-white/10 bg-white/8 p-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-bold">Create business profile</h2>

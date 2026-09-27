@@ -70,7 +70,7 @@ export default function TermsPage() {
         </header>
 
         {sections.map(([title, body]) => (
-          <section key={title} className="spotnera-card rounded-[24px] p-5">
+          <section key={title} id={title === "Contact" ? "contact" : undefined} className="spotnera-card rounded-[24px] p-5">
             <h2 className="text-xl font-semibold">{title}</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">{body}</p>
           </section>
