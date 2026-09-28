@@ -146,7 +146,7 @@ export function NotificationPreferences({
         </p>
         <h2 className="mt-1 text-xl font-semibold">Notification preferences</h2>
         <p className="mt-2 text-sm leading-6 text-white/62">
-          Choose future notifications about businesses you explicitly saved. These settings do not enable delivery or request browser permission by themselves.
+          Choose notifications about businesses you explicitly saved. Push notifications also require browser permission.
         </p>
       </div>
 

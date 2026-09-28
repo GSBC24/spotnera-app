@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getVapidDetails, sendWebPush } from "@/lib/server/web-push";
+import { processCustomerEmailBatch } from "@/lib/server/customer-email.mjs";
 import { discoverTimedOccurrences } from "@/lib/server/timed-discovery.mjs";
 import { isTimedDeliveryDue, resolveTimedOccurrences, sameTimestampInstant, timedDeliveryTiming,
   TIMED_START, TIMED_END } from "@/lib/server/timed-notifications.mjs";
@@ -375,6 +376,19 @@ export async function POST(request) {
   const result = { processed: outcomes.length, sent: 0, retried: 0, removed: 0, stale: 0, skipped: 0, failed: 0, uncertain: 0 };
   for (const outcome of outcomes) {
     if (Object.hasOwn(result, outcome)) result[outcome] += 1;
+  }
+
+  if (process.env.ENABLE_EMAIL_NOTIFICATIONS === "true") {
+    try {
+      result.email = await processCustomerEmailBatch(admin, {
+        apiKey: process.env.RESEND_API_KEY,
+        startAt: process.env.EMAIL_NOTIFICATIONS_START_AT,
+      });
+    } catch {
+      // Email errors must never roll back or hide successful push processing.
+      console.error("[Spotnera notification worker] Customer email processing failed");
+      result.email = { error: "Email processing unavailable." };
+    }
   }
 
   return NextResponse.json(result);
