@@ -466,8 +466,10 @@ export default async function BusinessProfilePage({ params }) {
     slug: business.slug,
     name: business.name,
     category: business.category,
+    address: business.address,
     city: business.city,
     country: business.country,
+    is_active: business.is_active,
   };
 
   return (
