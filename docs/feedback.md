@@ -1,6 +1,6 @@
-# Phase 8: small business pilot
+# Feedback
 
-Run this with approximately 10 real businesses. Use the current production experience on a phone when possible. Record observations under tester codes (B01–B10, C01–C05); do not put customer contact details or private account information in this document.
+Use this process while testing with the first approximately 10 real businesses, and reuse it for future feedback sessions. Owners can also submit their answers directly at `/feedback`. Use the current production experience on a phone when possible. Record observations under tester codes (B01–B10, C01–C05); do not put customer contact details or private account information in this document.
 
 ## Before each session
 
@@ -57,14 +57,14 @@ Record anything they called unnecessarily complicated: ____
 2. How easy was it to create your business? **Very easy / Easy / Difficult / Very difficult**
 3. How easy was it to create a Deal? **Very easy / Easy / Difficult / Very difficult**
 4. Was anything confusing?
-5. Could you understand when your Deal would be visible and available? **Yes / No / Not sure**
+5. Could you understand when your Deal would be visible or available? **Yes / No / Not sure**
 6. Could you easily find your business, Deals, Analytics, and Reviews? **Yes / No / Partly**
 7. What was the most useful part of Spotnera for your business?
 8. Is there anything you expected Spotnera to do that you could not find?
 9. Would you use Spotnera again to publish an offer? **Yes / Maybe / No**
-10. What is the **one** thing you would improve first?
+10. What is the ONE thing you would improve first?
 
-## Customer mini-pilot
+## Customer feedback session
 
 Use a customer who has not been shown the owner interface. Start from the Map. Ask them to:
 
@@ -111,10 +111,10 @@ Write down observed problems even if no feature is requested. Do not promise a f
 
 After several sessions, group repeated observations. For each candidate ask: Does it solve a real problem? Make Spotnera easier? Provide clear business or customer value? Reuse existing architecture? Add significant complexity? Is there a simpler solution to the underlying problem?
 
-## Simple pilot success check
+## Simple feedback check
 
 - **Business:** Can owners explain Spotnera, create and edit their business and Deal, understand availability, and find their customer view, Analytics, Reviews, and Help?
 - **Customer:** Can customers find a business and Deal, understand View deals versus Business profile, save it, find hours and Directions, read and write a review, and share it?
 - **Product:** Where do several people hesitate, ask for help, or request the same improvement? Which functions do they ignore or value immediately?
 
-Use completion, time, and the observed behavior above. Do not turn this small pilot into a scoring exercise.
+Use completion, time, and the observed behavior above. Keep the process simple; no scoring system is needed.

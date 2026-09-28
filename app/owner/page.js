@@ -1668,6 +1668,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <Link href="/feedback" className="inline-flex min-h-11 items-center rounded-2xl border border-white/20 px-3 text-sm font-semibold text-white/80 hover:border-[#72f0cc]/50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">Give feedback</Link>
               <HelpLink light />
               <div className="relative"><HeaderLogout /></div>
             </div>
