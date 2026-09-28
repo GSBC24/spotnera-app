@@ -10,6 +10,7 @@ export function SupportContact() {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState("idle");
   const [copyFeedback, setCopyFeedback] = useState("");
@@ -19,7 +20,7 @@ export function SupportContact() {
     if (submissionLockRef.current || status === "success" || !formRef.current?.reportValidity()) return;
     submissionLockRef.current = true;
     setStatus("sending");
-    const sent = await submitSupportForm({ category, subject, message, email, website });
+    const sent = await submitSupportForm({ category, subject, message, email, phone, website });
     if (sent) {
       setStatus("success");
       setSubject("");
@@ -64,6 +65,11 @@ export function SupportContact() {
       <label className="grid gap-1.5 text-sm font-semibold text-white/80">Your email
         <input type="email" required autoComplete="email" maxLength={254} value={email}
           onChange={(event) => setEmail(event.target.value)}
+          className="min-h-11 rounded-2xl border border-white/16 bg-black/25 px-3 text-white outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]" />
+      </label>
+      <label className="grid gap-1.5 text-sm font-semibold text-white/80">Phone number <span className="text-xs font-normal text-white/50">Optional</span>
+        <input type="tel" autoComplete="tel" maxLength={40} value={phone}
+          onChange={(event) => setPhone(event.target.value)} placeholder="+47 123 45 678"
           className="min-h-11 rounded-2xl border border-white/16 bg-black/25 px-3 text-white outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]" />
       </label>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">

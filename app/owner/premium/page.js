@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { legalConfig } from "@/lib/legal-config";
-import { getPremiumContactEmail } from "@/lib/premium-contact.mjs";
+import { SUPPORT_EMAIL } from "@/lib/support-contact.mjs";
 import { PremiumContactActions } from "@/components/premium-contact-actions";
+import { PremiumInquiryForm } from "@/components/premium-inquiry-form";
 import { HelpLink } from "@/components/help-link";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
@@ -20,11 +20,6 @@ export default async function OwnerPremiumPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/?auth=1&next=/owner/premium");
-
-  const contactEmail = getPremiumContactEmail(
-    process.env.NEXT_PUBLIC_SPOTNERA_CONTACT_EMAIL,
-    legalConfig.legalContactEmail,
-  );
 
   return (
     <main className="spotnera-owner-shell min-h-screen px-4 py-6 text-white sm:px-6">
@@ -52,14 +47,10 @@ export default async function OwnerPremiumPage() {
         <section className="spotnera-card mt-5 rounded-[28px] border border-amber-300/20 p-6">
           <h2 className="text-xl font-semibold">Interested in Premium?</h2>
           <p className="mt-2 text-sm text-white/65">Get in touch with Spotnera about your business needs.</p>
-          {contactEmail ? (
-            <PremiumContactActions email={contactEmail} />
-          ) : (
-            <>
-              <a href="/terms#contact" className="spotnera-primary-action mt-4 inline-flex min-h-11 items-center justify-center px-5 text-sm">Contact Spotnera</a>
-              <p className="mt-3 text-xs text-white/50">Contact email is being set up. See our contact information in the Terms of Service.</p>
-            </>
-          )}
+          <PremiumInquiryForm />
+          <div className="mt-5 border-t border-white/10 pt-1">
+            <PremiumContactActions email={SUPPORT_EMAIL} />
+          </div>
         </section>
       </div>
     </main>
