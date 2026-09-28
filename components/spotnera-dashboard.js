@@ -46,36 +46,6 @@ const STAR_PATH =
 const LOCATION_PATH =
   "M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z";
 
-const SOCIAL_PROFILES = [
-  {
-    field: "instagram_url",
-    label: "Instagram",
-    hosts: ["instagram.com", "www.instagram.com"],
-    buildUrl: (handle) => `https://www.instagram.com/${handle}`,
-    handlePattern: /^[A-Za-z0-9._]{1,30}$/,
-  },
-  {
-    field: "facebook_url",
-    label: "Facebook",
-    hosts: ["facebook.com", "www.facebook.com", "fb.com", "www.fb.com"],
-    buildUrl: (handle) => `https://www.facebook.com/${handle}`,
-    handlePattern: /^[A-Za-z0-9.]{3,80}$/,
-  },
-  {
-    field: "tiktok_url",
-    label: "TikTok",
-    hosts: ["tiktok.com", "www.tiktok.com"],
-    buildUrl: (handle) => `https://www.tiktok.com/@${handle}`,
-    handlePattern: /^[A-Za-z0-9._]{2,24}$/,
-  },
-  {
-    field: "snapchat_url",
-    label: "Snapchat",
-    hosts: ["snapchat.com", "www.snapchat.com"],
-    buildUrl: (handle) => `https://www.snapchat.com/add/${handle}`,
-    handlePattern: /^[A-Za-z0-9._-]{3,30}$/,
-  },
-];
 
 function Icon({ path }) {
   return (
@@ -142,7 +112,7 @@ function MapBusinessDeals({ business }) {
           <p className="mt-0.5 break-words text-xs text-[#72f0cc]">{getDealAvailabilityLabel(deal)}</p>
         </div>
       ))}
-      {deals.length > 2 ? <p className="mt-2 text-xs text-white/54">More deals on the profile</p> : null}
+      {deals.length > 2 ? <p className="mt-2 text-xs text-white/54">View deals to see all offers</p> : null}
     </div>
   );
 }
@@ -178,11 +148,29 @@ function MapUpcomingDeals({ business, onOpen }) {
             <span className="mt-1 block break-words text-xs font-semibold text-[#72f0cc]">
               {getDealAvailabilityLabel(deal)}
             </span>
+            <span className="mt-2 block text-xs font-bold text-white">View deal</span>
           </button>
         ))}
       </div>
     </section>
   );
+}
+
+function MapActiveDeals({ business, onOpen }) {
+  const deals = getDiscoverableDeals(business);
+  return <section className="mt-4" aria-labelledby="map-active-deals-title">
+    <h3 id="map-active-deals-title" className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Active deals</h3>
+    {deals.length ? <div className="mt-2 grid gap-2">
+      {deals.map((deal) => <button key={deal.id} type="button" aria-haspopup="dialog"
+        onClick={() => onOpen({ business, deal })}
+        className="min-w-0 rounded-xl border border-white/10 bg-black/20 p-3 text-left transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
+        <span className="block break-words text-sm font-semibold text-white">{deal.title}</span>
+        {deal.description ? <span className="mt-1 block whitespace-pre-line break-words text-xs leading-5 text-white/65">{deal.description}</span> : null}
+        <span className="mt-1 block text-xs font-semibold text-[#72f0cc]">{getDealAvailabilityLabel(deal)}</span>
+        <span className="mt-2 block text-xs font-bold text-white">View deal</span>
+      </button>)}
+    </div> : <p className="mt-2 text-sm text-white/60">No active deals right now.</p>}
+  </section>;
 }
 
 function getActiveDeal(deals = []) {
@@ -226,116 +214,6 @@ function getUniqueDisplayValues(values) {
   );
 }
 
-function getBusinessPhone(business) {
-  return getDisplayValue(business.phone);
-}
-
-function getBusinessEmail(business) {
-  const email = getDisplayValue(business.email);
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return null;
-  }
-
-  return email;
-}
-
-function getPhoneHref(phone) {
-  const normalizedPhone = phone.replace(/[^\d+]/g, "");
-  return normalizedPhone ? `tel:${normalizedPhone}` : null;
-}
-
-function getEmailHref(email) {
-  return `mailto:${email}`;
-}
-
-function getWebsiteUrl(value) {
-  const rawValue = getDisplayValue(value);
-
-  if (!rawValue) {
-    return null;
-  }
-
-  const urlCandidate = /^[a-z][a-z\d+.-]*:/i.test(rawValue)
-    ? rawValue
-    : `https://${rawValue}`;
-
-  try {
-    const url = new URL(urlCandidate);
-
-    if (!["http:", "https:"].includes(url.protocol) || !url.hostname.includes(".")) {
-      return null;
-    }
-
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
-function getWebsiteDisplayLabel(websiteUrl) {
-  try {
-    const url = new URL(websiteUrl);
-    const path = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
-    return `${url.hostname}${path}`;
-  } catch {
-    return websiteUrl;
-  }
-}
-
-function getSocialUrl(value, profile) {
-  const rawValue = getDisplayValue(value);
-
-  if (!rawValue) {
-    return null;
-  }
-
-  const lowerRawValue = rawValue.toLowerCase();
-  const schemelessUrl = profile.hosts.some(
-    (host) => lowerRawValue === host || lowerRawValue.startsWith(`${host}/`),
-  );
-  const urlCandidate = schemelessUrl ? `https://${rawValue}` : rawValue;
-
-  try {
-    const url = new URL(urlCandidate);
-
-    if (
-      !["http:", "https:"].includes(url.protocol) ||
-      !profile.hosts.includes(url.hostname.toLowerCase())
-    ) {
-      return null;
-    }
-
-    if (!url.pathname.split("/").filter(Boolean).length) {
-      return null;
-    }
-
-    return url.toString();
-  } catch {
-    const handle = rawValue
-      .replace(/^@+/, "")
-      .replace(/^\/+/, "")
-      .split("/")
-      .filter(Boolean)[0];
-
-    if (!handle || !profile.handlePattern.test(handle)) {
-      return null;
-    }
-
-    return profile.buildUrl(handle);
-  }
-}
-
-function getBusinessSocialLinks(business) {
-  return SOCIAL_PROFILES.map((profile) => ({
-    label: profile.label,
-    href: getSocialUrl(business[profile.field], profile),
-  })).filter((profile) => profile.href);
-}
-
-function getReviewLabel(reviewCount) {
-  return `${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`;
-}
 
 function getCountLabel(count, singularLabel, pluralLabel = `${singularLabel}s`) {
   return `${count} ${count === 1 ? singularLabel : pluralLabel}`;
@@ -511,17 +389,6 @@ function RatingPill({ averageRating, reviewCount }) {
   );
 }
 
-function RatingLine({ averageRating, reviewCount }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/76">
-      <span className="text-[#ffd166]">
-        <Icon path={STAR_PATH} />
-      </span>
-      <span>{formatRating(averageRating)}</span>
-      <span className="text-white/60">({getReviewLabel(reviewCount)})</span>
-    </span>
-  );
-}
 
 function BusinessAddress({ business, compact = false }) {
   const addressLines = getBusinessAddressLines(business);
@@ -550,107 +417,6 @@ function BusinessAddress({ business, compact = false }) {
   );
 }
 
-function ContactActions({ business, compact = false }) {
-  const phone = getBusinessPhone(business);
-  const email = getBusinessEmail(business);
-  const websiteUrl = getWebsiteUrl(business.website_url);
-  const phoneHref = phone ? getPhoneHref(phone) : null;
-  const actions = [
-    phone && phoneHref
-      ? {
-          label: compact ? "Call" : `Phone: ${phone}`,
-          href: phoneHref,
-          external: false,
-          method: "call",
-        }
-      : null,
-    email
-      ? {
-          label: compact ? "Email" : `Email: ${email}`,
-          href: getEmailHref(email),
-          external: false,
-          method: "email",
-        }
-      : null,
-    websiteUrl
-      ? {
-          label: compact ? "Website" : `Website: ${getWebsiteDisplayLabel(websiteUrl)}`,
-          href: websiteUrl,
-          external: true,
-          method: "website",
-        }
-      : null,
-  ].filter(Boolean);
-
-  if (!actions.length) {
-    return null;
-  }
-
-  return (
-    <div className={`flex flex-wrap gap-2 ${compact ? "mt-3" : "mt-2"}`}>
-      {actions.map((action) => (
-        <a
-          key={action.href}
-          href={action.href}
-          target={action.external ? "_blank" : undefined}
-          rel={action.external ? "noopener noreferrer" : undefined}
-          onClick={() => {
-            trackEvent(`contact_${action.method}`, {
-              ...getBusinessEventParameters(business),
-              contact_method: action.method,
-            });
-            recordBusinessEvent({
-              businessId: business.id,
-              eventType: `${action.method}_click`,
-              source: "map",
-            });
-          }}
-          className={`max-w-full break-all rounded-full border border-white/10 bg-white/10 font-bold text-white/76 transition hover:bg-white/16 hover:text-white ${
-            compact ? "px-3 py-1.5 text-xs" : "px-3 py-2 text-sm"
-          }`}
-        >
-          {action.label}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-function SocialLinks({ business, compact = false }) {
-  const links = getBusinessSocialLinks(business);
-
-  if (!links.length) {
-    return null;
-  }
-
-  return (
-    <div className={`flex flex-wrap items-center gap-2 ${compact ? "mt-2" : "mt-2"}`}>
-      {links.map((link) => (
-        <a
-          key={link.label}
-          href={link.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => {
-            trackEvent("social_click", {
-              ...getBusinessEventParameters(business),
-              social_platform: link.label.toLowerCase(),
-            });
-            recordBusinessEvent({
-              businessId: business.id,
-              eventType: "social_click",
-            });
-          }}
-          className={`rounded-full border border-white/10 bg-white/8 font-bold text-white/64 transition hover:bg-white/14 hover:text-white ${
-            compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-2 text-sm"
-          }`}
-        >
-          {link.label}
-        </a>
-      ))}
-    </div>
-  );
-}
 
 function CategoryDot({ category, className = "h-2.5 w-2.5" }) {
   return (
@@ -900,8 +666,6 @@ export function SpotneraDashboard({
   const [pendingNotificationBusinessId, setPendingNotificationBusinessId] = useState(null);
   const notificationWriteRef = useRef(null);
   const [notificationToggleError, setNotificationToggleError] = useState(null);
-  const [reviewDrafts, setReviewDrafts] = useState({});
-  const [isSavingReview, setIsSavingReview] = useState(false);
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState(
@@ -1186,15 +950,6 @@ export function SpotneraDashboard({
     ],
   );
 
-  const currentUserReview = selectedBusiness?.reviews.find(
-    (review) => review.user_id === userId,
-  );
-  const selectedReviewDraft = selectedBusiness
-    ? reviewDrafts[selectedBusiness.id]
-    : null;
-  const activeReviewRating = selectedReviewDraft?.rating ?? currentUserReview?.rating ?? 5;
-  const activeReviewComment =
-    selectedReviewDraft?.comment ?? currentUserReview?.comment ?? "";
 
   const updateBusiness = useCallback((businessId, updater) => {
     setLocalBusinesses((currentBusinesses) =>
@@ -1287,79 +1042,6 @@ export function SpotneraDashboard({
     }
   }, [pendingFavoriteId, supabase, updateBusiness, userId]);
 
-  const handleSubmitReview = useCallback(
-    async (event) => {
-      event.preventDefault();
-
-      if (!userId) {
-        event.preventDefault();
-        if (selectedBusiness) requestAuth(getBusinessPath(selectedBusiness));
-        return;
-      }
-      if (!selectedBusiness || isSavingReview) {
-        return;
-      }
-
-      setDashboardError(null);
-      setIsSavingReview(true);
-
-      const payload = {
-        business_id: selectedBusiness.id,
-        user_id: userId,
-        rating: activeReviewRating,
-        comment: activeReviewComment.trim() || null,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { data, error } = await supabase
-        .from("reviews")
-        .upsert(payload, { onConflict: "business_id,user_id" })
-        .select("id, business_id, user_id, rating, comment, created_at, updated_at")
-        .single();
-
-      if (error) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Review save failed", error);
-        }
-        setDashboardError("Unable to save review.");
-        setIsSavingReview(false);
-        return;
-      }
-
-      updateBusiness(selectedBusiness.id, (business) => {
-        const reviews = business.reviews ?? [];
-        const nextReviews = reviews.some((review) => review.user_id === userId)
-          ? reviews.map((review) => (review.user_id === userId ? data : review))
-          : [data, ...reviews];
-
-        return {
-          ...business,
-          reviews: nextReviews,
-        };
-      });
-      trackEvent("review_submit", {
-        ...getBusinessEventParameters(selectedBusiness),
-        rating: activeReviewRating,
-      });
-      setReviewDrafts((currentDrafts) => {
-        const nextDrafts = { ...currentDrafts };
-        delete nextDrafts[selectedBusiness.id];
-        return nextDrafts;
-      });
-
-      setIsSavingReview(false);
-    },
-    [
-      activeReviewComment,
-      activeReviewRating,
-      isSavingReview,
-      requestAuth,
-      selectedBusiness,
-      supabase,
-      updateBusiness,
-      userId,
-    ],
-  );
 
   const discoveryDeals = useMemo(
     () => partitionDiscoveryDeals(mappedBusinesses, userId, undefined, localProfile.interests ?? []),
@@ -1599,7 +1281,7 @@ export function SpotneraDashboard({
             >
               <button
                 type="button"
-                aria-label="Close business details"
+                aria-label="Close selected business"
                 onClick={(event) => {
                   event.stopPropagation();
                   closeSelectedBusinessUI();
@@ -1637,19 +1319,17 @@ export function SpotneraDashboard({
                   type="button"
                   onClick={() => {
                     setIsDetailOpen(true);
-                    trackEvent("view_business", {
-                      ...getBusinessEventParameters(selectedBusiness),
-                    });
                   }}
                   className="spotnera-brand-action inline-flex min-h-11 items-center rounded-xl px-3 text-xs font-bold transition"
                 >
-                  View details
+                  View deals
                 </button>
                 <Link
                   href={getBusinessPath(selectedBusiness)}
+                  onClick={() => trackEvent("view_business", getBusinessEventParameters(selectedBusiness))}
                   className="inline-flex min-h-11 items-center rounded-xl border border-white/10 bg-white/10 px-3 text-center text-xs font-bold text-white/78 transition hover:bg-white/16"
                 >
-                  View profile
+                  Business profile
                 </Link>
               </div>
               <BusinessLocationActions key={selectedBusiness.id} business={selectedBusiness} className="mt-2" />
@@ -1681,12 +1361,12 @@ export function SpotneraDashboard({
                     id="selected-business-title"
                     className="mt-2 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]"
                   >
-                    {selectedBusiness.name}
+                    Deals from {selectedBusiness.name}
                   </h2>
                 </div>
                 <button
                   type="button"
-                  aria-label="Close business details"
+                  aria-label="Close deals"
                   onClick={(event) => {
                     event.stopPropagation();
                     closeSelectedBusinessUI();
@@ -1697,162 +1377,9 @@ export function SpotneraDashboard({
                 </button>
               </div>
 
-              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Business hours</p>
-                <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-1" />
-              </div>
-
-              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-                  Active deal
-                </p>
-                <p className="mt-1 text-base font-semibold text-white">
-                  {getActiveDeal(selectedBusiness.deals)?.title ?? "No active deal"}
-                </p>
-                {getActiveDeal(selectedBusiness.deals) ? (
-                  <p className="mt-1 text-xs font-bold text-[#72f0cc]">
-                    {getDealAvailabilityLabel(getActiveDeal(selectedBusiness.deals))}
-                  </p>
-                ) : null}
-              </div>
-
+              <p className="mt-3 text-sm text-white/66">Select a deal to see its details and calendar options.</p>
+              <MapActiveDeals business={selectedBusiness} onOpen={(item) => openDealDetails(item, "map")} />
               <MapUpcomingDeals business={selectedBusiness} onOpen={(item) => openDealDetails(item, "map")} />
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <RatingLine
-                  averageRating={selectedBusiness.averageRating}
-                  reviewCount={selectedBusiness.reviewCount}
-                />
-                <span className="rounded-full border border-white/12 bg-black/24 px-3 py-1.5 text-xs font-semibold text-white/66">
-                  {getDealStatusMeta(selectedBusiness).label}
-                </span>
-                <span className="rounded-full border border-white/12 bg-black/24 px-3 py-1.5 text-xs font-semibold text-white/66">
-                  {selectedBusiness.is_active ? "Public listing" : "Hidden"}
-                </span>
-              </div>
-
-              {selectedBusiness.description ? (
-                <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-                    About
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-white/62">
-                    {selectedBusiness.description}
-                  </p>
-                </div>
-              ) : null}
-
-              {getBusinessAddressLines(selectedBusiness).length ? (
-                <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-                    Location
-                  </p>
-                  <BusinessAddress business={selectedBusiness} />
-                  <BusinessLocationActions key={selectedBusiness.id} business={selectedBusiness} className="mt-3" />
-                </div>
-              ) : null}
-
-              {getBusinessPhone(selectedBusiness) ||
-              getBusinessEmail(selectedBusiness) ||
-              getWebsiteUrl(selectedBusiness.website_url) ? (
-                <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-                    Contact
-                  </p>
-                  <ContactActions business={selectedBusiness} />
-                </div>
-              ) : null}
-
-              {getBusinessSocialLinks(selectedBusiness).length ? (
-                <div className="mt-3 rounded-[24px] border border-white/10 bg-white/8 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-                    Social media
-                  </p>
-                  <SocialLinks business={selectedBusiness} />
-                </div>
-              ) : null}
-
-              <div className="mt-4 flex items-center gap-3">
-                <FavoriteButton
-                  isFavorite={selectedBusiness.isFavorite}
-                  disabled={pendingFavoriteId === selectedBusiness.id}
-                  onClick={() => handleToggleFavorite(selectedBusiness)}
-                />
-                <span className="text-sm font-semibold text-white/70">
-                  {selectedBusiness.isFavorite ? "Saved" : "Save business"}
-                </span>
-                {selectedBusiness.owner_id === userId ? (
-                  <Link
-                    href="/owner"
-                    className="ml-auto rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-xs font-bold text-white/78 transition hover:bg-white/14"
-                  >
-                    Edit
-                  </Link>
-                ) : null}
-              </div>
-
-              <form onSubmit={handleSubmitReview} className="mt-4 min-w-0 border-t border-white/10 pt-4">
-                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex max-w-full flex-wrap gap-1" aria-label="Rating">
-                    {[1, 2, 3, 4, 5].map((rating) => (
-                      <button
-                        key={rating}
-                        type="button"
-                        aria-label={`${rating} star rating`}
-                        onClick={() =>
-                          setReviewDrafts((currentDrafts) => ({
-                            ...currentDrafts,
-                            [selectedBusiness.id]: {
-                              rating,
-                              comment: activeReviewComment,
-                            },
-                          }))
-                        }
-                        className={`grid h-9 w-9 place-items-center rounded-xl text-lg transition ${
-                          rating <= activeReviewRating
-                            ? "bg-[#ffd166]/18 text-[#ffd166]"
-                            : "bg-white/8 text-white/34 hover:text-white/70"
-                        }`}
-                      >
-                        <Icon path={STAR_PATH} />
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={isSavingReview}
-                    className="spotnera-brand-action w-full rounded-2xl px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                  >
-                    {isSavingReview
-                      ? "Saving"
-                      : currentUserReview
-                        ? "Update review"
-                        : "Review"}
-                  </button>
-                </div>
-                <Link
-                  href={getBusinessPath(selectedBusiness)}
-                  className="mt-3 inline-flex min-h-10 items-center rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/78 transition hover:bg-white/14"
-                >
-                  View public profile
-                </Link>
-                <textarea
-                  value={activeReviewComment}
-                  onChange={(event) =>
-                    setReviewDrafts((currentDrafts) => ({
-                      ...currentDrafts,
-                      [selectedBusiness.id]: {
-                        rating: activeReviewRating,
-                        comment: event.target.value,
-                      },
-                    }))
-                  }
-                  maxLength={1000}
-                  rows={3}
-                  placeholder="Share a quick note"
-                  className="mt-3 block w-full min-w-0 max-w-full resize-none rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-white/52 focus:border-white/28"
-                />
-              </form>
             </motion.section>
           </div>
         ) : null}

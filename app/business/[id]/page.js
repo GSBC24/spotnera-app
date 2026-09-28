@@ -7,9 +7,10 @@ import { BusinessProfileBottomNav } from "@/components/business-profile-bottom-n
 import { HelpLink } from "@/components/help-link";
 import { BusinessProfileFavorite } from "@/components/business-profile-favorite";
 import { BusinessProfileMap } from "@/components/business-profile-map";
-import { BusinessOpeningHoursPanel } from "@/components/business-opening-hours";
+import { BusinessOpeningHoursPanel, BusinessOpeningStatus } from "@/components/business-opening-hours";
 import { BusinessLocationActions } from "@/components/business-location-actions";
 import { BusinessProfileDeals } from "@/components/business-profile-deals";
+import { BusinessProfileReviews } from "@/components/business-profile-reviews";
 import { BusinessShareActions } from "@/components/business-share-actions";
 import { getBusinessAddressLines } from "@/lib/business-address.mjs";
 import { getBusinessPath, getBusinessUrl } from "@/lib/business-url";
@@ -68,6 +69,7 @@ const DEAL_SELECT = `
 const REVIEW_SELECT = `
   id,
   business_id,
+  user_id,
   rating,
   comment,
   created_at,
@@ -343,6 +345,7 @@ async function getPublicBusiness(identifier) {
       ...business,
       deals: deals ?? [],
       reviews: reviews ?? [],
+      currentUserId: user?.id ?? null,
       isFavorite,
       isOwner: Boolean(user && business.owner_id === user.id),
       isAuthenticated: Boolean(user),
@@ -455,6 +458,11 @@ export default async function BusinessProfilePage({ params }) {
   }
 
   const reviews = business.reviews ?? [];
+  const ownReview = business.isAuthenticated
+    ? reviews.find((review) => review.user_id === business.currentUserId) ?? null : null;
+  const publicReviews = reviews.map(({ id, rating, comment, created_at }) => ({
+    id, rating, comment, created_at,
+  }));
   const averageRating = getAverageRating(reviews);
   const contactActions = getContactActions(business);
   const socialLinks = getSocialLinks(business);
@@ -523,18 +531,23 @@ export default async function BusinessProfilePage({ params }) {
                   <h1 className="mt-2 max-w-3xl text-3xl font-semibold leading-tight tracking-normal [overflow-wrap:anywhere] sm:text-5xl sm:leading-[1.02] lg:text-6xl">
                     {business.name}
                   </h1>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <BusinessOpeningStatus hours={business.business_opening_hours} />
+                    <span className="rounded-full border border-[#33d6a6]/30 bg-[#33d6a6]/12 px-3 py-1 text-xs font-semibold text-[#72f0cc]">Public listing</span>
+                  </div>
                   <div className="mt-4 flex min-w-0 flex-col items-start gap-2 text-sm font-semibold text-white/72 sm:mt-3 sm:flex-row sm:flex-wrap sm:items-center">
                     {locationLine ? <span className="[overflow-wrap:anywhere]">{locationLine}</span> : null}
                     {locationLine ? <span className="hidden text-white/32 sm:inline">/</span> : null}
-                    <span className="[overflow-wrap:anywhere]">
+                    <a href="#reviews" className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] [overflow-wrap:anywhere]">
                       {formatRating(averageRating)} rating
                       <span className="text-white/44"> ({getReviewLabel(reviewCount)})</span>
-                    </span>
+                    </a>
                   </div>
                 </div>
                 <div className="flex min-w-0 flex-col gap-2 sm:items-end">
                   <BusinessShareActions
                     businessId={business.id}
+                    businessSlug={business.slug}
                     businessCategory={business.category}
                     city={business.city}
                     country={business.country}
@@ -649,41 +662,12 @@ export default async function BusinessProfilePage({ params }) {
             <BusinessLocationActions business={business} className="mt-3" source="business_profile" />
           </section>
 
-          <section className="spotnera-surface rounded-[30px] p-4 sm:p-5">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="spotnera-kicker text-white/42">Reviews</p>
-                <h2 className="mt-2 text-3xl font-semibold">{formatRating(averageRating)}</h2>
-              </div>
-              <p className="text-sm font-semibold text-white/56">{getReviewLabel(reviewCount)}</p>
-            </div>
-            <div className="mt-4 grid gap-3">
-              {reviews.length ? (
-                reviews.slice(0, 8).map((review) => (
-                  <article
-                    key={review.id}
-                    className="rounded-[24px] border border-white/10 bg-white/8 p-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-bold text-white">Customer review</p>
-                      <span className="rounded-full bg-[#ffd166]/18 px-2.5 py-1 text-xs font-black text-[#ffd166]">
-                        {review.rating}.0
-                      </span>
-                    </div>
-                    {review.comment ? (
-                      <p className="mt-2 text-sm leading-6 text-white/62">{review.comment}</p>
-                    ) : (
-                      <p className="mt-2 text-sm text-white/42">No comment left.</p>
-                    )}
-                  </article>
-                ))
-              ) : (
-                <p className="rounded-[24px] border border-white/10 bg-white/8 p-4 text-sm font-semibold text-white/58">
-                  No reviews yet.
-                </p>
-              )}
-            </div>
-          </section>
+          <BusinessProfileReviews business={{ id: business.id, slug: business.slug,
+            category: business.category, city: business.city, country: business.country }}
+            initialReviews={publicReviews}
+            initialOwnReview={ownReview ? { id: ownReview.id, rating: ownReview.rating,
+              comment: ownReview.comment, created_at: ownReview.created_at } : null}
+            isAuthenticated={business.isAuthenticated} />
         </aside>
       </section>
       <BusinessProfileBottomNav isAuthenticated={business.isAuthenticated} />

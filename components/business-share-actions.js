@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { recordBusinessEvent } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
+import { getBusinessUrl } from "@/lib/business-url";
 
-export function BusinessShareActions({ businessId, businessCategory, city, country, title }) {
+export function BusinessShareActions({ businessId, businessSlug, businessCategory, city, country, title }) {
   const [message, setMessage] = useState(null);
-  const shareUrl = typeof window === "undefined" ? "" : window.location.href;
+  const shareUrl = getBusinessUrl({ id: businessId, slug: businessSlug });
   const analyticsParameters = {
     business_id: businessId,
     business_category: businessCategory,
@@ -77,7 +78,7 @@ export function BusinessShareActions({ businessId, businessCategory, city, count
         onClick={shareBusiness}
         className="spotnera-primary-action inline-flex min-h-12 items-center justify-center px-5 text-sm"
       >
-        Share
+        Share business
       </button>
       <button
         type="button"
