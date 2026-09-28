@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
+import { ownerSectionHref } from "@/lib/owner-navigation.mjs";
 
-export function DeleteBusinessButton({ businessId, businessName, businessCategory }) {
+export function DeleteBusinessButton({ businessId, businessName, businessCategory,
+  section = "businesses" }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
@@ -34,7 +36,7 @@ export function DeleteBusinessButton({ businessId, businessName, businessCategor
         business_id: businessId,
         business_category: businessCategory,
       });
-      router.push("/owner?businessDeleted=1");
+      router.push(ownerSectionHref(section, { businessDeleted: 1 }), { scroll: false });
       router.refresh();
     } catch (deleteError) {
       setError(deleteError.message || "Unable to delete this business.");

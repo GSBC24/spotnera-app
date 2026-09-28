@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
@@ -27,6 +28,7 @@ import {
 import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
 import { getBusinessPath } from "@/lib/business-url";
 import { canCreateBusiness, FREE_BUSINESS_LIMIT, isFreeBusinessLimitError } from "@/lib/owner-plan.mjs";
+import { OWNER_SECTIONS, ownerSectionHref } from "@/lib/owner-navigation.mjs";
 import { PROMOTION_TYPE_VALUES } from "@/lib/promotions";
 import {
   SUPPORTED_COUNTRIES,
@@ -110,7 +112,6 @@ const ANALYTICS_RANGES = [
   { key: "all", label: "All time" },
 ];
 
-const OWNER_SECTIONS = ["overview", "businesses", "deals", "analytics", "reviews"];
 
 const BUSINESS_ANALYTICS_METRICS = [
   {
@@ -827,8 +828,8 @@ async function getSignedInUser() {
   return { supabase, user };
 }
 
-function redirectWithError(message) {
-  redirect(`/owner?error=${encodeURIComponent(message)}`);
+function redirectWithError(message, section, parameters = {}) {
+  redirect(ownerSectionHref(section, { ...parameters, error: message }));
 }
 
 function redirectWithBusinessFormError(message, { businessId, imageField } = {}) {
@@ -897,6 +898,7 @@ async function createBusiness(formData) {
     if (cleanupError) {
       redirectWithError(
         "The business was created, but its image could not be uploaded. Edit the existing business to try the image again.",
+        "businesses", { editBusiness: business.id },
       );
     }
 
@@ -920,6 +922,7 @@ async function createBusiness(formData) {
       if (cleanupError) {
         redirectWithError(
           "The business was created, but its images could not be saved. Edit the existing business to try again.",
+          "businesses", { editBusiness: business.id },
         );
       }
 
@@ -1013,7 +1016,7 @@ async function updateBusiness(formData) {
 
   revalidateBusinessProfile(business);
   revalidatePath("/owner");
-  redirect("/owner");
+  redirect(ownerSectionHref("businesses"));
 }
 
 async function createDeal(formData) {
@@ -1025,7 +1028,7 @@ async function createDeal(formData) {
   const validationError = validateDeal(payload, scheduleResult);
 
   if (validationError) {
-    redirectWithError(validationError);
+    redirectWithError(validationError, "deals", { createDeal: 1 });
   }
 
   const ownedBusiness = await verifyOwnedBusiness(
@@ -1035,7 +1038,7 @@ async function createDeal(formData) {
   );
 
   if (ownedBusiness.error) {
-    redirectWithError(ownedBusiness.error);
+    redirectWithError(ownedBusiness.error, "deals", { createDeal: 1 });
   }
 
   const { error } = await supabase.rpc("save_owner_deal", {
@@ -1048,12 +1051,12 @@ async function createDeal(formData) {
 
   if (error) {
     logServerActionError("Deal creation failed", error);
-    redirectWithError("Unable to create deal. Please try again.");
+    redirectWithError("Unable to create deal. Please try again.", "deals", { createDeal: 1 });
   }
 
   revalidateBusinessProfile(ownedBusiness.business);
   revalidatePath("/owner");
-  redirect("/owner?section=deals&dealCreated=1");
+  redirect(ownerSectionHref("deals", { dealCreated: 1 }));
 }
 
 async function updateDeal(formData) {
@@ -1066,7 +1069,7 @@ async function updateDeal(formData) {
   const validationError = validateDeal(payload, scheduleResult);
 
   if (!dealId || validationError) {
-    redirectWithError(validationError ?? "Missing deal id.");
+    redirectWithError(validationError ?? "Missing deal id.", "deals", { editDeal: dealId });
   }
 
   const ownedBusiness = await verifyOwnedBusiness(
@@ -1076,7 +1079,7 @@ async function updateDeal(formData) {
   );
 
   if (ownedBusiness.error) {
-    redirectWithError(ownedBusiness.error);
+    redirectWithError(ownedBusiness.error, "deals", { editDeal: dealId });
   }
 
   const { data: editToken, error: beginError } = await supabase.rpc(
@@ -1084,7 +1087,7 @@ async function updateDeal(formData) {
   );
   if (beginError || !editToken) {
     logServerActionError("Deal edit lease failed", beginError);
-    redirectWithError("Another save may be in progress. Please try again shortly.");
+    redirectWithError("Another save may be in progress. Please try again shortly.", "deals", { editDeal: dealId });
   }
 
   const { error } = await supabase.rpc("save_owner_deal", {
@@ -1100,12 +1103,12 @@ async function updateDeal(formData) {
 
     redirectWithError(error.code === "55P03"
       ? "The save could not finish. Please try again shortly."
-      : "Unable to update deal. Please try again.");
+      : "Unable to update deal. Please try again.", "deals", { editDeal: dealId });
   }
 
   revalidateBusinessProfile(ownedBusiness.business);
   revalidatePath("/owner");
-  redirect("/owner?section=deals&dealUpdated=1");
+  redirect(ownerSectionHref("deals", { dealUpdated: 1 }));
 }
 
 async function deleteDeal(formData) {
@@ -1116,7 +1119,7 @@ async function deleteDeal(formData) {
   const businessId = getString(formData, "business_id");
 
   if (!dealId) {
-    redirectWithError("Missing deal id.");
+    redirectWithError("Missing deal id.", "deals");
   }
 
   const { error } = await supabase
@@ -1127,7 +1130,7 @@ async function deleteDeal(formData) {
 
   if (error) {
     logServerActionError("Deal deletion failed", error);
-    redirectWithError("Unable to delete deal. Please try again.");
+    redirectWithError("Unable to delete deal. Please try again.", "deals", { editDeal: dealId });
   }
 
   if (businessId) {
@@ -1135,7 +1138,7 @@ async function deleteDeal(formData) {
     revalidateBusinessProfile(ownedBusiness.business ?? { id: businessId });
   }
   revalidatePath("/owner");
-  redirect("/owner");
+  redirect(ownerSectionHref("deals"));
 }
 
 function Field({ label, children }) {
@@ -1875,8 +1878,8 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 const categoryConfig = getBusinessCategoryConfig(business.category);
 
                 return (
+                  <Fragment key={business.id}>
                   <article
-                    key={business.id}
                     className="rounded-[24px] border border-white/10 bg-white/8 p-3"
                     style={{ borderTopColor: categoryConfig.color, borderTopWidth: "3px" }}
                   >
@@ -1994,6 +1997,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
                       <BusinessQrCode business={business} />
                       <Link
                         href={`/owner?section=businesses&editBusiness=${business.id}`}
+                        scroll={false}
+                        aria-controls={`edit-business-${business.id}`}
+                        aria-expanded={ownerSection === "businesses" && editingBusinessId === business.id}
                         className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
                       >
                         Edit
@@ -2002,9 +2008,23 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         businessId={business.id}
                         businessName={business.name}
                         businessCategory={business.category}
+                        section={ownerSection}
                       />
                     </div>
                   </article>
+                  {ownerSection === "businesses" && editingBusinessId === business.id ? (
+                    <section id={`edit-business-${business.id}`}
+                      aria-labelledby={`edit-business-title-${business.id}`}
+                      className="spotnera-card min-w-0 rounded-[30px] p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <h2 id={`edit-business-title-${business.id}`} className="text-lg font-bold">Edit {business.name}</h2>
+                        <Link href={ownerSectionHref("businesses")} scroll={false}
+                          className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
+                      </div>
+                      <div className="mt-4"><BusinessForm action={updateBusiness} business={business} imageError={imageError} submitLabel="Save business" /></div>
+                    </section>
+                  ) : null}
+                  </Fragment>
                 );
               })
             ) : (
@@ -2014,20 +2034,6 @@ export default async function OwnerDashboardPage({ searchParams }) {
             )}
           </div>
         </section>
-        ) : null}
-
-        {ownerSection === "businesses" ? (
-          <section className="grid gap-4">
-            {editingBusinessId ? businesses.filter((business) => business.id === editingBusinessId).map((business) => (
-              <section key={business.id} className="spotnera-card rounded-[30px] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-bold">Edit {business.name}</h2>
-                  <Link href="/owner?section=businesses" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
-                </div>
-                <div className="mt-4"><BusinessForm action={updateBusiness} business={business} imageError={imageError} submitLabel="Save business" /></div>
-              </section>
-            )) : null}
-          </section>
         ) : null}
 
         {ownerSection === "deals" ? (
