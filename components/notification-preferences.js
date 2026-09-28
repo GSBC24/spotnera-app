@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { PushNotificationControl } from "@/components/push-notification-control";
+import { normalizeNotificationPreferenceState, resolveNotificationPreferenceState,
+  validLead } from "@/lib/notification-preferences.mjs";
 
 const PREFERENCE_GROUPS = [
   {
@@ -31,7 +33,7 @@ const PREFERENCE_GROUPS = [
   },
 ];
 
-function PreferenceToggle({ name, label, description, defaultChecked }) {
+function PreferenceToggle({ name, label, description, checked, onChange }) {
   const descriptionId = `${name}-description`;
 
   return (
@@ -47,7 +49,8 @@ function PreferenceToggle({ name, label, description, defaultChecked }) {
           type="checkbox"
           role="switch"
           name={name}
-          defaultChecked={defaultChecked}
+          checked={checked}
+          onChange={(event) => onChange(name, event.target.checked)}
           aria-describedby={descriptionId}
           className="peer sr-only"
         />
@@ -64,17 +67,16 @@ function PreferenceToggle({ name, label, description, defaultChecked }) {
   );
 }
 
-function TimedPreference({ kind, initialPreferences }) {
+function TimedPreference({ kind, preferences, onChange }) {
   const starting = kind === "starting";
   const name = starting ? "saved_business_deal_starting_soon" :
     "saved_business_deal_ending_soon";
   const minutesName = starting ? "starting_soon_minutes" : "ending_soon_minutes";
   const choices = starting ? [[30, "30 min"], [60, "1 hour"], [120, "2 hours"]] :
     [[30, "30 min"], [60, "1 hour"]];
-  const [enabled, setEnabled] = useState(Boolean(initialPreferences[name]));
-  const initialMinutes = Number(initialPreferences[minutesName]);
-  const [minutes, setMinutes] = useState(choices.some(([value]) => value === initialMinutes)
-    ? initialMinutes : starting ? 60 : 30);
+  const enabled = preferences[name];
+  const minutes = validLead(kind, preferences[minutesName])
+    ? Number(preferences[minutesName]) : starting ? 60 : 30;
   const descriptionId = `${name}-description`;
   return (
     <div className="rounded-[20px] border border-white/10 bg-black/20 px-4 py-3">
@@ -88,7 +90,7 @@ function TimedPreference({ kind, initialPreferences }) {
         </span>
         <span className="relative shrink-0">
           <input type="checkbox" role="switch" name={name} checked={enabled}
-            onChange={(event) => setEnabled(event.target.checked)}
+            onChange={(event) => onChange(name, event.target.checked)}
             aria-describedby={descriptionId} className="peer sr-only" />
           <span aria-hidden="true" className="block h-7 w-12 rounded-full border border-white/16 bg-white/10 transition peer-checked:border-[#33d6a6]/55 peer-checked:bg-[#33d6a6]/80 peer-focus-visible:ring-2 peer-focus-visible:ring-[#72f0cc] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[#16191f]" />
           <span aria-hidden="true" className="pointer-events-none absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5" />
@@ -101,7 +103,7 @@ function TimedPreference({ kind, initialPreferences }) {
             {choices.map(([value, label]) => (
               <label key={value} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-white/14 bg-white/8 px-3 text-sm font-semibold text-white">
                 <input type="radio" name={minutesName} value={value}
-                  checked={minutes === value} onChange={() => setMinutes(value)}
+                  checked={minutes === value} onChange={() => onChange(minutesName, value)}
                   className="h-4 w-4 accent-[#33d6a6]" />
                 {label}
               </label>
@@ -119,11 +121,20 @@ export function NotificationPreferences({
   loadError = false,
 }) {
   const [state, formAction, isPending] = useActionState(action, null);
+  const [draft, setDraft] = useState(() => ({
+    values: normalizeNotificationPreferenceState(initialPreferences),
+    baseActionState: null,
+  }));
+  const preferences = resolveNotificationPreferenceState(state, draft);
   const submissionLockRef = useRef(false);
 
   useEffect(() => {
     submissionLockRef.current = false;
   }, [state]);
+
+  function changePreference(name, value) {
+    setDraft({ values: { ...preferences, [name]: value }, baseActionState: state });
+  }
 
   function handleSubmit(event) {
     if (submissionLockRef.current) {
@@ -135,6 +146,7 @@ export function NotificationPreferences({
       return;
     }
 
+    setDraft({ values: preferences, baseActionState: state });
     submissionLockRef.current = true;
   }
 
@@ -170,13 +182,14 @@ export function NotificationPreferences({
               <PreferenceToggle
                 key={preference.name}
                 {...preference}
-                defaultChecked={Boolean(initialPreferences[preference.name])}
+                checked={preferences[preference.name]}
+                onChange={changePreference}
               />
             ))}
             {group.title === "Push notifications" ? (
               <>
-                <TimedPreference kind="starting" initialPreferences={initialPreferences} />
-                <TimedPreference kind="ending" initialPreferences={initialPreferences} />
+                <TimedPreference kind="starting" preferences={preferences} onChange={changePreference} />
+                <TimedPreference kind="ending" preferences={preferences} onChange={changePreference} />
               </>
             ) : null}
           </fieldset>

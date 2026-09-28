@@ -80,7 +80,9 @@ export default async function MePage() {
     }
 
     revalidatePath("/me");
-    return { success: true, savedAt: new Date().toISOString() };
+    const { user_id, ...savedPreferences } = preferences;
+    return { success: true, savedAt: new Date().toISOString(),
+      preferences: savedPreferences };
   }
 
   const notificationPreferences = {
