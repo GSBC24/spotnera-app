@@ -1676,7 +1676,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
             <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Business deleted.</p>
           ) : null}
           {resolvedSearchParams?.businessCreated === "1" ? (
-            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Business created.</p>
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+              Business created. <Link href="/owner?section=deals&createDeal=1" className="underline underline-offset-2">Create a deal</Link>
+            </p>
           ) : null}
           {resolvedSearchParams?.dealUpdated === "1" ? (
             <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">Deal updated.</p>
@@ -1747,7 +1749,11 @@ export default async function OwnerDashboardPage({ searchParams }) {
                     <span className="shrink-0 text-sm font-bold text-white/72">{formatRating(getAverageRating(reviewsByBusinessId.get(business.id) ?? []))} rating</span>
                   </div>
                 )) : (
-                  <p className="rounded-2xl border border-dashed border-white/14 p-4 text-sm text-white/58">No businesses yet. Open Businesses to create your first profile.</p>
+                  <div className="rounded-2xl border border-dashed border-white/14 p-4">
+                    <p className="text-sm text-white/58">No businesses yet. Create your first business to get started.</p>
+                    {!businessesError && canCreateAnotherBusiness ? <Link href="/owner?section=businesses&createBusiness=1"
+                      className="spotnera-brand-action mt-3 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">Create business</Link> : null}
+                  </div>
                 )}
               </div>
             </section>
@@ -2050,7 +2056,12 @@ export default async function OwnerDashboardPage({ searchParams }) {
                   <Link href="/owner?section=deals" className="text-xs font-bold text-white/58 hover:text-white">Cancel</Link>
                 </div>
                 <div className="mt-4">
-                  {businesses.length ? <DealForm action={createDeal} businesses={businesses} submitLabel="Create deal" /> : <p className="text-sm text-white/58">Create a business before adding deals.</p>}
+                  {businesses.length ? <DealForm action={createDeal} businesses={businesses} submitLabel="Create deal" /> :
+                    <div className="grid justify-items-start gap-3">
+                      <p className="text-sm text-white/58">Create a business before adding deals.</p>
+                      {!businessesError && canCreateAnotherBusiness ? <Link href="/owner?section=businesses&createBusiness=1"
+                        className="spotnera-brand-action inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">Create business</Link> : null}
+                    </div>}
                 </div>
               </section>
             ) : null}
