@@ -133,6 +133,7 @@ export default async function Home({ searchParams }) {
       .from("businesses")
       .select(BUSINESS_SELECT)
       .eq("is_active", true)
+      .is("suspended_at", null)
       .order("name", { ascending: true });
 
     if (businessesError) {
@@ -147,9 +148,11 @@ export default async function Home({ searchParams }) {
       .from("deals")
       .select(DEAL_SELECT)
       .eq("is_active", true)
+      .is("admin_disabled_at", null)
       .or(`starts_at.is.null,starts_at.lte.${now.toISOString()}`)
       .or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`)
       .eq("businesses.is_active", true)
+      .is("businesses.suspended_at", null)
       .order("created_at", { ascending: false });
 
     if (dealsError) {
@@ -180,9 +183,11 @@ export default async function Home({ searchParams }) {
           .select(DEAL_SELECT)
           .in("business_id", businessIds)
           .eq("is_active", true)
+          .is("admin_disabled_at", null)
           .gt("starts_at", now.toISOString())
           .or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`)
           .eq("businesses.is_active", true)
+          .is("businesses.suspended_at", null)
           .order("id", { ascending: true })
           .range(offset, offset + 499);
         if (upcomingError) {
@@ -205,6 +210,7 @@ export default async function Home({ searchParams }) {
         .from("reviews")
         .select(REVIEW_SELECT)
         .in("business_id", businessIds)
+        .is("admin_hidden_at", null)
         .order("created_at", { ascending: false });
 
       if (reviewsError) {

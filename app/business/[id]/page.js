@@ -42,6 +42,7 @@ const BUSINESS_SELECT = `
   logo_url,
   cover_image_url,
   is_active,
+  verified_at,
   business_opening_hours (id, day_of_week, is_closed, open_time, close_time, spans_midnight)
 `;
 
@@ -275,7 +276,8 @@ async function getPublicBusiness(identifier) {
   const businessQuery = supabase
     .from("businesses")
     .select(BUSINESS_SELECT)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .is("suspended_at", null);
   const { data: business, error: businessError } = await applyBusinessIdentifier(
     businessQuery,
     identifier,
@@ -306,12 +308,14 @@ async function getPublicBusiness(identifier) {
         .select(DEAL_SELECT)
         .eq("business_id", businessId)
         .eq("is_active", true)
+        .is("admin_disabled_at", null)
         .or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`)
         .order("created_at", { ascending: false }),
       supabase
         .from("reviews")
         .select(REVIEW_SELECT)
         .eq("business_id", businessId)
+        .is("admin_hidden_at", null)
         .order("created_at", { ascending: false }),
     ]);
 
@@ -368,7 +372,8 @@ export async function generateMetadata({ params }) {
   const metadataQuery = supabase
     .from("businesses")
     .select("id, slug, name, category, city, country, description, logo_url, cover_image_url, is_active")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .is("suspended_at", null);
   const { data: business } = await applyBusinessIdentifier(metadataQuery, id).maybeSingle();
 
   if (!business) {
@@ -534,7 +539,9 @@ export default async function BusinessProfilePage({ params }) {
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <BusinessOpeningStatus hours={business.business_opening_hours} />
                     <span className="rounded-full border border-[#33d6a6]/30 bg-[#33d6a6]/12 px-3 py-1 text-xs font-semibold text-[#72f0cc]">Public listing</span>
+                    <span className="text-xs font-semibold text-[#72f0cc]">{business.verified_at ? "✓ Verified business" : "Business information not yet verified"}</span>
                   </div>
+                  <p className="mt-2 max-w-2xl text-xs text-white/55">Verification means Spotnera checked information or control associated with this business. It does not guarantee quality, prices, safety, reliability, or individual Deals.</p>
                   <div className="mt-4 flex min-w-0 flex-col items-start gap-2 text-sm font-semibold text-white/72 sm:mt-3 sm:flex-row sm:flex-wrap sm:items-center">
                     {locationLine ? <span className="[overflow-wrap:anywhere]">{locationLine}</span> : null}
                     {locationLine ? <span className="hidden text-white/32 sm:inline">/</span> : null}

@@ -69,6 +69,8 @@ const BUSINESS_FIELDS = `
   logo_url,
   cover_image_url,
   is_active,
+  verified_at,
+  suspended_at,
   created_at,
   updated_at,
   business_opening_hours (id, day_of_week, is_closed, open_time, close_time, spans_midnight)
@@ -1594,6 +1596,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
         .from("reviews")
         .select(REVIEW_FIELDS)
         .in("business_id", businessIds)
+        .is("admin_hidden_at", null)
         .order("created_at", { ascending: false }),
       supabase.rpc("get_owner_business_favorite_counts"),
       supabase.rpc("get_owner_business_event_counts", {
@@ -1922,13 +1925,14 @@ export default async function OwnerDashboardPage({ searchParams }) {
                         </div>
                       </div>
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                        business.is_active
+                        (business.suspended_at ? false : business.is_active)
                           ? "bg-emerald-100 text-emerald-700"
                           : "bg-zinc-200 text-zinc-600"
                       }`}>
-                        {business.is_active ? "Active" : "Hidden"}
+                        {business.suspended_at ? "Suspended by Spotnera" : business.is_active ? "Active" : "Hidden"}
                       </span>
                     </div>
+                    <p className="mt-2 text-xs text-white/55">Verification: {business.verified_at ? "Verified ✓" : "Not verified"}</p>
                     <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
                       <div className="rounded-2xl border border-white/14 bg-white/12 p-2">
                         <p className="font-black">{businessDeals.length}</p>

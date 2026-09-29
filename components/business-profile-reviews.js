@@ -39,11 +39,11 @@ export function BusinessProfileReviews({ business, initialReviews, initialOwnRev
         business_id: business.id, user_id: user.id, rating,
         comment: comment.trim() || null, updated_at: new Date().toISOString(),
       }, { onConflict: "business_id,user_id" })
-        .select("id, business_id, user_id, rating, comment, created_at, updated_at").single();
+        .select("id, business_id, user_id, rating, comment, created_at, updated_at, admin_hidden_at").single();
       if (error || !data) throw error ?? new Error("Review was not saved.");
       const saved = { id: data.id, rating: data.rating, comment: data.comment,
         created_at: data.created_at };
-      setReviews((current) => ownReview
+      if (!data.admin_hidden_at) setReviews((current) => ownReview
         ? current.map((review) => review.id === ownReview.id ? saved : review)
         : [saved, ...current]);
       setOwnReview(saved);

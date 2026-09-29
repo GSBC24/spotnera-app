@@ -56,9 +56,9 @@ async function loadEligibleContext(admin, delivery) {
   const [dealResult, businessResult, favoriteResult, preferenceResult, deviceResult] =
     await Promise.all([
       admin.from("deals")
-        .select("id, business_id, title, is_active, status, availability_mode")
+        .select("id, business_id, title, is_active, admin_disabled_at, status, availability_mode")
         .eq("id", event.deal_id).maybeSingle(),
-      admin.from("businesses").select("id, slug, name, is_active").eq("id", event.business_id).maybeSingle(),
+      admin.from("businesses").select("id, slug, name, is_active, suspended_at").eq("id", event.business_id).maybeSingle(),
       admin.from("favorites").select("id, deal_notifications_enabled").eq("business_id", event.business_id)
         .eq("user_id", delivery.user_id).maybeSingle(),
       admin.from("notification_preferences").select("saved_business_new_deals")
@@ -83,8 +83,8 @@ async function loadEligibleContext(admin, delivery) {
       preferenceResult.data?.saved_business_new_deals !== true ||
       !device || !device.enabled || device.disabled_at ||
       (device.expires_at && Date.parse(device.expires_at) <= Date.now()) ||
-      !deal.is_active || deal.status === "paused" || deal.status === "ended" ||
-      !business.is_active) {
+      !deal.is_active || deal.admin_disabled_at || deal.status === "paused" || deal.status === "ended" ||
+      !business.is_active || business.suspended_at) {
     return { kind: "skip" };
   }
 
@@ -119,9 +119,9 @@ async function loadTimedContext(admin, delivery) {
   }
   const [dealResult, businessResult, favoriteResult, preferenceResult, deviceResult,
     deliveryResult] = await Promise.all([
-    admin.from("deals").select("id, business_id, title, is_active, timed_edit_token_hash, timed_edit_generation, status, availability_mode, availability_timezone, starts_at, ends_at")
+    admin.from("deals").select("id, business_id, title, is_active, admin_disabled_at, timed_edit_token_hash, timed_edit_generation, status, availability_mode, availability_timezone, starts_at, ends_at")
       .eq("id", event.deal_id).maybeSingle(),
-    admin.from("businesses").select("id, slug, name, is_active")
+    admin.from("businesses").select("id, slug, name, is_active, suspended_at")
       .eq("id", event.business_id).maybeSingle(),
     admin.from("favorites").select("id, deal_notifications_enabled").eq("business_id", event.business_id)
       .eq("user_id", delivery.user_id).maybeSingle(),
@@ -143,11 +143,11 @@ async function loadTimedContext(admin, delivery) {
   const business = businessResult.data;
   const device = deviceResult.data;
   const persisted = deliveryResult.data;
-  if (!deal || deal.business_id !== event.business_id || !deal.is_active ||
+  if (!deal || deal.business_id !== event.business_id || !deal.is_active || deal.admin_disabled_at ||
       deal.timed_edit_token_hash ||
       deal.timed_edit_generation !== event.timed_edit_generation ||
       deal.status === "paused" || deal.status === "ended" ||
-      !business?.is_active || favoriteResult.data?.deal_notifications_enabled !== true || !device || !persisted ||
+      !business?.is_active || business.suspended_at || favoriteResult.data?.deal_notifications_enabled !== true || !device || !persisted ||
       !device.enabled || device.disabled_at ||
       (device.expires_at && Date.parse(device.expires_at) <= Date.now())) {
     return { kind: "skip" };
