@@ -10,7 +10,7 @@ import {
   BUSINESS_CATEGORIES,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
-import { businessMatchesFilters, groupSearchBusinesses } from "@/lib/search-businesses.mjs";
+import { businessMatchesFilters, getSearchFilterSummary, groupSearchBusinesses } from "@/lib/search-businesses.mjs";
 import { recordBusinessEvent, recordDealClick } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import { getBusinessPath } from "@/lib/business-url";
@@ -439,7 +439,7 @@ function CategoryFilters({
         />
         <span>All categories</span>
       </label>
-      <div className="grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+      <div className="grid max-h-40 gap-2 overflow-y-auto pr-1 sm:max-h-64 sm:grid-cols-2">
         {visibleCategories.map((category) => {
     const isChecked = selectedCategories.includes(category.value);
 
@@ -654,8 +654,13 @@ export function SpotneraDashboard({
   );
   const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
+  const [areFiltersOpen, setAreFiltersOpen] = useState(true);
+  const [showSearchBusinesses, setShowSearchBusinesses] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(initialSearchOpen);
+  const searchDialogRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const searchCountryRef = useRef(null);
+  const searchResultsTitleRef = useRef(null);
   const [requestedAuthIntent, setRequestedAuthIntent] = useState(null);
   const [isConsentDialogVisible, setIsConsentDialogVisible] = useState(true);
   const authDialogRef = useRef(null);
@@ -769,6 +774,37 @@ export function SpotneraDashboard({
       previousFocus?.focus?.();
     };
   }, [handleCloseAuth, isAuthDialogVisible]);
+  useEffect(() => {
+    if (!isSearchOpen || activeTab !== "map" || isAuthDialogVisible || isConsentDialogVisible) return undefined;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    searchInputRef.current?.focus();
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setIsSearchOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = searchDialogRef.current?.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [activeTab, isAuthDialogVisible, isConsentDialogVisible, isSearchOpen]);
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
@@ -805,6 +841,7 @@ export function SpotneraDashboard({
     () => groupSearchBusinesses(filteredBusinesses),
     [filteredBusinesses],
   );
+  const searchFilterSummary = getSearchFilterSummary({ selectedCountry, selectedCity, selectedCategories });
 
   useEffect(() => {
     const normalizedSearch = searchQuery.trim();
@@ -1116,7 +1153,7 @@ export function SpotneraDashboard({
     setSelectedCountry(defaultCountry);
     setSelectedCity("");
     setSelectedCategories([]);
-    setAreFiltersOpen(false);
+    setAreFiltersOpen(true);
     clearSelectedBusinessIfExcluded({
       searchQuery: "",
       selectedCategories: [],
@@ -1127,7 +1164,23 @@ export function SpotneraDashboard({
 
   const handleOpenSearch = useCallback(() => {
     setActiveTab("map");
+    setShowSearchBusinesses(false);
+    setAreFiltersOpen(true);
     setIsSearchOpen(true);
+  }, []);
+  const handleViewSearchBusinesses = useCallback(() => {
+    setAreFiltersOpen(false);
+    setShowSearchBusinesses(true);
+    window.requestAnimationFrame(() => searchResultsTitleRef.current?.focus());
+  }, []);
+  const handleHideSearchBusinesses = useCallback(() => {
+    setShowSearchBusinesses(false);
+    setAreFiltersOpen(true);
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+  }, []);
+  const handleEditSearchFilters = useCallback(() => {
+    setAreFiltersOpen(true);
+    window.requestAnimationFrame(() => searchCountryRef.current?.focus());
   }, []);
 
   const displayName =
@@ -1185,7 +1238,7 @@ export function SpotneraDashboard({
         {isSearchOpen ? (
         <>
         <div className="spotnera-dialog-backdrop fixed inset-0 z-[86]" aria-hidden="true" />
-        <section role="dialog" aria-modal="true" aria-labelledby="search-panel-title" className="fixed inset-x-3 bottom-24 z-[87] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-2xl overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/96 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:w-[min(92vw,560px)] sm:-translate-x-1/2">
+        <section ref={searchDialogRef} role="dialog" aria-modal="true" aria-labelledby="search-panel-title" className="fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[87] mx-auto max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] w-auto max-w-2xl overflow-y-auto overscroll-contain rounded-[28px] border border-white/14 bg-[#151821]/96 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-24 sm:max-h-[calc(100dvh-8rem)] sm:w-[min(92vw,560px)] sm:-translate-x-1/2">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/60">Discovery</p>
@@ -1195,17 +1248,21 @@ export function SpotneraDashboard({
           </div>
           <div className="flex items-center gap-2">
             <input
+              ref={searchInputRef}
               type="search"
+              aria-label="Search businesses"
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search businesses..."
               className="h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/24 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/52 focus:border-white/30"
             />
           </div>
+          {(!showSearchBusinesses || areFiltersOpen) ? <>
           <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
             <label className="grid min-w-0 gap-1.5">
               <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">Country</span>
               <select
+                ref={searchCountryRef}
                 value={selectedCountry}
                 onChange={handleSelectCountry}
                 className="h-11 w-full rounded-2xl border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none focus:border-white/30"
@@ -1241,7 +1298,7 @@ export function SpotneraDashboard({
               aria-expanded={areFiltersOpen}
               className="spotnera-brand-action h-11 self-end rounded-2xl border border-[#33d6a6]/40 px-4 text-xs font-bold transition"
             >
-              Categories {activeFilterCount ? `(${activeFilterCount})` : ""}
+              Categories {selectedCategoryCount ? `(${selectedCategoryCount})` : ""}
             </button>
           </div>
           {areFiltersOpen ? (
@@ -1256,10 +1313,16 @@ export function SpotneraDashboard({
               </div>
             </div>
           ) : null}
-          <section aria-label="Businesses" className="mt-4 border-t border-white/10 pt-3">
+          </> : (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/8 p-3">
+              <p className="min-w-0 flex-1 break-words text-xs leading-5 text-white/70">{searchFilterSummary}</p>
+              <button type="button" onClick={handleEditSearchFilters} className="min-h-10 shrink-0 rounded-xl border border-white/16 px-3 text-xs font-bold text-white">Edit filters</button>
+            </div>
+          )}
+          {showSearchBusinesses ? <section id="search-business-results" aria-label="Businesses" className="mt-4 border-t border-white/10 pt-3">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="text-sm font-bold text-white">Businesses</h3>
-              <span className="text-xs font-semibold text-white/55">{filteredBusinesses.length} found</span>
+              <h3 ref={searchResultsTitleRef} tabIndex={-1} className="text-sm font-bold text-white outline-none">Businesses <span className="text-white/55">({filteredBusinesses.length})</span></h3>
+              <button type="button" onClick={handleHideSearchBusinesses} aria-controls="search-business-results" aria-expanded="true" className="min-h-10 rounded-xl border border-white/16 px-3 text-xs font-bold text-white">Hide businesses</button>
             </div>
             {searchBusinessGroups.length ? (
               <div className="grid gap-4">
@@ -1275,9 +1338,9 @@ export function SpotneraDashboard({
                           <span>{liveDeals.length} active {liveDeals.length === 1 ? "deal" : "deals"}</span>
                         </div>
                         {liveDeals[0] ? <p className="mt-1 truncate text-xs text-white/72">{liveDeals[0].title}</p> : null}
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                          <button type="button" onClick={() => handleOpenSearchBusinessDeals(business)} className="spotnera-brand-action min-h-11 rounded-xl px-3 text-xs font-bold">View deals</button>
-                          <Link href={getBusinessPath(business)} onClick={() => trackEvent("view_business", getBusinessEventParameters(business))} className="flex min-h-11 items-center justify-center rounded-xl border border-white/16 px-3 text-center text-xs font-bold text-white">Business profile</Link>
+                        <div className={`mt-3 grid gap-2 ${liveDeals.length ? "grid-cols-2" : "grid-cols-1"}`}>
+                          {liveDeals.length ? <button type="button" onClick={() => handleOpenSearchBusinessDeals(business)} className="spotnera-brand-action min-h-11 rounded-xl px-3 text-xs font-bold">View deals</button> : null}
+                          <Link href={getBusinessPath(business)} onClick={() => trackEvent("view_business", getBusinessEventParameters(business))} className={`flex min-h-11 items-center justify-center rounded-xl px-3 text-center text-xs font-bold ${liveDeals.length ? "border border-white/16 text-white" : "spotnera-brand-action"}`}>Business profile</Link>
                         </div>
                       </article>
                     ))}
@@ -1285,7 +1348,10 @@ export function SpotneraDashboard({
                 ))}
               </div>
             ) : <p className="rounded-2xl border border-dashed border-white/16 p-4 text-sm text-white/70">No businesses match. Try another name, category or city.</p>}
-          </section>
+          </section> : <>
+            <span id="search-business-results" hidden />
+            <button type="button" onClick={handleViewSearchBusinesses} aria-controls="search-business-results" aria-expanded="false" className="spotnera-brand-action mt-4 min-h-12 w-full rounded-2xl px-4 text-sm font-bold" aria-live="polite">View businesses ({filteredBusinesses.length})</button>
+          </>}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             <button type="button" onClick={handleClearFilters} className="min-h-10 rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/75 transition hover:bg-white/14">Clear filters</button>
             <button type="button" onClick={() => setIsSearchOpen(false)} className="min-h-10 rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/75 transition hover:bg-white/14">Show map</button>
