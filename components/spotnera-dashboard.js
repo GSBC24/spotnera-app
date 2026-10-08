@@ -8,9 +8,9 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import {
   BUSINESS_CATEGORIES,
-  businessCategoryMatches,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
+import { businessMatchesFilters, groupSearchBusinesses } from "@/lib/search-businesses.mjs";
 import { recordBusinessEvent, recordDealClick } from "@/lib/business-events";
 import { trackEvent } from "@/lib/analytics";
 import { getBusinessPath } from "@/lib/business-url";
@@ -35,12 +35,12 @@ import { DealDetailsDialog } from "@/components/deal-details-dialog";
 import { BusinessOpeningStatus } from "@/components/business-opening-hours";
 import { BusinessLocationActions } from "@/components/business-location-actions";
 import { getBusinessAddressLines } from "@/lib/business-address.mjs";
+import { getStoredConsent } from "@/lib/consent";
 import { getDiscoverableDeals, partitionDiscoveryDeals } from "@/lib/deal-discovery.mjs";
 import { groupMapUpcomingDeals } from "@/lib/map-upcoming-deals.mjs";
 import { saveBusinessDealNotificationPreference } from "@/lib/saved-business-notifications.mjs";
 
-const HEART_PATH =
-  "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
+const BOOKMARK_PATH = "M5 3h14v19l-7-4-7 4V3z";
 const STAR_PATH =
   "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z";
 const LOCATION_PATH =
@@ -252,25 +252,6 @@ function normalizeSearchValue(value) {
   return String(value ?? "").trim().toLocaleLowerCase("en");
 }
 
-function businessMatchesFilters(business, filters) {
-  const normalizedSearch = normalizeSearchValue(filters.searchQuery);
-  const businessCountry = getDisplayValue(business.country);
-  const businessCity = getDisplayValue(business.city);
-  const matchesCategory =
-    filters.selectedCategories.length === 0 ||
-    filters.selectedCategories.some((category) => businessCategoryMatches(business.category, category));
-  const matchesSearch =
-    !normalizedSearch ||
-    normalizeSearchValue(business.name).includes(normalizedSearch);
-  const matchesCountry =
-    !filters.selectedCountry || businessCountry === filters.selectedCountry;
-  const matchesSupportedCountry =
-    !SUPPORTED_COUNTRY_NAMES.length || SUPPORTED_COUNTRY_NAMES.includes(businessCountry);
-  const matchesCity = !filters.selectedCity || businessCity === filters.selectedCity;
-
-  return matchesCategory && matchesSearch && matchesSupportedCountry && matchesCountry && matchesCity;
-}
-
 function normalizeBusinesses(businesses) {
   const invalidLocationBusinesses = businesses.filter(
     (business) =>
@@ -362,7 +343,7 @@ function FavoriteButton({ isFavorite, onClick, size = "md", disabled = false }) 
   return (
     <button
       type="button"
-      aria-label={isFavorite ? "Remove from favorites" : "Save favorite"}
+      aria-label={isFavorite ? "Remove saved business" : "Save business"}
       aria-pressed={isFavorite}
       disabled={disabled}
       onClick={onClick}
@@ -372,7 +353,7 @@ function FavoriteButton({ isFavorite, onClick, size = "md", disabled = false }) 
           : "border-white/12 bg-white/10 text-white/70 hover:bg-white/16 hover:text-white"
       }`}
     >
-      <Icon path={HEART_PATH} />
+      <Icon path={BOOKMARK_PATH} />
     </button>
   );
 }
@@ -676,6 +657,10 @@ export function SpotneraDashboard({
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(initialSearchOpen);
   const [requestedAuthIntent, setRequestedAuthIntent] = useState(null);
+  const [isConsentDialogVisible, setIsConsentDialogVisible] = useState(true);
+  const authDialogRef = useRef(null);
+  const authCloseRef = useRef(null);
+  const authViewportRef = useRef(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const detailBackdropRef = useRef(null);
   const [isSelectedCardOpen, setIsSelectedCardOpen] = useState(false);
@@ -696,6 +681,7 @@ export function SpotneraDashboard({
       : "/";
   const isAuthOpen =
     !userId && (searchParams.get("auth") === "1" || requestedAuthIntent !== null);
+  const isAuthDialogVisible = isAuthOpen && !isConsentDialogVisible;
   const authIntent = requestedAuthIntent ?? queryAuthIntent;
   const handleSelectTab = useCallback((tabId) => {
     setActiveTab(tabId);
@@ -720,6 +706,69 @@ export function SpotneraDashboard({
 
     router.replace(query ? `/?${query}` : "/", { scroll: false });
   }, [router]);
+  useEffect(() => {
+    const initialSync = window.setTimeout(() => setIsConsentDialogVisible(!getStoredConsent()), 0);
+    const handleConsentVisibility = (event) => {
+      window.clearTimeout(initialSync);
+      setIsConsentDialogVisible(event.detail?.visible === true);
+    };
+    window.addEventListener("spotnera-consent-dialog-visibility", handleConsentVisibility);
+    return () => {
+      window.clearTimeout(initialSync);
+      window.removeEventListener("spotnera-consent-dialog-visibility", handleConsentVisibility);
+    };
+  }, []);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("spotnera-auth-dialog-visibility", {
+      detail: { visible: isAuthDialogVisible },
+    }));
+  }, [isAuthDialogVisible]);
+  useEffect(() => {
+    if (!isAuthDialogVisible) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
+    const viewport = window.visualViewport;
+    const container = authViewportRef.current;
+    document.body.style.overflow = "hidden";
+    authCloseRef.current?.focus();
+    function fitViewport() {
+      if (!viewport || !container) return;
+      container.style.top = `${viewport.offsetTop}px`;
+      container.style.height = `${viewport.height}px`;
+      if (container.contains(document.activeElement)) {
+        document.activeElement.scrollIntoView({ block: "nearest" });
+      }
+    }
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        handleCloseAuth();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = authDialogRef.current?.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    fitViewport();
+    viewport?.addEventListener("resize", fitViewport);
+    viewport?.addEventListener("scroll", fitViewport);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      viewport?.removeEventListener("resize", fitViewport);
+      viewport?.removeEventListener("scroll", fitViewport);
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [handleCloseAuth, isAuthDialogVisible]);
   const mappedBusinesses = useMemo(
     () => normalizeBusinesses(localBusinesses),
     [localBusinesses],
@@ -752,6 +801,10 @@ export function SpotneraDashboard({
       businessMatchesFilters(business, filters),
     );
   }, [mappedBusinesses, searchQuery, selectedCategories, selectedCity, selectedCountry]);
+  const searchBusinessGroups = useMemo(
+    () => groupSearchBusinesses(filteredBusinesses),
+    [filteredBusinesses],
+  );
 
   useEffect(() => {
     const normalizedSearch = searchQuery.trim();
@@ -848,6 +901,13 @@ export function SpotneraDashboard({
     setSelectedBusinessId(business.id);
     setIsDetailOpen(false);
     setIsSelectedCardOpen(true);
+    trackEvent("business_select", getBusinessEventParameters(business));
+  }, []);
+  const handleOpenSearchBusinessDeals = useCallback((business) => {
+    setSelectedBusinessId(business.id);
+    setIsSelectedCardOpen(false);
+    setIsSearchOpen(false);
+    setIsDetailOpen(true);
     trackEvent("business_select", getBusinessEventParameters(business));
   }, []);
   const closeSelectedBusinessUI = useCallback(() => {
@@ -1110,13 +1170,14 @@ export function SpotneraDashboard({
             {userId ? <><Link href="/me" aria-label="Open profile" className="spotnera-brand-action grid h-12 w-12 place-items-center rounded-2xl text-sm font-bold transition">{displayName.slice(0, 2).toUpperCase()}</Link><div className="relative"><HeaderLogout /></div></> : <Link href="/?auth=1" className="spotnera-brand-action inline-flex min-h-10 items-center rounded-2xl px-3 text-xs font-bold">Sign in</Link>}
           </div>
         </header>
-        {isAuthOpen ? (
+        {isAuthDialogVisible ? (
           <>
-          <div className="spotnera-dialog-backdrop fixed inset-0 z-[89]" aria-hidden="true" />
-          <section role="dialog" aria-modal="true" aria-labelledby="auth-gate-title" className="fixed inset-x-3 bottom-24 z-[90] mx-auto max-h-[calc(100vh-8rem)] w-auto max-w-md overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821]/98 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
-            <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button type="button" aria-label="Close sign in" onClick={handleCloseAuth} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
+          <div ref={authViewportRef} className="spotnera-dialog-backdrop fixed inset-x-0 top-0 z-[90] flex h-[100dvh] items-center justify-center overflow-y-auto overscroll-contain px-3 py-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-4" onMouseDown={(event) => { if (event.target === event.currentTarget) handleCloseAuth(); }}>
+          <section ref={authDialogRef} data-spotnera-auth-dialog role="dialog" aria-modal="true" aria-labelledby="auth-gate-title" className="my-auto max-h-full w-full max-w-md overflow-y-auto overscroll-contain rounded-[28px] border border-white/14 bg-[#151821]/98 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+            <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button ref={authCloseRef} type="button" aria-label="Close sign in" onClick={handleCloseAuth} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
             <div className="spotnera-auth-panel mt-5 rounded-2xl border border-white/10 p-4"><AuthPanel successRedirect={authIntent} /></div>
           </section>
+          </div>
           </>
         ) : null}
         {activeTab === "map" ? (
@@ -1195,9 +1256,39 @@ export function SpotneraDashboard({
               </div>
             </div>
           ) : null}
+          <section aria-label="Businesses" className="mt-4 border-t border-white/10 pt-3">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-bold text-white">Businesses</h3>
+              <span className="text-xs font-semibold text-white/55">{filteredBusinesses.length} found</span>
+            </div>
+            {searchBusinessGroups.length ? (
+              <div className="grid gap-4">
+                {searchBusinessGroups.map((group) => (
+                  <section key={group.category} aria-label={group.category} className="grid gap-2">
+                    <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-[#72f0cc]">{group.category}</h4>
+                    {group.items.map(({ business, liveDeals }) => (
+                      <article key={business.id} className="rounded-2xl border border-white/10 bg-white/8 p-3">
+                        <h5 className="text-sm font-bold text-white">{business.name}</h5>
+                        <p className="mt-1 truncate text-xs text-white/60">{business.address || [business.city, business.country].filter(Boolean).join(", ")}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/65">
+                          {business.business_opening_hours?.length ? <BusinessOpeningStatus hours={business.business_opening_hours} /> : null}
+                          <span>{liveDeals.length} active {liveDeals.length === 1 ? "deal" : "deals"}</span>
+                        </div>
+                        {liveDeals[0] ? <p className="mt-1 truncate text-xs text-white/72">{liveDeals[0].title}</p> : null}
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button type="button" onClick={() => handleOpenSearchBusinessDeals(business)} className="spotnera-brand-action min-h-11 rounded-xl px-3 text-xs font-bold">View deals</button>
+                          <Link href={getBusinessPath(business)} onClick={() => trackEvent("view_business", getBusinessEventParameters(business))} className="flex min-h-11 items-center justify-center rounded-xl border border-white/16 px-3 text-center text-xs font-bold text-white">Business profile</Link>
+                        </div>
+                      </article>
+                    ))}
+                  </section>
+                ))}
+              </div>
+            ) : <p className="rounded-2xl border border-dashed border-white/16 p-4 text-sm text-white/70">No businesses match. Try another name, category or city.</p>}
+          </section>
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             <button type="button" onClick={handleClearFilters} className="min-h-10 rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/75 transition hover:bg-white/14">Clear filters</button>
-            <button type="button" onClick={() => setIsSearchOpen(false)} className="spotnera-brand-action min-h-10 rounded-2xl px-4 text-xs font-bold transition">Show results</button>
+            <button type="button" onClick={() => setIsSearchOpen(false)} className="min-h-10 rounded-2xl border border-white/10 bg-white/8 px-4 text-xs font-bold text-white/75 transition hover:bg-white/14">Show map</button>
           </div>
         </section>
         </>
@@ -1304,7 +1395,25 @@ export function SpotneraDashboard({
               <BusinessAddress business={selectedBusiness} compact />
               <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-2" />
               <MapBusinessDeals business={selectedBusiness} />
-              <div className="mt-3 flex min-w-0 flex-wrap gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDetailOpen(true);
+                  }}
+                  className="spotnera-brand-action inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-xs font-bold transition"
+                >
+                  View deals
+                </button>
+                <Link
+                  href={getBusinessPath(selectedBusiness)}
+                  onClick={() => trackEvent("view_business", getBusinessEventParameters(selectedBusiness))}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/10 px-3 text-center text-xs font-bold text-white/78 transition hover:bg-white/16"
+                >
+                  Business profile
+                </Link>
+              </div>
+              <div className="mt-2 flex flex-wrap items-start gap-2 border-t border-white/10 pt-2">
                 <div className="flex min-h-11 items-center gap-2">
                   <FavoriteButton
                     isFavorite={selectedBusiness.isFavorite}
@@ -1315,24 +1424,8 @@ export function SpotneraDashboard({
                     {pendingFavoriteId === selectedBusiness.id ? "Saving..." : selectedBusiness.isFavorite ? "Saved" : "Save"}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsDetailOpen(true);
-                  }}
-                  className="spotnera-brand-action inline-flex min-h-11 items-center rounded-xl px-3 text-xs font-bold transition"
-                >
-                  View deals
-                </button>
-                <Link
-                  href={getBusinessPath(selectedBusiness)}
-                  onClick={() => trackEvent("view_business", getBusinessEventParameters(selectedBusiness))}
-                  className="inline-flex min-h-11 items-center rounded-xl border border-white/10 bg-white/10 px-3 text-center text-xs font-bold text-white/78 transition hover:bg-white/16"
-                >
-                  Business profile
-                </Link>
+                <BusinessLocationActions key={selectedBusiness.id} business={selectedBusiness} />
               </div>
-              <BusinessLocationActions key={selectedBusiness.id} business={selectedBusiness} className="mt-2" />
             </motion.div>
           ) : null}
         </div>

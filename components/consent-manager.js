@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CONSENT_VERSION, getStoredConsent, storeConsent } from "@/lib/consent";
 
 function updateGoogleConsent(analytics) {
@@ -36,6 +36,8 @@ export function ConsentManager() {
   const [consent, setConsent] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const dialogRef = useRef(null);
+  const firstActionRef = useRef(null);
   const shouldShowBanner = isLoaded && !consent && !isSettingsOpen;
   const analyticsEnabled = consent?.analytics === true;
 
@@ -46,6 +48,37 @@ export function ConsentManager() {
       }),
     );
   }, [isSettingsOpen, shouldShowBanner]);
+  useEffect(() => {
+    if (!shouldShowBanner && !isSettingsOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
+    document.body.style.overflow = "hidden";
+    firstActionRef.current?.focus();
+    function handleKeyDown(event) {
+      if (event.key === "Escape" && isSettingsOpen && consent) {
+        setIsSettingsOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = dialogRef.current?.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [consent, isSettingsOpen, shouldShowBanner]);
 
   useEffect(() => {
     const loadConsentId = window.setTimeout(() => {
@@ -92,12 +125,13 @@ export function ConsentManager() {
   }
 
   return (
-    <div className="spotnera-dialog-backdrop fixed inset-0 z-[100] flex items-end px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-16 sm:items-center sm:justify-center sm:p-4">
+    <div className="spotnera-dialog-backdrop fixed inset-x-0 top-0 z-[100] flex h-[100dvh] items-center justify-center overflow-y-auto overscroll-contain px-3 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-4">
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="privacy-choices-title"
-        className="max-h-[calc(100vh-5rem)] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/14 bg-[#151821] p-4 text-white shadow-[0_28px_90px_rgba(0,0,0,0.54)] sm:max-h-[calc(100vh-2rem)] sm:p-5"
+        className="my-auto max-h-full w-full max-w-2xl overflow-y-auto overscroll-contain rounded-[28px] border border-white/14 bg-[#151821] p-4 text-white shadow-[0_28px_90px_rgba(0,0,0,0.54)] sm:p-5"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -154,6 +188,7 @@ export function ConsentManager() {
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           <button
+            ref={firstActionRef}
             type="button"
             onClick={() => saveChoice(false)}
             className="min-h-12 rounded-[18px] border border-white/18 bg-white/10 px-4 text-sm font-black text-white transition hover:bg-white/16"

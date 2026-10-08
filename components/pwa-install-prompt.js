@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getStoredConsent } from "@/lib/consent";
+import { canPresentInstallPrompt } from "@/lib/prompt-visibility.mjs";
 
 const DISMISSED_KEY = "spotnera-install-dismissed";
 const CONTROLLER_RELOAD_KEY = "spotnera-sw-controller-reloaded";
@@ -144,6 +145,7 @@ export function PwaInstallPrompt() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [hasConsentChoice, setHasConsentChoice] = useState(false);
   const [isConsentDialogVisible, setIsConsentDialogVisible] = useState(true);
+  const [isAuthDialogVisible, setIsAuthDialogVisible] = useState(false);
   const [isAutoPromptReady, setIsAutoPromptReady] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
@@ -292,12 +294,18 @@ export function PwaInstallPrompt() {
         setIsOpen(false);
       }
     };
+    const handleAuthDialogVisibility = (event) => {
+      const isVisible = event.detail?.visible === true;
+      setIsAuthDialogVisible(isVisible);
+      if (isVisible) setIsOpen(false);
+    };
     const initializeInstallState = window.setTimeout(() => {
       const storedConsent = Boolean(getStoredConsent());
       setIsIos(isIosBrowser());
       setIsInstalled(isStandaloneMode());
       setHasConsentChoice(storedConsent);
       setIsConsentDialogVisible(!storedConsent);
+      setIsAuthDialogVisible(Boolean(document.querySelector("[data-spotnera-auth-dialog]")));
     }, 0);
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -307,6 +315,7 @@ export function PwaInstallPrompt() {
       CONSENT_DIALOG_VISIBILITY_EVENT,
       handleConsentDialogVisibility,
     );
+    window.addEventListener("spotnera-auth-dialog-visibility", handleAuthDialogVisibility);
 
     return () => {
       window.clearTimeout(initializeInstallState);
@@ -317,29 +326,35 @@ export function PwaInstallPrompt() {
         CONSENT_DIALOG_VISIBILITY_EVENT,
         handleConsentDialogVisibility,
       );
+      window.removeEventListener("spotnera-auth-dialog-visibility", handleAuthDialogVisibility);
     };
   }, []);
 
   const installAvailable = Boolean(installEvent) || isIos;
+  const canPresent = canPresentInstallPrompt({
+    available: installAvailable,
+    installed: isInstalled,
+    hasConsentChoice,
+    consentDialogVisible: isConsentDialogVisible,
+    authDialogVisible: isAuthDialogVisible,
+  });
 
   useEffect(() => {
     const promptDelay = window.setTimeout(
       () =>
         setIsAutoPromptReady(
-          hasConsentChoice && !isConsentDialogVisible,
+          canPresent,
         ),
-      hasConsentChoice && !isConsentDialogVisible ? AUTO_PROMPT_DELAY_MS : 0,
+      canPresent ? AUTO_PROMPT_DELAY_MS : 0,
     );
 
     return () => window.clearTimeout(promptDelay);
-  }, [hasConsentChoice, isConsentDialogVisible]);
+  }, [canPresent]);
 
   useEffect(() => {
     const shouldOpenAutomatically =
       isAutoPromptReady &&
-      installAvailable &&
-      !isInstalled &&
-      !isConsentDialogVisible &&
+      canPresent &&
       !isAutoPromptOnCooldown();
 
     if (!shouldOpenAutomatically) {
@@ -350,10 +365,8 @@ export function PwaInstallPrompt() {
 
     return () => window.clearTimeout(openPrompt);
   }, [
-    installAvailable,
+    canPresent,
     isAutoPromptReady,
-    isConsentDialogVisible,
-    isInstalled,
   ]);
 
   useEffect(() => {
@@ -364,10 +377,7 @@ export function PwaInstallPrompt() {
     const handleStatusRequest = () => publishInstallStatus(status);
     const handleManualOpen = (event) => {
       if (
-        !status.available ||
-        status.installed ||
-        isConsentDialogVisible ||
-        !hasConsentChoice
+        !canPresent
       ) {
         return;
       }
@@ -386,9 +396,8 @@ export function PwaInstallPrompt() {
       window.removeEventListener(OPEN_INSTALL_PROMPT_EVENT, handleManualOpen);
     };
   }, [
-    hasConsentChoice,
+    canPresent,
     installAvailable,
-    isConsentDialogVisible,
     isInstalled,
   ]);
 
@@ -482,7 +491,7 @@ export function PwaInstallPrompt() {
 
   return (
     <div
-      className="spotnera-dialog-backdrop fixed inset-0 z-[95] flex items-end px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-16 sm:items-center sm:justify-center sm:p-4"
+      className="spotnera-dialog-backdrop fixed inset-x-0 top-0 z-[95] flex h-[100dvh] items-center justify-center overflow-y-auto overscroll-contain px-3 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           dismissPrompt();
@@ -495,7 +504,7 @@ export function PwaInstallPrompt() {
         aria-modal="true"
         aria-labelledby="spotnera-install-title"
         aria-describedby="spotnera-install-description"
-        className="w-full max-w-md rounded-t-[30px] border border-white/14 bg-[#151821] p-5 text-white shadow-[0_30px_90px_rgba(0,0,0,0.58)] sm:rounded-[30px] sm:p-6"
+        className="my-auto max-h-full w-full max-w-md overflow-y-auto overscroll-contain rounded-[30px] border border-white/14 bg-[#151821] p-5 text-white shadow-[0_30px_90px_rgba(0,0,0,0.58)] sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">

@@ -28,6 +28,7 @@ import {
 import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
 import { getBusinessPath } from "@/lib/business-url";
 import { canCreateBusiness, FREE_BUSINESS_LIMIT, isFreeBusinessLimitError } from "@/lib/owner-plan.mjs";
+import { SHOW_OWNER_PREMIUM_PROMOTION } from "@/lib/owner-ui-config.mjs";
 import { OWNER_SECTIONS, ownerSectionHref } from "@/lib/owner-navigation.mjs";
 import { PROMOTION_TYPE_VALUES } from "@/lib/promotions";
 import {
@@ -1306,14 +1307,18 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
           <TextInput name="city" required minLength={2} maxLength={120} defaultValue={business?.city ?? ""} />
         </Field>
       </div>
-      <Field label="Description">
-        <TextArea name="description" maxLength={1000} defaultValue={business?.description ?? ""} />
-      </Field>
       <AddressAutocomplete
         defaultAddress={business?.address ?? ""}
         defaultLatitude={business?.latitude ?? ""}
         defaultLongitude={business?.longitude ?? ""}
       />
+      <p className="text-xs leading-5 text-zinc-600">Choose an address suggestion so customers can find your business on the map.</p>
+      <details open={Boolean(business) || Boolean(imageError)} className="rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
+        <summary className="cursor-pointer text-sm font-bold text-zinc-900">Opening hours, contact, photos and more <span className="font-medium text-zinc-500">(optional)</span></summary>
+        <div className="mt-4 grid gap-3">
+      <Field label="Description">
+        <TextArea name="description" maxLength={1000} defaultValue={business?.description ?? ""} />
+      </Field>
       <BusinessOpeningHoursFields hours={business?.business_opening_hours ?? []} />
       <section className="grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
         <div>
@@ -1416,6 +1421,8 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
           {imageError.message}
         </p>
       ) : null}
+        </div>
+      </details>
       <label className="flex h-12 items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-800">
         Active listing
         <input
@@ -1450,7 +1457,7 @@ function DealForm({ action, deal, businesses, submitLabel }) {
         <input type="hidden" name="promotion_type" value={deal.promotion_type} />
       ) : null}
       {deal ? <DealStatusSummary deal={deal} /> : null}
-      <Field label="Business">
+      {businesses.length === 1 && !deal ? <input type="hidden" name="business_id" value={businesses[0].id} /> : <Field label="Business">
         <Select name="business_id" required defaultValue={deal?.business_id ?? businesses[0]?.id ?? ""}>
           {businesses.map((business) => (
             <option key={business.id} value={business.id}>
@@ -1458,13 +1465,14 @@ function DealForm({ action, deal, businesses, submitLabel }) {
             </option>
           ))}
         </Select>
-      </Field>
+      </Field>}
       <Field label="Title">
         <TextInput name="title" required minLength={2} maxLength={140} defaultValue={deal?.title ?? ""} />
       </Field>
       <Field label="Description">
         <TextArea name="description" defaultValue={deal?.description ?? ""} />
       </Field>
+      <p className="text-xs leading-5 text-white/60">Describe what customers get and any conditions they should know.</p>
       <fieldset className="grid min-w-0 gap-3 rounded-[24px] border border-white/12 bg-black/18 p-3 sm:p-4">
         <legend className="px-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">
           Deal validity
@@ -1666,7 +1674,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
                   Manage your businesses
                 </h1>
                 <p className="mt-1 text-sm text-white/54">
-                  {profile?.first_name ? `${profile.first_name}'s portfolio` : "Your business portfolio"}
+                  {profile?.first_name ? `Welcome, ${profile.first_name}` : "Your business dashboard"}
                 </p>
               </div>
             </div>
@@ -1724,22 +1732,42 @@ export default async function OwnerDashboardPage({ searchParams }) {
           ))}
         </nav>
 
-        <Link href="/owner/premium" className="spotnera-surface group flex items-center justify-between gap-4 rounded-[22px] border border-amber-300/20 px-4 py-3 transition hover:border-amber-300/40 hover:bg-white/8">
+        {SHOW_OWNER_PREMIUM_PROMOTION && ownerSection !== "overview" ? <Link href="/owner/premium" className="spotnera-surface group flex items-center justify-between gap-4 rounded-[22px] border border-amber-300/20 px-4 py-3 transition hover:border-amber-300/40 hover:bg-white/8">
           <span>
             <span className="block text-sm font-semibold text-amber-200">Spotnera Premium</span>
             <span className="mt-0.5 block text-xs text-white/58">More tools for your local audience. Coming soon.</span>
           </span>
           <span className="shrink-0 text-sm font-bold text-amber-200 group-hover:translate-x-0.5">Explore →</span>
-        </Link>
+        </Link> : null}
 
         {ownerSection === "overview" ? (
           <>
-            <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <section className="spotnera-card rounded-[30px] p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#72f0cc]">Get started</p>
+              <h2 className="mt-2 text-xl font-semibold">
+                {!businesses.length ? "Create your business" : !deals.length ? "Publish your first deal" : "See what customers see"}
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">
+                {!businesses.length
+                  ? "Add your business name, category and location. You can add photos, hours and contact details now or later."
+                  : !deals.length
+                    ? "Your business is ready. Add a real offer and choose when customers can use it."
+                    : "Your business and deal are set up. Open your public profile to check how they appear to customers."}
+              </p>
+              {!businesses.length && canCreateAnotherBusiness ? (
+                <Link href="/owner?section=businesses&createBusiness=1" className="spotnera-brand-action mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">Create business</Link>
+              ) : businesses.length && !deals.length ? (
+                <Link href="/owner?section=deals&createDeal=1" className="spotnera-brand-action mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">Create deal</Link>
+              ) : businesses.length ? (
+                <Link href={getBusinessPath(businesses[0])} className="spotnera-brand-action mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">View customer page</Link>
+              ) : null}
+            </section>
+            {businesses.length ? <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatTile label="Businesses" value={businesses.length} />
               <StatTile label="Active deals" value={activeDealCount} />
               <StatTile label="Reviews" value={reviews.length} />
               <StatTile label="Favorites" value={totalFavorites} />
-            </section>
+            </section> : null}
             <section className="spotnera-card rounded-[30px] p-4">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/48">Portfolio</p>
               <h2 className="mt-1 text-xl font-semibold">Your businesses</h2>
@@ -1796,13 +1824,11 @@ export default async function OwnerDashboardPage({ searchParams }) {
               </Link>
             </div>
           ) : null}
-          {ownerSection === "businesses" && !canCreateAnotherBusiness && !businessesError && !accountPlanError ? (
+          {ownerSection === "businesses" && (resolvedSearchParams?.createLimit === "1" || (!canCreateAnotherBusiness && !businessesError && !accountPlanError)) ? (
             <section className="mb-4 rounded-[24px] border border-amber-300/25 bg-amber-300/8 p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-200">Free plan</p>
-              <h3 className="mt-2 text-xl font-semibold">You&apos;ve reached your Free plan limit</h3>
-              <p className="mt-2 text-sm text-white/70">Your Free account supports up to {FREE_BUSINESS_LIMIT} businesses. You can continue to manage your existing businesses.</p>
-              <p className="mt-2 text-sm text-white/70">Need more businesses or advanced tools? Explore Spotnera Premium.</p>
-              <Link href="/owner/premium" className="spotnera-primary-action mt-4 inline-flex min-h-11 items-center justify-center px-4 text-sm">Explore Premium</Link>
+              <h3 className="text-lg font-semibold">You&apos;ve reached the limit of {FREE_BUSINESS_LIMIT} businesses for your current plan.</h3>
+              <p className="mt-2 text-sm text-white/70">You can continue to manage your existing businesses.</p>
+              {SHOW_OWNER_PREMIUM_PROMOTION ? <Link href="/owner/premium" className="spotnera-primary-action mt-4 inline-flex min-h-11 items-center justify-center px-4 text-sm">Explore Premium</Link> : null}
             </section>
           ) : null}
           {ownerSection === "businesses" && accountPlanError ? (
