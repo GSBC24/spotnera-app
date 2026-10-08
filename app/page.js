@@ -26,6 +26,7 @@ const BUSINESS_SELECT = `
   latitude,
   longitude,
   is_active,
+  verified_at,
   business_opening_hours (id, day_of_week, is_closed, open_time, close_time, spans_midnight)
 `;
 

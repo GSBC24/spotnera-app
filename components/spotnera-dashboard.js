@@ -41,6 +41,8 @@ import { groupMapUpcomingDeals } from "@/lib/map-upcoming-deals.mjs";
 import { saveBusinessDealNotificationPreference } from "@/lib/saved-business-notifications.mjs";
 
 const BOOKMARK_PATH = "M5 3h14v19l-7-4-7 4V3z";
+const TAG_PATH = "M3 3h8l10 10-8 8L3 11V3zm4 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z";
+const STORE_PATH = "M4 3h16l2 7v2h-2v9H4v-9H2v-2l2-7zm2 10v6h4v-6H6zm6 0v6h6v-6h-6z";
 const STAR_PATH =
   "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z";
 const LOCATION_PATH =
@@ -346,14 +348,19 @@ function FavoriteButton({ isFavorite, onClick, size = "md", disabled = false }) 
       aria-label={isFavorite ? "Remove saved business" : "Save business"}
       aria-pressed={isFavorite}
       disabled={disabled}
-      onClick={onClick}
-      className={`grid ${sizeClass} shrink-0 place-items-center border transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className={`grid ${sizeClass} shrink-0 place-items-center border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:cursor-not-allowed disabled:opacity-60 ${
         isFavorite
           ? "border-[#33d6a6]/50 bg-[#33d6a6] text-zinc-950 shadow-[0_12px_30px_rgba(51,214,166,0.22)]"
           : "border-white/12 bg-white/10 text-white/70 hover:bg-white/16 hover:text-white"
       }`}
     >
-      <Icon path={BOOKMARK_PATH} />
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
+        <path d={BOOKMARK_PATH} fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      </svg>
     </button>
   );
 }
@@ -863,6 +870,7 @@ export function SpotneraDashboard({
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim();
   const selectedBusiness =
     filteredBusinesses.find((business) => business.id === selectedBusinessId) ?? null;
+  const selectedBusinessLiveDeals = selectedBusiness ? getDiscoverableDeals(selectedBusiness) : [];
   useEffect(() => {
     if (!selectedBusiness || !isDetailOpen || !detailBackdropRef.current) return undefined;
     const backdrop = detailBackdropRef.current;
@@ -1436,62 +1444,63 @@ export function SpotneraDashboard({
               aria-label={`Selected business: ${selectedBusiness.name}`}
               className="absolute bottom-4 left-4 right-4 z-10 max-h-[min(65dvh,420px)] min-w-0 overflow-y-auto overscroll-contain rounded-[28px] border border-white/14 bg-zinc-950/92 p-4 shadow-[0_22px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:left-auto sm:max-w-md"
             >
-              <button
-                type="button"
-                aria-label="Close selected business"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  closeSelectedBusinessUI();
-                }}
-                className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-white/14 bg-black/40 text-xl font-bold text-white/82 transition hover:border-white/24 hover:bg-black/60 hover:text-white"
-              >
-                &times;
-              </button>
-              <div className="min-w-0 pr-12">
-                <div className="flex items-center gap-2">
-                  <CategoryDot category={selectedBusiness.category} />
-                  <p className="break-words text-xs font-semibold text-white/56">
-                    {selectedBusiness.category}
-                  </p>
+              <div className="flex min-w-0 items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <CategoryDot category={selectedBusiness.category} />
+                    <p className="break-words text-xs font-semibold text-white/56">{selectedBusiness.category}</p>
+                    {selectedBusiness.verified_at ? <span className="text-xs font-semibold text-[#72f0cc]">✓ Verified</span> : null}
+                  </div>
+                  <h2 className="mt-1 break-words text-xl font-semibold tracking-tight">{selectedBusiness.name}</h2>
                 </div>
-                <h2 className="mt-2 break-words text-xl font-semibold tracking-tight">
-                  {selectedBusiness.name}
-                </h2>
-              </div>
-              <BusinessAddress business={selectedBusiness} compact />
-              <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-2" />
-              <MapBusinessDeals business={selectedBusiness} />
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsDetailOpen(true);
-                  }}
-                  className="spotnera-brand-action inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-xs font-bold transition"
-                >
-                  View deals
-                </button>
-                <Link
-                  href={getBusinessPath(selectedBusiness)}
-                  onClick={() => trackEvent("view_business", getBusinessEventParameters(selectedBusiness))}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/10 px-3 text-center text-xs font-bold text-white/78 transition hover:bg-white/16"
-                >
-                  Business profile
-                </Link>
-              </div>
-              <div className="mt-2 flex flex-wrap items-start gap-2 border-t border-white/10 pt-2">
-                <div className="flex min-h-11 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    aria-label="Close selected business"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      closeSelectedBusinessUI();
+                    }}
+                    className="grid h-11 w-11 place-items-center rounded-2xl border border-white/14 bg-black/40 text-xl font-bold text-white/82 transition hover:border-white/24 hover:bg-black/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
+                  >
+                    &times;
+                  </button>
                   <FavoriteButton
                     isFavorite={selectedBusiness.isFavorite}
                     disabled={pendingFavoriteId === selectedBusiness.id || pendingNotificationBusinessId === selectedBusiness.id}
                     onClick={() => handleToggleFavorite(selectedBusiness)}
                   />
-                  <span className="text-xs font-semibold text-white/78" aria-live="polite">
-                    {pendingFavoriteId === selectedBusiness.id ? "Saving..." : selectedBusiness.isFavorite ? "Saved" : "Save"}
-                  </span>
                 </div>
-                <BusinessLocationActions key={selectedBusiness.id} business={selectedBusiness} />
               </div>
+              <BusinessAddress business={selectedBusiness} compact />
+              <BusinessOpeningStatus hours={selectedBusiness.business_opening_hours} className="mt-2" />
+              <MapBusinessDeals business={selectedBusiness} />
+              <div className={`mt-3 grid min-w-0 gap-2 ${selectedBusinessLiveDeals.length || selectedBusiness.upcomingDealCount > 0 ? "grid-cols-2 max-[340px]:grid-cols-1" : "grid-cols-1"}`}>
+                {selectedBusinessLiveDeals.length ? <button
+                  type="button"
+                  onClick={() => setIsDetailOpen(true)}
+                  className="spotnera-brand-action inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
+                >
+                  <Icon path={TAG_PATH} />
+                  View deals
+                </button> : null}
+                <Link
+                  href={getBusinessPath(selectedBusiness)}
+                  onClick={() => trackEvent("view_business", getBusinessEventParameters(selectedBusiness))}
+                  className={`inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-center text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] ${selectedBusinessLiveDeals.length ? "border border-white/14 bg-white/10 text-white/86 hover:bg-white/16" : "spotnera-brand-action"}`}
+                >
+                  <Icon path={STORE_PATH} />
+                  Profile
+                </Link>
+                {!selectedBusinessLiveDeals.length && selectedBusiness.upcomingDealCount > 0 ? <button
+                  type="button"
+                  onClick={() => setIsDetailOpen(true)}
+                  className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-xl border border-white/14 bg-white/8 px-3 text-xs font-semibold text-white/74 transition hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
+                >
+                  Upcoming deals
+                </button> : null}
+              </div>
+              <BusinessLocationActions key={selectedBusiness.id} business={selectedBusiness} className="mt-2 border-t border-white/10 pt-2" compact />
             </motion.div>
           ) : null}
         </div>
