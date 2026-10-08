@@ -3,19 +3,16 @@ import { Fragment } from "react";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
-import { CopyProfileLinkButton } from "@/components/copy-profile-link-button";
-import { BusinessQrCode } from "@/components/business-qr-code";
+import { OwnerBusinessMoreMenu } from "@/components/owner-business-more-menu";
 import { BusinessOpeningHoursFields } from "@/components/business-opening-hours-fields";
 import { BUSINESS_WEEKDAYS } from "@/lib/business-opening-hours.mjs";
 import { compensateFailedOpeningHoursCreate } from "@/lib/business-opening-hours-compensation.mjs";
 import { DealAvailabilityFields } from "@/components/deal-availability-fields";
-import { DeleteBusinessButton } from "@/components/delete-business-button";
 import {
   DealDateTimeInput,
 } from "@/components/deal-date-time-input";
 import {
-  DealAvailabilityLabel,
-  DealTimeLabel,
+  OwnerDealTimingLabel,
 } from "@/components/deal-time-label";
 import { HeaderLogout } from "@/components/header-logout";
 import { SpotneraBottomNav } from "@/components/spotnera-bottom-nav";
@@ -1218,12 +1215,7 @@ function DealStatusSummary({ deal }) {
           <span aria-hidden="true" className="mr-1.5">●</span>
           {meta.label}
         </span>
-        <span className="text-xs font-semibold text-zinc-500">
-          <DealTimeLabel deal={deal} fallback="Promotion timing" />
-        </span>
-        <span className="text-xs font-bold text-emerald-700">
-          <DealAvailabilityLabel deal={deal} />
-        </span>
+        <span className="text-xs font-semibold text-zinc-500"><OwnerDealTimingLabel deal={deal} /></span>
       </div>
     </div>
   );
@@ -1665,7 +1657,7 @@ export default async function OwnerDashboardPage({ searchParams }) {
       />
       <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8">
         <header className="spotnera-card rounded-[30px] p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" />
               <div className="min-w-0">
@@ -1678,10 +1670,10 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 flex-wrap justify-end gap-2">
-              <Link href="/feedback" className="inline-flex min-h-11 items-center rounded-2xl border border-white/20 px-3 text-sm font-semibold text-white/80 hover:border-[#72f0cc]/50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">Give feedback</Link>
-              <HelpLink light />
-              <div className="relative"><HeaderLogout /></div>
+            <div className="ml-auto flex flex-wrap justify-end gap-1.5">
+              <Link href="/feedback" className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-xs font-semibold text-white/65 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"><span aria-hidden="true">✎</span>Give feedback</Link>
+              <HelpLink showLabel className="text-xs" />
+              <div className="relative"><HeaderLogout withIcon /></div>
             </div>
           </div>
           {resolvedSearchParams?.businessDeleted === "1" ? (
@@ -2017,36 +2009,23 @@ export default async function OwnerDashboardPage({ searchParams }) {
                       ) : null}
                     </section>
                     ) : null}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Link
-                        href={getBusinessPath(business)}
-                        className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
-                      >
-                        View public profile
-                      </Link>
-                      <CopyProfileLinkButton
-                        businessId={business.id}
-                        businessSlug={business.slug}
-                        businessCategory={business.category}
-                        city={business.city}
-                        country={business.country}
-                      />
-                      <BusinessQrCode business={business} />
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Link
                         href={`/owner?section=businesses&editBusiness=${business.id}`}
                         scroll={false}
                         aria-controls={`edit-business-${business.id}`}
                         aria-expanded={ownerSection === "businesses" && editingBusinessId === business.id}
-                        className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
+                        className="spotnera-primary-action inline-flex min-h-11 items-center justify-center gap-2 px-4 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
                       >
-                        Edit
+                        <span aria-hidden="true">✎</span>Edit
                       </Link>
-                      <DeleteBusinessButton
-                        businessId={business.id}
-                        businessName={business.name}
-                        businessCategory={business.category}
-                        section={ownerSection}
-                      />
+                      <Link
+                        href={getBusinessPath(business)}
+                        className="spotnera-secondary-action inline-flex min-h-11 items-center justify-center gap-2 px-4 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
+                      >
+                        Profile
+                      </Link>
+                      <OwnerBusinessMoreMenu business={business} section={ownerSection} />
                     </div>
                   </article>
                   {ownerSection === "businesses" && editingBusinessId === business.id ? (
@@ -2110,14 +2089,13 @@ export default async function OwnerDashboardPage({ searchParams }) {
                       {DEAL_STATUS_META[status].label}
                     </span>
                   </div>
-                  <p className="mt-3 text-xs text-white/54"><DealTimeLabel deal={deal} fallback="Promotion timing" /></p>
-                  <p className="mt-1 text-xs font-bold text-[#72f0cc]"><DealAvailabilityLabel deal={deal} /></p>
+                  <p className="mt-2 text-xs font-semibold text-white/64"><OwnerDealTimingLabel deal={deal} /></p>
                   {editingDealId === deal.id ? (
                     <div className="mt-4 border-t border-white/10 pt-4">
                       <DealForm action={updateDeal} deal={deal} businesses={businesses} submitLabel="Save deal" />
                     </div>
                   ) : (
-                    <Link href={`/owner?section=deals&editDeal=${deal.id}`} className="spotnera-secondary-action mt-4 inline-flex min-h-10 items-center justify-center px-4 text-xs">Edit</Link>
+                    <Link href={`/owner?section=deals&editDeal=${deal.id}`} className="spotnera-primary-action mt-3 inline-flex min-h-11 items-center justify-center gap-2 px-4 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"><span aria-hidden="true">✎</span>Edit deal</Link>
                   )}
                 </article>
               );

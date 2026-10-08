@@ -5,6 +5,7 @@ import {
   getDealAvailabilityLabel,
   getDealTimingLabel,
 } from "@/lib/deals";
+import { getOwnerDealTimingLabel } from "@/lib/owner-deal-presentation.mjs";
 
 export function DealTimeLabel({ deal, fallback }) {
   const label = getDealTimingLabel(deal) || fallback || "";
@@ -29,4 +30,8 @@ export function LocalDealDateTime({ prefix, value }) {
 
 export function DealAvailabilityLabel({ deal }) {
   return <span suppressHydrationWarning>{getDealAvailabilityLabel(deal)}</span>;
+}
+
+export function OwnerDealTimingLabel({ deal }) {
+  return <span suppressHydrationWarning>{getOwnerDealTimingLabel(deal)}</span>;
 }

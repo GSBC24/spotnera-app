@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { DeleteAccountPanel } from "@/components/delete-account-panel";
 import { NotificationPreferences } from "@/components/notification-preferences";
 import { PersonalizationSettings } from "@/components/personalization-settings";
@@ -146,6 +147,7 @@ export function ProfileAccountView({
         loadError={notificationPreferencesLoadError}
       />
       <PwaInstallAction />
+      <Link href="/feedback" className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[#72f0cc] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">Give feedback</Link>
       <section className="mt-4 rounded-[24px] border border-white/14 bg-white/10 p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/42">Privacy</p><PrivacySettingsLink className="mt-3 min-h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-sm font-black text-white/78 transition hover:bg-white/16" /></section>
       <DeleteAccountPanel ownedBusinessCount={ownedBusinessCount} />
     </section>

@@ -16,6 +16,7 @@ export default function HelpPage() {
         <p className="mt-3 text-sm leading-6 text-white/65">Find a quick answer, or contact us if you still need help.</p>
       </header>
       <HelpCenter />
+      <p className="mt-5 text-sm text-white/65">Have an idea for Spotnera? <Link href="/feedback" className="inline-flex min-h-11 items-center font-semibold text-[#72f0cc] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">Give feedback</Link></p>
     </div>
   </main>;
 }

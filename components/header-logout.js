@@ -1,11 +1,13 @@
 import { LogoutButton } from "@/components/logout-button";
 
-export function HeaderLogout() {
+export function HeaderLogout({ withIcon = false }) {
   return (
     <LogoutButton
       className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/12 bg-white/10 px-3 text-xs font-bold text-white/78 transition hover:border-[#33d6a6]/35 hover:bg-[#33d6a6]/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#33d6a6]/60 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
       errorClassName="absolute right-0 top-full mt-2 w-48 rounded-xl border border-red-300/30 bg-red-950/90 px-2 py-1.5 text-right text-[11px] font-semibold text-red-200 shadow-xl"
       loadingChildren="Logging out..."
-    />
+      >
+      {withIcon ? <span className="inline-flex items-center gap-1.5"><span aria-hidden="true">↪</span>Log out</span> : "Log out"}
+    </LogoutButton>
   );
 }

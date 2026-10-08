@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { getBusinessUrl } from "@/lib/business-url";
 
-export function BusinessQrCode({ business }) {
+export function BusinessQrCode({ business, triggerClassName = "" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [copyMessage, setCopyMessage] = useState(null);
   const [qrError, setQrError] = useState(null);
@@ -91,7 +91,7 @@ export function BusinessQrCode({ business }) {
       <button
         type="button"
         onClick={openModal}
-        className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
+        className={`spotnera-secondary-action inline-flex min-h-11 items-center justify-center px-4 text-xs ${triggerClassName}`}
       >
         QR code
       </button>

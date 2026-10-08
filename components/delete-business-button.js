@@ -6,7 +6,7 @@ import { trackEvent } from "@/lib/analytics";
 import { ownerSectionHref } from "@/lib/owner-navigation.mjs";
 
 export function DeleteBusinessButton({ businessId, businessName, businessCategory,
-  section = "businesses" }) {
+  section = "businesses", triggerClassName = "" }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
@@ -46,12 +46,12 @@ export function DeleteBusinessButton({ businessId, businessName, businessCategor
 
   return (
     <>
-      <button type="button" onClick={() => { setIsOpen(true); setConfirmation(""); setError(""); }} className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center border-red-200 bg-red-50 px-4 text-xs text-red-700 hover:bg-red-100">
+      <button type="button" onClick={() => { setIsOpen(true); setConfirmation(""); setError(""); }} className={`spotnera-secondary-action inline-flex min-h-11 items-center justify-center border-red-200 bg-red-50 px-4 text-xs text-red-700 hover:bg-red-100 ${triggerClassName}`}>
         Delete business
       </button>
       {isOpen ? (
         <div className="spotnera-dialog-backdrop fixed inset-0 z-[90] flex items-end px-4 pb-4 pt-16 sm:items-center sm:justify-center">
-          <section role="dialog" aria-modal="true" aria-labelledby="delete-business-title" className="spotnera-dialog-panel max-h-[86vh] w-full max-w-md overflow-y-auto rounded-[30px] p-5">
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-business-title" onKeyDown={(event) => { if (event.key === "Escape" && !isDeleting) { event.stopPropagation(); setIsOpen(false); } }} className="spotnera-dialog-panel max-h-[86vh] w-full max-w-md overflow-y-auto rounded-[30px] p-5">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-red-200">Permanent deletion</p>
             <h2 id="delete-business-title" className="mt-2 text-2xl font-semibold">Delete &quot;{businessName}&quot;?</h2>
             <p className="mt-3 text-sm leading-6 text-white/68">This will permanently remove the business and associated deals, reviews, favorites, analytics, and owned media. This action cannot be undone.</p>

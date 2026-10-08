@@ -12,6 +12,7 @@ export function CopyProfileLinkButton({
   country,
   label = "Copy profile link",
   url,
+  className = "",
 }) {
   const [message, setMessage] = useState(null);
 
@@ -40,7 +41,7 @@ export function CopyProfileLinkButton({
       <button
         type="button"
         onClick={copyLink}
-        className="spotnera-secondary-action inline-flex min-h-10 items-center justify-center px-4 text-xs"
+        className={`spotnera-secondary-action inline-flex min-h-11 items-center justify-center px-4 text-xs ${className}`}
       >
         {label}
       </button>
