@@ -1775,8 +1775,6 @@ export default async function OwnerDashboardPage({ searchParams }) {
                 )) : (
                   <div className="rounded-2xl border border-dashed border-white/14 p-4">
                     <p className="text-sm text-white/58">No businesses yet. Create your first business to get started.</p>
-                    {!businessesError && canCreateAnotherBusiness ? <Link href="/owner?section=businesses&createBusiness=1"
-                      className="spotnera-brand-action mt-3 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">Create business</Link> : null}
                   </div>
                 )}
               </div>
