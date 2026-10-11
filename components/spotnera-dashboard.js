@@ -1220,7 +1220,7 @@ export function SpotneraDashboard({
           <div className="flex min-w-0 items-center gap-3">
             <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark shrink-0 object-contain" />
             <div className="min-w-0">
-              <p className="spotnera-kicker text-white/55">Spotnera™ Live</p>
+              <p className="spotnera-kicker text-white/55">Spotnera® Live</p>
               <h1 className="mt-1 truncate text-[1.35rem] font-semibold leading-tight sm:text-2xl">
                 {activeHeading}
               </h1>
@@ -1235,7 +1235,7 @@ export function SpotneraDashboard({
           <>
           <div ref={authViewportRef} className="spotnera-dialog-backdrop fixed inset-x-0 top-0 z-[90] flex h-[100dvh] items-center justify-center overflow-y-auto overscroll-contain px-3 py-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-4" onMouseDown={(event) => { if (event.target === event.currentTarget) handleCloseAuth(); }}>
           <section ref={authDialogRef} data-spotnera-auth-dialog role="dialog" aria-modal="true" aria-labelledby="auth-gate-title" className="my-auto max-h-full w-full max-w-md overflow-y-auto overscroll-contain rounded-[28px] border border-white/14 bg-[#151821]/98 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
-            <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button ref={authCloseRef} type="button" aria-label="Close sign in" onClick={handleCloseAuth} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
+            <div className="flex items-start justify-between gap-3"><div><p className="spotnera-kicker text-white/55">Spotnera®</p><h2 id="auth-gate-title" className="mt-1 text-xl font-semibold">Sign in to continue</h2><p className="mt-2 text-sm leading-6 text-white/62">Create an account or sign in to use this personal feature.</p></div><button ref={authCloseRef} type="button" aria-label="Close sign in" onClick={handleCloseAuth} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/10 text-xl text-white/80">&times;</button></div>
             <div className="spotnera-auth-panel mt-5 rounded-2xl border border-white/10 p-4"><AuthPanel successRedirect={authIntent} /></div>
           </section>
           </div>

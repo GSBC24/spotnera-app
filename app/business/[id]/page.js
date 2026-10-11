@@ -380,7 +380,7 @@ export async function generateMetadata({ params }) {
 
   if (!hasSupabaseEnv()) {
     return {
-      title: "Business not found | Spotnera",
+      title: "Business not found | Spotnera®",
       description: "This Spotnera business profile is not available.",
     };
   }
@@ -395,12 +395,12 @@ export async function generateMetadata({ params }) {
 
   if (!business) {
     return {
-      title: "Business not found | Spotnera",
+      title: "Business not found | Spotnera®",
       description: "This Spotnera business profile is not available.",
     };
   }
 
-  const title = `${business.name} | Spotnera`;
+  const title = `${business.name} | Spotnera®`;
   const description =
     business.description ||
     [business.category, business.city, business.country].filter(Boolean).join(" in ") ||
@@ -418,7 +418,7 @@ export async function generateMetadata({ params }) {
       title,
       description,
       url,
-      siteName: "Spotnera",
+      siteName: "Spotnera®",
       type: "website",
       images: [{ url: image, alt: business.name }],
     },
@@ -444,7 +444,7 @@ function BrandedUnavailable({ title, message }) {
             className="spotnera-brand-mark object-contain"
           />
           <div>
-            <p className="spotnera-kicker text-zinc-500">Spotnera</p>
+            <p className="spotnera-kicker text-zinc-500">Spotnera®</p>
             <p className="text-sm font-bold">Business profile</p>
           </div>
         </div>
@@ -521,7 +521,7 @@ export default async function BusinessProfilePage({ params }) {
               className="spotnera-brand-mark shrink-0 object-contain"
             />
             <div className="min-w-0">
-              <p className="spotnera-kicker text-white/55">Spotnera™</p>
+              <p className="spotnera-kicker text-white/55">Spotnera®</p>
               <p className="truncate text-sm font-bold text-white/82">Public business profile</p>
             </div>
           </Link>

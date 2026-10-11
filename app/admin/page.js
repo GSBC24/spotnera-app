@@ -268,7 +268,7 @@ export default async function AdminPage({ searchParams }) {
   return <main className="min-h-screen bg-[#0d1310] px-4 py-8 text-white sm:px-8">
     <div className="mx-auto max-w-5xl">
       <div className="mb-8 flex items-center justify-between gap-3">
-        <div><p className="text-xs font-bold uppercase tracking-widest text-[#72f0cc]">Spotnera</p>
+        <div><p className="text-xs font-bold uppercase tracking-widest text-[#72f0cc]">Spotnera®</p>
           <h1 className="mt-1 text-3xl font-semibold">Admin</h1></div>
         <Link href="/" className="text-sm text-white/60 underline">Back to Spotnera</Link>
       </div>

@@ -85,7 +85,7 @@ export default async function Home({ searchParams }) {
           <div className="flex items-center gap-3">
             <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark object-contain" />
             <div>
-              <p className="spotnera-kicker text-zinc-500">Spotnera</p>
+              <p className="spotnera-kicker text-zinc-500">Spotnera®</p>
               <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
             </div>
           </div>
@@ -327,7 +327,7 @@ export default async function Home({ searchParams }) {
                 <div className="flex items-center gap-3">
                   <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark object-contain" />
                   <div>
-                    <p className="spotnera-kicker text-zinc-500">Spotnera™</p>
+                    <p className="spotnera-kicker text-zinc-500">Spotnera®</p>
                     <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
                   </div>
                 </div>
@@ -354,7 +354,7 @@ export default async function Home({ searchParams }) {
                 <div className="flex items-center gap-3">
                   <img src="/icons/logo.png" alt="Spotnera" className="spotnera-brand-mark object-contain" />
                   <div>
-                    <p className="spotnera-kicker text-zinc-500">Spotnera™</p>
+                    <p className="spotnera-kicker text-zinc-500">Spotnera®</p>
                     <p className="text-sm font-bold text-zinc-950">Live local discovery</p>
                   </div>
                 </div>

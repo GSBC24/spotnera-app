@@ -1,7 +1,7 @@
 export default function manifest() {
   return {
-    name: "Spotnera",
-    short_name: "Spotnera",
+    name: "Spotnera®",
+    short_name: "Spotnera®",
     description: "Discover nearby businesses, live deals and local activity.",
     start_url: "/",
     scope: "/",

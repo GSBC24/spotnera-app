@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FeedbackForm } from "@/components/feedback-form";
 
 export const metadata = {
-  title: "Give feedback | Spotnera",
+  title: "Give feedback | Spotnera®",
   description: "Help us make Spotnera easier and more useful for businesses.",
 };
 
@@ -11,8 +11,8 @@ export default function FeedbackPage() {
     <div className="mx-auto w-full max-w-3xl pb-12">
       <Link href="/" className="text-sm font-semibold text-white/65 underline-offset-4 hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">← Back to Spotnera</Link>
       <header className="spotnera-card mt-5 rounded-[30px] border border-white/10 p-6 sm:p-9">
-        <p className="spotnera-kicker text-[#72f0cc]">Spotnera™</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Help us improve Spotnera™</h1>
+        <p className="spotnera-kicker text-[#72f0cc]">Spotnera®</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Help us improve Spotnera®</h1>
         <p className="mt-3 text-sm leading-6 text-white/65">Your feedback helps us make Spotnera easier and more useful for businesses. It should only take a few minutes.</p>
       </header>
       <FeedbackForm />

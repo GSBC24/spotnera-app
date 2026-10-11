@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 export const runtime = "nodejs";
 
 const TEST_PAYLOAD = {
-  title: "Spotnera",
+  title: "Spotnera®",
   body: "Push notifications are working on this device.",
   url: "/me",
   tag: "spotnera-test",

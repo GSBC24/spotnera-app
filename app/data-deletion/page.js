@@ -3,7 +3,7 @@ import Image from "next/image";
 import { legalConfig } from "@/lib/legal-config";
 
 export const metadata = {
-  title: "User Data Deletion | Spotnera",
+  title: "User Data Deletion | Spotnera®",
   description: "Instructions for permanently deleting a Spotnera account and associated data.",
 };
 

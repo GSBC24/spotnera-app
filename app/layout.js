@@ -5,14 +5,14 @@ import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 
 export const metadata = {
-  title: "Spotnera",
+  title: "Spotnera®",
   description: "Discover nearby businesses, live deals and local activity.",
-  applicationName: "Spotnera",
+  applicationName: "Spotnera®",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Spotnera",
+    title: "Spotnera®",
   },
   icons: {
     icon: [

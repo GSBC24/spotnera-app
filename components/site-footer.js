@@ -9,7 +9,7 @@ export function SiteFooter() {
     <footer className="border-t border-white/10 bg-zinc-950 px-4 py-5 text-white sm:px-6">
       <div className="mx-auto grid w-full max-w-6xl gap-3 text-center text-xs font-bold text-white/62 sm:grid-cols-[1fr_auto] sm:text-left">
         <div className="grid gap-1">
-          <p>&copy; {year} Spotnera</p>
+          <p>&copy; {year} Spotnera®</p>
           <p>{getOperatorSentence()}</p>
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 sm:justify-start">
             {legalConfig.organizationNumber ? (

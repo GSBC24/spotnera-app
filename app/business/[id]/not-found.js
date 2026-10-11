@@ -14,7 +14,7 @@ export default function BusinessProfileNotFound() {
             className="spotnera-brand-mark object-contain"
           />
           <div>
-            <p className="spotnera-kicker text-zinc-500">Spotnera</p>
+            <p className="spotnera-kicker text-zinc-500">Spotnera®</p>
             <p className="text-sm font-bold">Business profile</p>
           </div>
         </div>
