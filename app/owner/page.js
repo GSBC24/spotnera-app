@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import AddressAutocomplete from "./address-autocomplete";
 import { OwnerBusinessMoreMenu } from "@/components/owner-business-more-menu";
 import { BusinessOpeningHoursFields } from "@/components/business-opening-hours-fields";
+import { BusinessCreateDetails, BusinessCreateFieldError, BusinessCreateForm, BusinessCreateFormError } from "@/components/business-create-form";
 import { BUSINESS_WEEKDAYS } from "@/lib/business-opening-hours.mjs";
 import { compensateFailedOpeningHoursCreate } from "@/lib/business-opening-hours-compensation.mjs";
+import { businessInsertError, businessStorageError, logBusinessCreateInsertFailure, validateBusinessImage } from "@/lib/business-create-errors.mjs";
 import { DealAvailabilityFields } from "@/components/deal-availability-fields";
 import {
   DealDateTimeInput,
@@ -443,14 +445,10 @@ function buildBusinessPayload(formData, userId) {
     tiktok_url: tiktok.value,
     snapchat_url: snapchat.value,
     fieldErrors: [
-      phone.error,
-      email.error,
-      website.error,
-      facebook.error,
-      instagram.error,
-      tiktok.error,
-      snapchat.error,
-    ].filter(Boolean),
+      ["phone", phone.error], ["email", email.error], ["website_url", website.error],
+      ["facebook_url", facebook.error], ["instagram_url", instagram.error],
+      ["tiktok_url", tiktok.error], ["snapchat_url", snapchat.error],
+    ].filter(([, message]) => Boolean(message)).map(([field, message]) => ({ field, message })),
     selected_address: getNullableString(formData, "selected_address"),
     selected_country: getNullableString(formData, "selected_country"),
     selected_city: getNullableString(formData, "selected_city"),
@@ -537,47 +535,75 @@ function buildDealSchedules(formData) {
   return { schedules };
 }
 
-function validateBusiness(payload, { supportedCountriesOnly = false } = {}) {
-  if (payload.fieldErrors.length) {
-    return payload.fieldErrors[0];
-  }
+function validateBusinessIssue(payload, { supportedCountriesOnly = false } = {}) {
+  if (!payload.name) return { field: "name", message: "Enter your business name." };
+  if (payload.name.length < 2 || payload.name.length > 120) return { field: "name", message: "Business name must be 2 to 120 characters." };
+  if (!payload.category) return { field: "category", message: "Choose a business category." };
+  if (!payload.country) return { field: "country", message: "Choose a country." };
+  if (!payload.city) return { field: "city", message: "Enter your city." };
+  if (payload.city.length < 2 || payload.city.length > 120) return { field: "city", message: "City must be 2 to 120 characters." };
+  if (payload.fieldErrors.length) return payload.fieldErrors[0];
 
-  if (!payload.name || !payload.category || !payload.country || !payload.city) {
-    return "Name, category, country, and city are required.";
-  }
-
-  if (!BUSINESS_CATEGORY_LABELS.includes(payload.category)) {
-    if (!isKnownBusinessCategory(payload.category)) {
-    return "Choose a valid business category.";
-    }
+  if (!BUSINESS_CATEGORY_LABELS.includes(payload.category) && !isKnownBusinessCategory(payload.category)) {
+    return { field: "category", message: "Choose a valid business category." };
   }
 
   if (supportedCountriesOnly && !isSupportedCountry(payload.country)) {
-    return "Choose a currently supported country.";
+    return { field: "country", message: "Choose a currently supported country." };
   }
 
   if (!payload.address || payload.address !== payload.selected_address) {
-    return "Choose an address from the Mapbox suggestions before saving.";
+    return { field: "address", message: "Select a complete business address from the suggestions so customers can find you." };
   }
 
   if (
     payload.selected_country &&
     normalizeComparable(payload.country) !== normalizeComparable(payload.selected_country)
   ) {
-    return `The selected address appears to be in ${payload.selected_country}. Choose the matching country or select another address.`;
+    return { field: "country", message: "Choose the country shown in the selected address, or select another address." };
   }
 
   if (
     payload.selected_city &&
     normalizeComparable(payload.city) !== normalizeComparable(payload.selected_city)
   ) {
-    return `The selected address appears to be in ${payload.selected_city}. Choose the matching city or select another address.`;
+    return { field: "city", message: "Choose the city shown in the selected address, or select another address." };
   }
 
   if (payload.latitude === null || payload.longitude === null) {
-    return "Choose an address from the Mapbox suggestions so map coordinates can be saved.";
+    return { field: "address", message: "Select a complete business address from the suggestions so customers can find you." };
   }
 
+  if (Math.abs(payload.latitude) > 90 || Math.abs(payload.longitude) > 180) {
+    return { field: "address", message: "Select a valid business address from the suggestions." };
+  }
+
+  return null;
+}
+
+function validateBusiness(payload, { supportedCountriesOnly = false } = {}) {
+  if (payload.fieldErrors.length) return payload.fieldErrors[0].message;
+  if (!payload.name || !payload.category || !payload.country || !payload.city) {
+    return "Name, category, country, and city are required.";
+  }
+  if (!BUSINESS_CATEGORY_LABELS.includes(payload.category) && !isKnownBusinessCategory(payload.category)) {
+    return "Choose a valid business category.";
+  }
+  if (supportedCountriesOnly && !isSupportedCountry(payload.country)) {
+    return "Choose a currently supported country.";
+  }
+  if (!payload.address || payload.address !== payload.selected_address) {
+    return "Choose an address from the Mapbox suggestions before saving.";
+  }
+  if (payload.selected_country && normalizeComparable(payload.country) !== normalizeComparable(payload.selected_country)) {
+    return `The selected address appears to be in ${payload.selected_country}. Choose the matching country or select another address.`;
+  }
+  if (payload.selected_city && normalizeComparable(payload.city) !== normalizeComparable(payload.selected_city)) {
+    return `The selected address appears to be in ${payload.selected_city}. Choose the matching city or select another address.`;
+  }
+  if (payload.latitude === null || payload.longitude === null) {
+    return "Choose an address from the Mapbox suggestions so map coordinates can be saved.";
+  }
   return null;
 }
 
@@ -862,30 +888,38 @@ function revalidateBusinessProfile(business) {
   }
 }
 
-async function createBusiness(formData) {
+async function createBusiness(_previousState, formData) {
   "use server";
 
-  const { supabase, user } = await getSignedInUser();
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { field: null, message: "Your session has expired. Please sign in again." };
+  }
   const payload = buildBusinessPayload(formData, user.id);
-  const validationError = validateBusiness(payload, { supportedCountriesOnly: true });
+  const validationIssue = validateBusinessIssue(payload, { supportedCountriesOnly: true });
   const openingHours = buildBusinessOpeningHours(formData);
 
-  if (validationError || openingHours.error) {
-    redirectWithBusinessFormError(validationError ?? openingHours.error);
+  if (validationIssue) return validationIssue;
+  if (openingHours.error) return { field: "opening_hours", message: openingHours.error };
+
+  for (const [key, field] of [["logo", "logo"], ["cover_image", "cover"]]) {
+    const imageIssue = validateBusinessImage(getImageFile(formData, key), field);
+    if (imageIssue) return imageIssue;
   }
 
-  const { data: business, error } = await supabase
+  const { data: business, error, status } = await supabase
     .from("businesses")
     .insert(getBusinessSavePayload(payload))
     .select("id, slug")
     .single();
 
   if (error) {
-    logServerActionError("Business creation failed", error);
+    const referenceId = logBusinessCreateInsertFailure(error, status);
     if (isFreeBusinessLimitError(error)) {
-      redirect("/owner?section=businesses&createLimit=1");
+      return { field: null, message: "You have reached the maximum number of businesses allowed on your current plan.", referenceId };
     }
-    redirectWithBusinessFormError("Unable to create business. Please try again.");
+    return businessInsertError(error, referenceId, status);
   }
 
   const uploaded = await uploadBusinessImages(supabase, user.id, business.id, formData);
@@ -901,10 +935,9 @@ async function createBusiness(formData) {
         "businesses", { editBusiness: business.id },
       );
     }
-
-    redirectWithBusinessFormError(uploaded.error.userMessage, {
-      imageField: uploaded.error.field,
-    });
+    return uploaded.error.technicalError
+      ? businessStorageError(uploaded.error.technicalError, uploaded.error.field)
+      : { field: uploaded.error.field, message: uploaded.error.userMessage };
   }
 
   if (Object.keys(uploaded.urls).length) {
@@ -925,10 +958,7 @@ async function createBusiness(formData) {
           "businesses", { editBusiness: business.id },
         );
       }
-
-      redirectWithBusinessFormError("We couldn't save the business images. Please try again.", {
-        imageField: "images",
-      });
+      return { field: "images", message: "We couldn't save the business images. Please try again." };
     }
   }
 
@@ -952,11 +982,9 @@ async function createBusiness(formData) {
       revalidatePath("/owner");
       if (compensation.outcome === "deleted_images_remain") {
         logServerActionError("Business deleted but image cleanup failed", compensation.error);
-        redirectWithBusinessFormError(
-          "Opening hours could not be saved, so the new business was removed. Some uploaded images could not be cleaned up. Please contact support if this persists.",
-        );
+        return { field: "opening_hours", message: "Opening hours could not be saved. Please try again or contact support if this persists." };
       }
-      redirectWithBusinessFormError("Opening hours could not be saved, so the new business was removed. Please try again.");
+      return { field: "opening_hours", message: "Opening hours could not be saved. Please try again." };
     }
   }
 
@@ -1222,6 +1250,7 @@ function DealStatusSummary({ deal }) {
 }
 
 function BusinessForm({ action, business, imageError, submitLabel }) {
+  const Form = business ? AnalyticsForm : BusinessCreateForm;
   const selectedCategory = business?.category ?? "";
   const selectedCountry = business?.country ?? "";
   const hasLegacyCategory =
@@ -1230,7 +1259,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
     Boolean(business && selectedCountry && !isSupportedCountry(selectedCountry));
 
   return (
-    <AnalyticsForm
+    <Form
       action={action}
       encType="multipart/form-data"
       eventName={business ? "business_update" : "business_create"}
@@ -1267,6 +1296,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
       ) : null}
       <Field label="Business name">
         <TextInput name="name" required minLength={2} maxLength={120} defaultValue={business?.name ?? ""} />
+        <BusinessCreateFieldError field="name" />
       </Field>
       <Field label="Category">
         <Select name="category" required defaultValue={selectedCategory}>
@@ -1280,6 +1310,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
             </option>
           ))}
         </Select>
+        <BusinessCreateFieldError field="category" />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Country">
@@ -1294,9 +1325,11 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               </option>
             ))}
           </Select>
+          <BusinessCreateFieldError field="country" />
         </Field>
         <Field label="City">
           <TextInput name="city" required minLength={2} maxLength={120} defaultValue={business?.city ?? ""} />
+          <BusinessCreateFieldError field="city" />
         </Field>
       </div>
       <AddressAutocomplete
@@ -1304,14 +1337,16 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
         defaultLatitude={business?.latitude ?? ""}
         defaultLongitude={business?.longitude ?? ""}
       />
+      <BusinessCreateFieldError field="address" />
       <p className="text-xs leading-5 text-zinc-600">Choose an address suggestion so customers can find your business on the map.</p>
-      <details open={Boolean(business) || Boolean(imageError)} className="rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
+      <BusinessCreateDetails defaultOpen={Boolean(business) || Boolean(imageError)}>
         <summary className="cursor-pointer text-sm font-bold text-zinc-900">Opening hours, contact, photos and more <span className="font-medium text-zinc-500">(optional)</span></summary>
         <div className="mt-4 grid gap-3">
       <Field label="Description">
         <TextArea name="description" maxLength={1000} defaultValue={business?.description ?? ""} />
       </Field>
       <BusinessOpeningHoursFields hours={business?.business_opening_hours ?? []} />
+      <BusinessCreateFieldError field="opening_hours" />
       <section className="grid gap-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
@@ -1327,6 +1362,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               placeholder="+47 123 45 678"
               defaultValue={business?.phone ?? ""}
             />
+            <BusinessCreateFieldError field="phone" />
           </Field>
           <Field label="Email">
             <TextInput
@@ -1336,6 +1372,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               placeholder="contact@business.com"
               defaultValue={business?.email ?? ""}
             />
+            <BusinessCreateFieldError field="email" />
           </Field>
           <Field label="Website">
             <TextInput
@@ -1346,6 +1383,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               placeholder="spotnera.com"
               defaultValue={business?.website_url ?? ""}
             />
+            <BusinessCreateFieldError field="website_url" />
           </Field>
         </div>
       </section>
@@ -1363,6 +1401,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               placeholder="facebook.com/spotnera"
               defaultValue={business?.facebook_url ?? ""}
             />
+            <BusinessCreateFieldError field="facebook_url" />
           </Field>
           <Field label="Instagram">
             <TextInput
@@ -1371,6 +1410,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               placeholder="@spotnera"
               defaultValue={business?.instagram_url ?? ""}
             />
+            <BusinessCreateFieldError field="instagram_url" />
           </Field>
           <Field label="TikTok">
             <TextInput
@@ -1379,6 +1419,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               placeholder="@spotnera"
               defaultValue={business?.tiktok_url ?? ""}
             />
+            <BusinessCreateFieldError field="tiktok_url" />
           </Field>
           <Field label="Snapchat">
             <TextInput
@@ -1387,12 +1428,14 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               placeholder="spotnera"
               defaultValue={business?.snapchat_url ?? ""}
             />
+            <BusinessCreateFieldError field="snapchat_url" />
           </Field>
         </div>
       </section>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Logo">
           <FileInput name="logo" />
+          <BusinessCreateFieldError field="logo" />
           {imageError?.field === "logo" ? (
             <span className="text-xs font-semibold leading-5 text-red-600" role="alert">
               {imageError.message}
@@ -1401,6 +1444,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
         </Field>
         <Field label="Cover image">
           <FileInput name="cover_image" />
+          <BusinessCreateFieldError field="cover" />
           {imageError?.field === "cover" ? (
             <span className="text-xs font-semibold leading-5 text-red-600" role="alert">
               {imageError.message}
@@ -1413,8 +1457,9 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
           {imageError.message}
         </p>
       ) : null}
+      <BusinessCreateFieldError field="images" />
         </div>
-      </details>
+      </BusinessCreateDetails>
       <label className="flex h-12 items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-800">
         Active listing
         <input
@@ -1427,11 +1472,12 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
       {business ? (
         <SubmitButton>{submitLabel}</SubmitButton>
       ) : (
-        <LockedFormSubmitButton pendingLabel="Creating profile…">
-          {submitLabel}
-        </LockedFormSubmitButton>
+        <>
+          <BusinessCreateFormError />
+          <LockedFormSubmitButton pendingLabel="Creating business…">{submitLabel}</LockedFormSubmitButton>
+        </>
       )}
-    </AnalyticsForm>
+    </Form>
   );
 }
 

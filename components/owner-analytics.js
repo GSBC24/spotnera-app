@@ -65,6 +65,8 @@ export function AnalyticsForm({
   className,
   encType,
   eventName,
+  formRef,
+  preserveOnAction = false,
   preventDuplicateSubmissions = false,
 }) {
   const submissionLockRef = useRef(false);
@@ -107,6 +109,8 @@ export function AnalyticsForm({
       action={action}
       encType={encType}
       className={className}
+      ref={formRef}
+      onReset={preserveOnAction ? (event) => event.preventDefault() : undefined}
       onSubmit={(event) => {
         const submitter = event.nativeEvent.submitter;
         const isTrackedSubmission =
