@@ -28,18 +28,18 @@ export function BusinessContactActions({ business, action }) {
     <div className="min-w-0 rounded-2xl border border-white/10 bg-white/10 p-3">
       <p className="text-sm font-black text-white">{action.label}</p>
       <p className="mt-1 select-text text-sm font-semibold text-white/70 [overflow-wrap:anywhere]">{action.detail}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2 lg:gap-1.5">
         <BusinessEventLink business={business} eventType={action.eventType}
           gaEventName={action.gaEventName}
           gaParameters={action.gaParameters ?? { contact_method: action.eventType.replace("_click", "") }}
           href={action.href} target={action.external ? "_blank" : undefined}
           rel={action.external ? "noopener noreferrer" : undefined}
-          className="spotnera-secondary-action inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
+          className="spotnera-secondary-action inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] lg:px-2">
           <Icon kind={action.icon} />{action.action}
         </BusinessEventLink>
         <button type="button" aria-label={copyAriaLabel}
           onClick={() => copy(copyValue, successMessage)}
-          className="spotnera-secondary-action inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]">
+          className="spotnera-secondary-action inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] lg:px-2">
           <Icon kind="copy" />{feedback === successMessage ? successMessage : feedback ? "Copy failed" : copyLabel}
         </button>
       </div>
