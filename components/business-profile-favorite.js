@@ -86,7 +86,7 @@ export function BusinessProfileFavorite({
         href={`/?auth=1&next=${encodeURIComponent(
           getBusinessPath({ id: businessId, slug: businessSlug }),
         )}`}
-        className="spotnera-secondary-action inline-flex min-h-12 items-center justify-center gap-2 px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
+        className="spotnera-secondary-action inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
       >
         <BookmarkIcon />Sign in to save
       </Link>
@@ -100,7 +100,7 @@ export function BusinessProfileFavorite({
         onClick={toggleFavorite}
         disabled={isPending}
         aria-pressed={isFavorite}
-        className={`spotnera-secondary-action inline-flex min-h-12 items-center justify-center gap-2 px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] disabled:cursor-not-allowed disabled:opacity-60 ${isFavorite ? "border-[#72f0cc]/45 text-[#72f0cc]" : ""}`}
+        className={`spotnera-secondary-action inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] disabled:cursor-not-allowed disabled:opacity-60 ${isFavorite ? "border-[#72f0cc]/45 text-[#72f0cc]" : ""}`}
       >
         <BookmarkIcon saved={isFavorite} />{isPending ? "Saving..." : isFavorite ? "Saved" : "Save"}
       </button>

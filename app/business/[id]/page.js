@@ -540,7 +540,7 @@ export default async function BusinessProfilePage({ params }) {
           >
             <div className="relative flex min-h-[280px] w-full min-w-0 items-end bg-gradient-to-b from-black/45 via-[#151821]/85 to-[#151821] p-5 sm:min-h-[360px] sm:bg-none sm:p-6 lg:p-8">
               <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div className="min-w-0">
+                <div className="min-w-0 lg:w-[55%]">
                   <div className="mb-5 grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-[24px] border border-white/30 bg-white text-2xl font-black text-zinc-900 shadow-[0_18px_50px_rgba(0,0,0,0.32)] sm:mb-4">
                     {business.logo_url ? (
                       <Image src={business.logo_url} alt={`${business.name} logo`} width={96} height={96} unoptimized className="h-full w-full object-contain object-center p-2" />
@@ -565,7 +565,7 @@ export default async function BusinessProfilePage({ params }) {
                     </a>
                   </div>
                 </div>
-                <div className="flex min-w-0 flex-col gap-3 lg:items-end">
+                <div className="flex min-w-0 flex-col gap-3 lg:w-[43%] lg:items-end">
                   <BusinessShareActions
                     businessId={business.id}
                     businessSlug={business.slug}

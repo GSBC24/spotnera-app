@@ -78,14 +78,14 @@ export function BusinessShareActions({ businessId, businessSlug, businessCategor
       <button
         type="button"
         onClick={shareBusiness}
-        className="spotnera-primary-action inline-flex min-h-12 items-center justify-center gap-2 px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
+        className="spotnera-primary-action inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
       >
         <ActionIcon path={SHARE_PATH} />{feedback === "Shared" ? "Shared" : "Share"}
       </button>
       <button
         type="button"
         onClick={() => copyLink("copy")}
-        className="spotnera-secondary-action inline-flex min-h-12 items-center justify-center gap-2 px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
+        className="spotnera-secondary-action inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
       >
         <ActionIcon path={COPY_PATH} />{feedback === "Link copied" ? "Link copied" : feedback.startsWith("Could not") ? "Copy failed" : "Copy link"}
       </button>
