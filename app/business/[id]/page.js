@@ -226,10 +226,16 @@ function getSocialUrl(value, profile) {
 }
 
 function getSocialLinks(business) {
-  return SOCIAL_PROFILES.map((profile) => ({
-    label: profile.label,
-    href: getSocialUrl(business[profile.field], profile),
-  })).filter((profile) => profile.href);
+  return SOCIAL_PROFILES.map((profile) => {
+    const href = getSocialUrl(business[profile.field], profile);
+    if (!href) return null;
+    const url = new URL(href);
+    return {
+      label: profile.label,
+      href,
+      detail: `${url.hostname.replace(/^www\./, "")}${url.pathname.replace(/\/$/, "")}${url.search}`,
+    };
+  }).filter(Boolean);
 }
 
 function getContactActions(business) {
@@ -240,14 +246,16 @@ function getContactActions(business) {
 
   return [
     phone && phoneHref
-      ? { label: "Call", detail: phone, href: phoneHref, external: false, eventType: "call_click" }
+      ? { label: "Phone", action: "Call", icon: "phone", detail: phone, href: phoneHref, external: false, eventType: "call_click" }
       : null,
     emailHref
-      ? { label: "Email", detail: "Send email", href: emailHref, external: false, eventType: "email_click" }
+      ? { label: "Email", action: "Email", icon: "email", detail: getDisplayValue(business.email), href: emailHref, external: false, eventType: "email_click" }
       : null,
     websiteUrl
       ? {
           label: "Website",
+          action: "Visit",
+          icon: "website",
           detail: getWebsiteDisplayLabel(websiteUrl),
           href: websiteUrl,
           external: true,
@@ -255,6 +263,15 @@ function getContactActions(business) {
         }
       : null,
   ].filter(Boolean);
+}
+
+function ContactIcon({ kind }) {
+  const path = {
+    phone: "M6.6 3.7 9 6.1 7.7 8.5a15.1 15.1 0 0 0 7.8 7.8l2.4-1.3 2.4 2.4-1.4 2.6a2 2 0 0 1-2.1 1A19.5 19.5 0 0 1 3 7.2a2 2 0 0 1 1-2.1l2.6-1.4Z",
+    email: "M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-11Zm0 0 9 7 9-7",
+    website: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-9 10h18M12 2c2.5 2.7 3.8 6 3.8 10S14.5 19.3 12 22M12 2c-2.5 2.7-3.8 6-3.8 10S9.5 19.3 12 22",
+  }[kind];
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-[#72f0cc]"><path d={path} /></svg>;
 }
 
 function applyBusinessIdentifier(query, identifier) {
@@ -523,14 +540,10 @@ export default async function BusinessProfilePage({ params }) {
             <div className="relative min-w-0 bg-gradient-to-b from-black/45 via-[#151821]/85 to-[#151821] p-5 sm:absolute sm:inset-x-0 sm:bottom-0 sm:bg-none sm:p-6 lg:p-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
-                  <div
-                    className="mb-5 grid h-20 w-20 shrink-0 place-items-center rounded-[24px] border border-white/18 bg-white/14 bg-cover bg-center text-2xl font-black text-white shadow-[0_18px_50px_rgba(0,0,0,0.32)] backdrop-blur-xl sm:mb-4"
-                    style={{
-                      backgroundImage: business.logo_url ? `url(${business.logo_url})` : undefined,
-                    }}
-                    aria-label={`${business.name} logo`}
-                  >
-                    {business.logo_url ? null : business.name.slice(0, 2).toUpperCase()}
+                  <div className="mb-5 grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-[24px] border border-white/30 bg-white text-2xl font-black text-zinc-900 shadow-[0_18px_50px_rgba(0,0,0,0.32)] sm:mb-4">
+                    {business.logo_url ? (
+                      <Image src={business.logo_url} alt={`${business.name} logo`} width={96} height={96} unoptimized className="h-full w-full object-contain object-center p-2" />
+                    ) : business.name.slice(0, 2).toUpperCase()}
                   </div>
                   <p className="spotnera-kicker text-[#72f0cc] [overflow-wrap:anywhere]">{business.category}</p>
                   <h1 className="mt-2 max-w-3xl text-3xl font-semibold leading-tight tracking-normal [overflow-wrap:anywhere] sm:text-5xl sm:leading-[1.02] lg:text-6xl">
@@ -599,7 +612,7 @@ export default async function BusinessProfilePage({ params }) {
           <section id="contact" className="spotnera-surface rounded-[30px] p-4 sm:p-5">
             <p className="spotnera-kicker text-white/42">Contact</p>
             {contactActions.length ? (
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {contactActions.map((action) => (
                   <BusinessEventLink
                     business={business}
@@ -611,12 +624,14 @@ export default async function BusinessProfilePage({ params }) {
                     href={action.href}
                     target={action.external ? "_blank" : undefined}
                     rel={action.external ? "noopener noreferrer" : undefined}
-                    className="rounded-2xl border border-white/10 bg-white/10 p-3 transition hover:bg-white/16"
+                    className="flex min-w-0 items-start gap-3 rounded-2xl border border-white/10 bg-white/10 p-3 transition hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
                   >
-                    <span className="block text-sm font-black text-white">{action.label}</span>
-                    <span className="mt-1 block truncate text-xs font-semibold text-white/52">
-                      {action.detail}
+                    <ContactIcon kind={action.icon} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-black text-white">{action.label}</span>
+                      <span className="mt-1 block text-xs font-semibold text-white/70 [overflow-wrap:anywhere]">{action.detail}</span>
                     </span>
+                    <span className="shrink-0 text-xs font-bold text-[#72f0cc]">{action.action}</span>
                   </BusinessEventLink>
                 ))}
               </div>
@@ -630,7 +645,7 @@ export default async function BusinessProfilePage({ params }) {
           {socialLinks.length ? (
             <section className="spotnera-surface rounded-[30px] p-4 sm:p-5">
               <p className="spotnera-kicker text-white/42">Social</p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {socialLinks.map((link) => (
                   <BusinessEventLink
                     business={business}
@@ -643,9 +658,10 @@ export default async function BusinessProfilePage({ params }) {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white/74 transition hover:bg-white/16 hover:text-white"
+                    className="min-w-0 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 transition hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
                   >
-                    {link.label}
+                    <span className="flex items-center justify-between gap-2 text-sm font-bold text-white"><span>{link.label}</span><span aria-hidden="true" className="text-[#72f0cc]">↗</span></span>
+                    <span className="mt-1 block text-xs font-semibold text-white/70 [overflow-wrap:anywhere]">{link.detail}</span>
                   </BusinessEventLink>
                 ))}
               </div>

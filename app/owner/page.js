@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Fragment } from "react";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -1279,14 +1280,9 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
             }}
           />
           <div className="flex items-center gap-3 p-3">
-            <div
-              className="h-14 w-14 rounded-2xl border border-white bg-cover bg-center shadow-sm"
-              style={{
-                backgroundImage: business?.logo_url
-                  ? `url(${business.logo_url})`
-                  : "linear-gradient(135deg,#18181b,#71717a)",
-              }}
-            />
+            <div className={`h-14 w-14 overflow-hidden rounded-2xl border border-white p-1.5 shadow-sm ${business.logo_url ? "bg-white" : "bg-gradient-to-br from-zinc-900 to-zinc-500"}`}>
+              {business.logo_url ? <Image src={business.logo_url} alt={`${business.name} logo`} width={56} height={56} unoptimized className="h-full w-full object-contain object-center" /> : null}
+            </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold">{business.name}</p>
               <p className="text-xs font-medium text-zinc-500">Current brand images</p>
@@ -1965,14 +1961,9 @@ export default async function OwnerDashboardPage({ searchParams }) {
                     />
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <div
-                          className="h-12 w-12 shrink-0 rounded-2xl bg-cover bg-center"
-                          style={{
-                            backgroundImage: business.logo_url
-                              ? `url(${business.logo_url})`
-                              : "linear-gradient(135deg,#18181b,#71717a)",
-                          }}
-                        />
+                        <div className={`h-12 w-12 shrink-0 overflow-hidden rounded-2xl p-1.5 ${business.logo_url ? "bg-white" : "bg-gradient-to-br from-zinc-900 to-zinc-500"}`}>
+                          {business.logo_url ? <Image src={business.logo_url} alt={`${business.name} logo`} width={48} height={48} unoptimized className="h-full w-full object-contain object-center" /> : null}
+                        </div>
                         <div className="min-w-0">
                           <h3 className="truncate text-base font-bold">{business.name}</h3>
                           <p className="mt-1 flex items-center gap-2 text-sm text-white/54">
