@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound, permanentRedirect } from "next/navigation";
-import { BusinessEventLink } from "@/components/business-event-link";
 import { BusinessProfileAnalytics } from "@/components/business-profile-analytics";
 import { BusinessProfileBottomNav } from "@/components/business-profile-bottom-nav";
 import { HelpLink } from "@/components/help-link";
@@ -14,6 +13,7 @@ import { BusinessProfileReviews } from "@/components/business-profile-reviews";
 import { BusinessShareActions } from "@/components/business-share-actions";
 import { BusinessContactActions } from "@/components/business-contact-actions";
 import { getBusinessAddressLines } from "@/lib/business-address.mjs";
+import { getSocialLinks, getWebsiteUrl } from "@/lib/business-profile-links.mjs";
 import { getBusinessPath, getBusinessUrl } from "@/lib/business-url";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
 import { createClient } from "@/utils/supabase/server";
@@ -78,37 +78,6 @@ const REVIEW_SELECT = `
   updated_at
 `;
 
-const SOCIAL_PROFILES = [
-  {
-    field: "facebook_url",
-    label: "Facebook",
-    hosts: ["facebook.com", "www.facebook.com", "fb.com", "www.fb.com"],
-    buildUrl: (handle) => `https://www.facebook.com/${handle}`,
-    handlePattern: /^[A-Za-z0-9.]{3,80}$/,
-  },
-  {
-    field: "instagram_url",
-    label: "Instagram",
-    hosts: ["instagram.com", "www.instagram.com"],
-    buildUrl: (handle) => `https://www.instagram.com/${handle}`,
-    handlePattern: /^[A-Za-z0-9._]{1,30}$/,
-  },
-  {
-    field: "tiktok_url",
-    label: "TikTok",
-    hosts: ["tiktok.com", "www.tiktok.com"],
-    buildUrl: (handle) => `https://www.tiktok.com/@${handle}`,
-    handlePattern: /^[A-Za-z0-9._]{2,24}$/,
-  },
-  {
-    field: "snapchat_url",
-    label: "Snapchat",
-    hosts: ["snapchat.com", "www.snapchat.com"],
-    buildUrl: (handle) => `https://www.snapchat.com/add/${handle}`,
-    handlePattern: /^[A-Za-z0-9._-]{3,30}$/,
-  },
-];
-
 function getDisplayValue(value) {
   const normalizedValue = String(value ?? "").trim();
   return normalizedValue || null;
@@ -135,39 +104,6 @@ function getReviewLabel(reviewCount) {
   return `${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`;
 }
 
-function getWebsiteUrl(value) {
-  const rawValue = getDisplayValue(value);
-
-  if (!rawValue) {
-    return null;
-  }
-
-  const urlCandidate = /^[a-z][a-z\d+.-]*:/i.test(rawValue)
-    ? rawValue
-    : `https://${rawValue}`;
-
-  try {
-    const url = new URL(urlCandidate);
-
-    if (!["http:", "https:"].includes(url.protocol) || !url.hostname.includes(".")) {
-      return null;
-    }
-
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
-function getWebsiteDisplayLabel(websiteUrl) {
-  try {
-    const url = new URL(websiteUrl);
-    return url.hostname.replace(/^www\./, "");
-  } catch {
-    return "Website";
-  }
-}
-
 function getPhoneHref(phone) {
   const normalizedPhone = String(phone ?? "").replace(/[^\d+]/g, "");
   return normalizedPhone ? `tel:${normalizedPhone}` : null;
@@ -181,62 +117,6 @@ function getEmailHref(email) {
   }
 
   return `mailto:${publicEmail}`;
-}
-
-function getSocialUrl(value, profile) {
-  const rawValue = getDisplayValue(value);
-
-  if (!rawValue) {
-    return null;
-  }
-
-  const lowerRawValue = rawValue.toLowerCase();
-  const schemelessUrl = profile.hosts.some(
-    (host) => lowerRawValue === host || lowerRawValue.startsWith(`${host}/`),
-  );
-  const urlCandidate = schemelessUrl ? `https://${rawValue}` : rawValue;
-
-  try {
-    const url = new URL(urlCandidate);
-
-    if (
-      !["http:", "https:"].includes(url.protocol) ||
-      !profile.hosts.includes(url.hostname.toLowerCase())
-    ) {
-      return null;
-    }
-
-    if (!url.pathname.split("/").filter(Boolean).length) {
-      return null;
-    }
-
-    return url.toString();
-  } catch {
-    const handle = rawValue
-      .replace(/^@+/, "")
-      .replace(/^\/+/, "")
-      .split("/")
-      .filter(Boolean)[0];
-
-    if (!handle || !profile.handlePattern.test(handle)) {
-      return null;
-    }
-
-    return profile.buildUrl(handle);
-  }
-}
-
-function getSocialLinks(business) {
-  return SOCIAL_PROFILES.map((profile) => {
-    const href = getSocialUrl(business[profile.field], profile);
-    if (!href) return null;
-    const url = new URL(href);
-    return {
-      label: profile.label,
-      href,
-      detail: `${url.hostname.replace(/^www\./, "")}${url.pathname.replace(/\/$/, "")}${url.search}`,
-    };
-  }).filter(Boolean);
 }
 
 function getContactActions(business) {
@@ -255,24 +135,15 @@ function getContactActions(business) {
     websiteUrl
       ? {
           label: "Website",
-          action: "Visit",
+          action: "Visit website",
           icon: "website",
-          detail: getWebsiteDisplayLabel(websiteUrl),
+          detail: websiteUrl,
           href: websiteUrl,
           external: true,
           eventType: "website_click",
         }
       : null,
   ].filter(Boolean);
-}
-
-function ContactIcon({ kind }) {
-  const path = {
-    phone: "M6.6 3.7 9 6.1 7.7 8.5a15.1 15.1 0 0 0 7.8 7.8l2.4-1.3 2.4 2.4-1.4 2.6a2 2 0 0 1-2.1 1A19.5 19.5 0 0 1 3 7.2a2 2 0 0 1 1-2.1l2.6-1.4Z",
-    email: "M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-11Zm0 0 9 7 9-7",
-    website: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-9 10h18M12 2c2.5 2.7 3.8 6 3.8 10S14.5 19.3 12 22M12 2c-2.5 2.7-3.8 6-3.8 10S9.5 19.3 12 22",
-  }[kind];
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-[#72f0cc]"><path d={path} /></svg>;
 }
 
 function applyBusinessIdentifier(query, identifier) {
@@ -612,29 +483,7 @@ export default async function BusinessProfilePage({ params }) {
             {contactActions.length ? (
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {contactActions.map((action) => (
-                  action.icon === "phone" || action.icon === "email" ? (
-                    <BusinessContactActions key={action.href} business={business} action={action} />
-                  ) : (
-                  <BusinessEventLink
-                    business={business}
-                    eventType={action.eventType}
-                    gaParameters={{
-                      contact_method: action.eventType.replace("_click", ""),
-                    }}
-                    key={action.href}
-                    href={action.href}
-                    target={action.external ? "_blank" : undefined}
-                    rel={action.external ? "noopener noreferrer" : undefined}
-                    className="flex min-w-0 items-start gap-3 rounded-2xl border border-white/10 bg-white/10 p-3 transition hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
-                  >
-                    <ContactIcon kind={action.icon} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-black text-white">{action.label}</span>
-                      <span className="mt-1 block text-xs font-semibold text-white/70 [overflow-wrap:anywhere]">{action.detail}</span>
-                    </span>
-                    <span className="shrink-0 text-xs font-bold text-[#72f0cc]">{action.action}</span>
-                  </BusinessEventLink>
-                  )
+                  <BusinessContactActions key={action.href} business={business} action={action} />
                 ))}
               </div>
             ) : (
@@ -649,22 +498,16 @@ export default async function BusinessProfilePage({ params }) {
               <p className="spotnera-kicker text-white/42">Social</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {socialLinks.map((link) => (
-                  <BusinessEventLink
-                    business={business}
-                    eventType="social_click"
-                    gaEventName="social_click"
-                    gaParameters={{
-                      social_platform: link.label.toLowerCase(),
-                    }}
-                    key={link.label}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="min-w-0 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 transition hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc]"
-                  >
-                    <span className="flex items-center justify-between gap-2 text-sm font-bold text-white"><span>{link.label}</span><span aria-hidden="true" className="text-[#72f0cc]">↗</span></span>
-                    <span className="mt-1 block text-xs font-semibold text-white/70 [overflow-wrap:anywhere]">{link.detail}</span>
-                  </BusinessEventLink>
+                  <BusinessContactActions key={link.label} business={business} action={{
+                    label: link.label,
+                    detail: link.detail,
+                    href: link.href,
+                    icon: "social",
+                    action: `Open ${link.label}`,
+                    external: true,
+                    eventType: "social_click",
+                    gaParameters: { social_platform: link.label.toLowerCase() },
+                  }} />
                 ))}
               </div>
             </section>
