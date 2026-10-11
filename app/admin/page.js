@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AdminAction } from "@/components/admin-action";
 import { getBusinessPath } from "@/lib/business-url";
 import { getPlatformAdmin } from "@/lib/server/platform-admin";
-import { available, getAdminBusinessOwner, getAdminUserDetails, listAdminUsers } from "@/lib/server/admin-directory.mjs";
+import { available, getAdminBusinessOwner, getAdminReviewAuthors, getAdminUserDetails, listAdminUsers } from "@/lib/server/admin-directory.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -182,12 +182,28 @@ async function Reviews({ admin, query }) {
   if (query) list = list.ilike("comment", `%${query}%`);
   const { data, error } = await list;
   if (error) return <ErrorNotice />;
+  let authors = new Map();
+  let authorLookupFailed = false;
+  try {
+    authors = await getAdminReviewAuthors(admin, (data ?? []).map((review) => review.user_id));
+  } catch { authorLookupFailed = true; }
   return <><Filter section="reviews" query={query} /><div className="grid gap-3">{data?.map((review) =>
     <article key={review.id} className={card}>
       <p className="font-semibold">{review.businesses?.name} · {review.rating}/5</p>
-      <p className="mt-1 text-xs text-white/45">Review {review.id} · Author {review.user_id}</p>
+      <div className="mt-3 grid gap-1 text-sm text-white/70">
+        <p className="font-semibold text-white">Author: {authors.get(review.user_id)?.name ?? "Name not provided"}</p>
+        <p>Email: {authors.get(review.user_id)?.email ?? "Email unavailable"}</p>
+        <p>Phone: {authors.get(review.user_id)?.phone ?? "Phone not provided"}</p>
+        {authorLookupFailed || authors.get(review.user_id)?.lookupFailed ?
+          <p className="text-amber-200">Some author details could not be loaded. Check server logs.</p> : null}
+      </div>
       <p className="mt-2 whitespace-pre-line text-sm text-white/70">{review.comment || "No comment"}</p>
+      <p className="mt-2 text-xs text-white/50">Review date: {adminDate(review.created_at)}</p>
       <p className="my-2 text-sm">{review.admin_hidden_at ? "Hidden by admin" : "Visible"}</p>
+      <details className="mb-3 text-xs text-white/45"><summary className="cursor-pointer">Technical IDs</summary>
+        <p className="mt-1 break-all">Review ID: {review.id}</p>
+        <p className="break-all">Author ID: {review.user_id}</p>
+      </details>
       <AdminAction action={review.admin_hidden_at ? "REVIEW_RESTORED" : "REVIEW_HIDDEN"}
         targetId={review.id} label={review.admin_hidden_at ? "Restore Review" : "Hide Review"}
         confirm={!review.admin_hidden_at} reason={!review.admin_hidden_at} />
