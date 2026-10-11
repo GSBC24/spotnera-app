@@ -12,6 +12,7 @@ import { BusinessLocationActions } from "@/components/business-location-actions"
 import { BusinessProfileDeals } from "@/components/business-profile-deals";
 import { BusinessProfileReviews } from "@/components/business-profile-reviews";
 import { BusinessShareActions } from "@/components/business-share-actions";
+import { BusinessContactActions } from "@/components/business-contact-actions";
 import { getBusinessAddressLines } from "@/lib/business-address.mjs";
 import { getBusinessPath, getBusinessUrl } from "@/lib/business-url";
 import { hasSupabaseEnv } from "@/utils/supabase/env";
@@ -249,7 +250,7 @@ function getContactActions(business) {
       ? { label: "Phone", action: "Call", icon: "phone", detail: phone, href: phoneHref, external: false, eventType: "call_click" }
       : null,
     emailHref
-      ? { label: "Email", action: "Email", icon: "email", detail: getDisplayValue(business.email), href: emailHref, external: false, eventType: "email_click" }
+      ? { label: "Email", action: "Send email", icon: "email", detail: getDisplayValue(business.email), href: emailHref, external: false, eventType: "email_click" }
       : null,
     websiteUrl
       ? {
@@ -537,8 +538,8 @@ export default async function BusinessProfilePage({ params }) {
                 : "linear-gradient(135deg,rgba(255,122,89,0.42),rgba(51,214,166,0.26) 48%,rgba(16,18,23,0.95))",
             }}
           >
-            <div className="relative min-w-0 bg-gradient-to-b from-black/45 via-[#151821]/85 to-[#151821] p-5 sm:absolute sm:inset-x-0 sm:bottom-0 sm:bg-none sm:p-6 lg:p-8">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="relative flex min-h-[280px] w-full min-w-0 items-end bg-gradient-to-b from-black/45 via-[#151821]/85 to-[#151821] p-5 sm:min-h-[360px] sm:bg-none sm:p-6 lg:p-8">
+              <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div className="min-w-0">
                   <div className="mb-5 grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-[24px] border border-white/30 bg-white text-2xl font-black text-zinc-900 shadow-[0_18px_50px_rgba(0,0,0,0.32)] sm:mb-4">
                     {business.logo_url ? (
@@ -564,7 +565,7 @@ export default async function BusinessProfilePage({ params }) {
                     </a>
                   </div>
                 </div>
-                <div className="flex min-w-0 flex-col gap-2 sm:items-end">
+                <div className="flex min-w-0 flex-col gap-3 lg:items-end">
                   <BusinessShareActions
                     businessId={business.id}
                     businessSlug={business.slug}
@@ -572,8 +573,7 @@ export default async function BusinessProfilePage({ params }) {
                     city={business.city}
                     country={business.country}
                     title={business.name}
-                  />
-                  <div className="flex flex-wrap gap-2 sm:justify-end">
+                  >
                     <BusinessProfileFavorite
                       businessId={business.id}
                       businessSlug={business.slug}
@@ -583,15 +583,13 @@ export default async function BusinessProfilePage({ params }) {
                       initialIsFavorite={business.isFavorite}
                       isAuthenticated={business.isAuthenticated}
                     />
-                    {business.isOwner ? (
-                      <Link
-                        href="/owner"
-                        className="spotnera-secondary-action inline-flex min-h-12 items-center justify-center px-5 text-sm"
-                      >
-                        Manage business
-                      </Link>
-                    ) : null}
-                  </div>
+                  </BusinessShareActions>
+                  {business.isOwner ? (
+                    <Link href="/owner" className="spotnera-secondary-action inline-flex min-h-12 items-center justify-center gap-2 self-start px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] lg:self-end">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0"><path d="M4 7h16M4 17h16M9 4v6M15 14v6" /></svg>
+                      Manage business
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -614,6 +612,9 @@ export default async function BusinessProfilePage({ params }) {
             {contactActions.length ? (
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {contactActions.map((action) => (
+                  action.icon === "phone" || action.icon === "email" ? (
+                    <BusinessContactActions key={action.href} business={business} action={action} />
+                  ) : (
                   <BusinessEventLink
                     business={business}
                     eventType={action.eventType}
@@ -633,6 +634,7 @@ export default async function BusinessProfilePage({ params }) {
                     </span>
                     <span className="shrink-0 text-xs font-bold text-[#72f0cc]">{action.action}</span>
                   </BusinessEventLink>
+                  )
                 ))}
               </div>
             ) : (

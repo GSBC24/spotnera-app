@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { recordBusinessEvent } from "@/lib/business-events";
 import {
-  copyBusinessAddress,
   getBusinessDirectionsUrl,
   getCopyableBusinessAddress,
 } from "@/lib/business-address.mjs";
+import { useBusinessCopyFeedback } from "@/components/use-business-copy-feedback";
 
 const NAVIGATION_PATH = "M3 11.5 21 3l-7.5 18-2-7.5L3 11.5z";
 const COPY_PATH = "M8 3h12v15H8V3zM4 7h2v13h11v2H4V7z";
@@ -16,11 +15,11 @@ function UtilityIcon({ path }) {
 }
 
 export function BusinessLocationActions({ business, className = "", source = "map", compact = false }) {
-  const [feedback, setFeedback] = useState("");
+  const { feedback, copy } = useBusinessCopyFeedback();
   const address = getCopyableBusinessAddress(business);
   const directionsUrl = getBusinessDirectionsUrl(business);
   if (!address && !directionsUrl) return null;
-  const actionClass = `inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-white/12 text-xs font-semibold text-white/78 transition hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] ${compact ? "bg-transparent px-2.5" : "bg-white/8 px-3"}`;
+  const actionClass = `inline-flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-xl border border-white/12 text-xs font-semibold text-white/78 transition hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72f0cc] ${compact ? "bg-transparent px-2.5" : "bg-white/8 px-4"}`;
 
   return (
     <div className={`min-w-0 ${className}`}>
@@ -32,7 +31,7 @@ export function BusinessLocationActions({ business, className = "", source = "ma
               recordBusinessEvent({ businessId: business.id, eventType: "directions_click", source });
             }}
             className={actionClass}>
-            {compact ? <UtilityIcon path={NAVIGATION_PATH} /> : null}
+            <UtilityIcon path={NAVIGATION_PATH} />
             Directions
           </a>
         ) : null}
@@ -40,15 +39,15 @@ export function BusinessLocationActions({ business, className = "", source = "ma
           <button type="button" aria-label="Copy business address"
             onClick={async (event) => {
               event.stopPropagation();
-              setFeedback(await copyBusinessAddress(address) ? "Address copied" : "Could not copy. Select the address above.");
+              await copy(address, "Address copied");
             }}
             className={actionClass}>
-            {compact ? <UtilityIcon path={COPY_PATH} /> : null}
-            Copy address
+            <UtilityIcon path={COPY_PATH} />
+            {feedback === "Address copied" ? "Address copied" : feedback ? "Copy failed" : "Copy address"}
           </button>
         ) : null}
       </div>
-      <p role="status" aria-live="polite" className={feedback ? "mt-1 break-words text-xs text-white/60" : "sr-only"}>{feedback}</p>
+      <span role="status" aria-live="polite" className="sr-only">{feedback}</span>
     </div>
   );
 }
