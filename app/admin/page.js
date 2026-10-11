@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AdminAction } from "@/components/admin-action";
 import { getBusinessPath } from "@/lib/business-url";
+import { adminDealDate } from "@/lib/admin-deal-date.mjs";
 import { getPlatformAdmin } from "@/lib/server/platform-admin";
 import { available, getAdminBusinessOwner, getAdminReviewAuthors, getAdminUserDetails, listAdminUsers } from "@/lib/server/admin-directory.mjs";
 
@@ -156,7 +157,7 @@ async function Businesses({ admin, query, selected }) {
 
 async function Deals({ admin, query }) {
   let list = admin.from("deals")
-    .select("id, business_id, title, description, is_active, status, admin_disabled_at, created_at, businesses(name, slug)")
+    .select("id, business_id, title, description, is_active, status, admin_disabled_at, starts_at, ends_at, availability_timezone, created_at, businesses(name, slug)")
     .order("created_at", { ascending: false }).limit(100);
   if (query) list = list.ilike("title", `%${query}%`);
   const { data, error } = await list;
@@ -166,8 +167,12 @@ async function Deals({ admin, query }) {
       <h2 className="font-semibold">{deal.title}</h2>
       <p className="mt-1 text-sm text-white/60">{deal.businesses?.name} · {deal.status} · {deal.admin_disabled_at ? "Disabled by admin" : deal.is_active ? "Owner active" : "Owner paused"}</p>
       {deal.description ? <p className="mt-2 text-sm text-white/70">{deal.description}</p> : null}
+      <div className="mt-2 text-sm text-white/70">
+        <Detail label="Start date" value={adminDealDate(deal.starts_at, deal.availability_timezone)} />
+        <Detail label="End date" value={adminDealDate(deal.ends_at, deal.availability_timezone)} />
+      </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        {deal.businesses ? <Link className="text-sm text-[#72f0cc] underline" href={getBusinessPath({ id: deal.business_id, slug: deal.businesses.slug })}>View Deal</Link> : null}
+        {deal.businesses ? <Link className="text-sm text-[#72f0cc] underline" href={getBusinessPath({ id: deal.business_id, slug: deal.businesses.slug })}>View business profile</Link> : null}
         <AdminAction action={deal.admin_disabled_at ? "DEAL_RESTORED" : "DEAL_DISABLED"}
           targetId={deal.id} label={deal.admin_disabled_at ? "Restore Deal" : "Disable Deal"}
           confirm={!deal.admin_disabled_at} reason={!deal.admin_disabled_at} />
