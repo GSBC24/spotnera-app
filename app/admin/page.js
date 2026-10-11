@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AdminAction } from "@/components/admin-action";
 import { getBusinessPath } from "@/lib/business-url";
 import { getPlatformAdmin } from "@/lib/server/platform-admin";
-import { available, getAdminUserDetails, listAdminUsers } from "@/lib/server/admin-directory.mjs";
+import { available, getAdminBusinessOwner, getAdminUserDetails, listAdminUsers } from "@/lib/server/admin-directory.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -102,15 +102,17 @@ async function Businesses({ admin, query, selected }) {
   ]);
   if (error || detail.error) return <ErrorNotice />;
   let owner = null;
+  let ownerLookupFailed = false;
   try {
-    if (detail.data?.owner_id) owner = await getAdminUserDetails(admin, detail.data.owner_id);
-  } catch { return <ErrorNotice />; }
+    if (detail.data?.owner_id) owner = await getAdminBusinessOwner(admin, detail.data.owner_id);
+  } catch { ownerLookupFailed = true; }
   return <><Filter section="businesses" query={query} />
     {detail.data ? <section className={`${card} mb-5 space-y-5 text-sm text-white/70`}>
       <h2 className="text-xl font-semibold text-white">{detail.data.name}</h2>
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="grid content-start gap-2">
-          <h3 className="font-semibold text-white">Business owner · personal contact</h3>
+          <h3 className="font-semibold text-white">Business owner</h3>
+          {ownerLookupFailed ? <p role="alert" className="text-amber-200">Owner details could not be loaded. Check server logs.</p> : null}
           <Detail label="Name" value={owner?.name ?? "Name unavailable"} />
           <Detail label="Email" value={owner?.email ?? "Email unavailable"} />
           <Detail label="Phone" value={owner?.phone ?? "Phone not provided"} />
