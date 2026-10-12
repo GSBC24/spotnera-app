@@ -1793,26 +1793,6 @@ export default async function OwnerDashboardPage({ searchParams }) {
 
         {ownerSection === "overview" ? (
           <>
-            <section className="spotnera-card rounded-[30px] p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#72f0cc]">Get started</p>
-              <h2 className="mt-2 text-xl font-semibold">
-                {!businesses.length ? "Create your business" : !deals.length ? "Publish your first deal" : "See what customers see"}
-              </h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">
-                {!businesses.length
-                  ? "Add your business name, category and location. You can add photos, hours and contact details now or later."
-                  : !deals.length
-                    ? "Your business is ready. Add a real offer and choose when customers can use it."
-                    : "Your business and deal are set up. Open your public profile to check how they appear to customers."}
-              </p>
-              {!businesses.length && canCreateAnotherBusiness ? (
-                <Link href="/owner?section=businesses&createBusiness=1" className="spotnera-brand-action mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">Create business</Link>
-              ) : businesses.length && !deals.length ? (
-                <Link href="/owner?section=deals&createDeal=1" className="spotnera-brand-action mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">Create deal</Link>
-              ) : businesses.length ? (
-                <Link href={getBusinessPath(businesses[0])} className="spotnera-brand-action mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold">View customer page</Link>
-              ) : null}
-            </section>
             {businesses.length ? <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatTile label="Businesses" value={businesses.length} />
               <StatTile label="Active deals" value={activeDealCount} />
@@ -1877,7 +1857,6 @@ export default async function OwnerDashboardPage({ searchParams }) {
             <section className="mb-4 rounded-[24px] border border-amber-300/25 bg-amber-300/8 p-5">
               <h3 className="text-lg font-semibold">Business limit reached</h3>
               <p className="mt-2 text-sm text-white/70">{BUSINESS_LIMIT_MESSAGE}</p>
-              <Link href="/owner?section=businesses" className="spotnera-primary-action mt-4 inline-flex min-h-11 items-center justify-center px-4 text-sm">View my businesses</Link>
             </section>
           ) : null}
           {ownerSection === "businesses" && showCreateBusiness && canCreateAnotherBusiness ? (
