@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { BUSINESS_CATEGORIES } from "@/lib/business-categories";
+import { ALPHABETICAL_BUSINESS_CATEGORIES } from "@/lib/business-categories";
 import { AGE_RANGES, MAX_INTERESTS, canonicalInterest, validatePersonalization } from "@/lib/personalization.mjs";
 import { createClient } from "@/utils/supabase/browser";
 
@@ -72,7 +72,7 @@ export function PersonalizationSettings({ initialInterests, initialAgeRange, use
             Some previously saved interests are no longer available. Saving will replace them with your current selection.
           </p> : null}
           <div className="mt-3 flex flex-wrap gap-2">
-            {BUSINESS_CATEGORIES.map(({ value, label }) => {
+            {ALPHABETICAL_BUSINESS_CATEGORIES.map(({ value, label }) => {
               const selected = interests.includes(value);
               return <button key={value} type="button" aria-pressed={selected}
                 disabled={pending || (!selected && interests.length >= MAX_INTERESTS)}

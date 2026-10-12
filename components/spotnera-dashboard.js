@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import {
-  BUSINESS_CATEGORIES,
+  ALPHABETICAL_BUSINESS_CATEGORIES,
   getBusinessCategoryConfig,
 } from "@/lib/business-categories";
 import { businessMatchesFilters, getSearchFilterSummary, groupSearchBusinesses } from "@/lib/search-businesses.mjs";
@@ -423,15 +423,15 @@ function CategoryFilters({
 }) {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const isAllSelected = selectedCategories.length === 0;
-  const selectedOnlyCategories = BUSINESS_CATEGORIES.filter(
+  const selectedOnlyCategories = ALPHABETICAL_BUSINESS_CATEGORIES.filter(
     (category) => selectedCategories.includes(category.value),
   );
   const visibleCategories = showAllCategories
-    ? BUSINESS_CATEGORIES
+    ? ALPHABETICAL_BUSINESS_CATEGORIES
     : [
-        ...BUSINESS_CATEGORIES.slice(0, 12),
+        ...ALPHABETICAL_BUSINESS_CATEGORIES.slice(0, 12),
         ...selectedOnlyCategories.filter(
-          (category) => !BUSINESS_CATEGORIES.slice(0, 12).includes(category),
+          (category) => !ALPHABETICAL_BUSINESS_CATEGORIES.slice(0, 12).includes(category),
         ),
       ];
 
@@ -472,7 +472,7 @@ function CategoryFilters({
         onClick={() => setShowAllCategories((expanded) => !expanded)}
         className="min-h-10 rounded-2xl border border-white/10 bg-white/8 px-3 text-xs font-bold text-white/72 transition hover:bg-white/14"
       >
-        {showAllCategories ? "Show fewer" : `Show all categories (${BUSINESS_CATEGORIES.length})`}
+        {showAllCategories ? "Show fewer" : `Show all categories (${ALPHABETICAL_BUSINESS_CATEGORIES.length})`}
       </button>
     </div>
   );

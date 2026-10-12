@@ -38,6 +38,7 @@ const BUSINESS_SELECT = `
   instagram_url,
   tiktok_url,
   snapchat_url,
+  x_url,
   latitude,
   longitude,
   logo_url,
@@ -503,10 +504,10 @@ export default async function BusinessProfilePage({ params }) {
                     detail: link.detail,
                     href: link.href,
                     icon: "social",
-                    action: `Open ${link.label}`,
+                    action: `Open ${link.openLabel}`,
                     external: true,
                     eventType: "social_click",
-                    gaParameters: { social_platform: link.label.toLowerCase() },
+                    gaParameters: { social_platform: link.platform },
                   }} />
                 ))}
               </div>

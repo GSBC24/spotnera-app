@@ -25,8 +25,9 @@ import {
   LockedFormSubmitButton,
   OwnerDashboardAnalytics,
 } from "@/components/owner-analytics";
-import { BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
+import { ALPHABETICAL_BUSINESS_CATEGORY_LABELS, BUSINESS_CATEGORY_LABELS, getBusinessCategoryConfig, isKnownBusinessCategory } from "@/lib/business-categories";
 import { getBusinessPath } from "@/lib/business-url";
+import { normalizeXProfile } from "@/lib/business-profile-links.mjs";
 import { BUSINESS_LIMIT_MESSAGE, canCreateBusiness, isFreeBusinessLimitError } from "@/lib/owner-plan.mjs";
 import { SHOW_OWNER_PREMIUM_PROMOTION } from "@/lib/owner-ui-config.mjs";
 import { OWNER_SECTIONS, ownerSectionHref } from "@/lib/owner-navigation.mjs";
@@ -65,6 +66,7 @@ const BUSINESS_FIELDS = `
   instagram_url,
   tiktok_url,
   snapchat_url,
+  x_url,
   latitude,
   longitude,
   logo_url,
@@ -429,6 +431,7 @@ function buildBusinessPayload(formData, userId) {
   const instagram = normalizeSocialProfile(formData.get("instagram_url"), "instagram");
   const tiktok = normalizeSocialProfile(formData.get("tiktok_url"), "tiktok");
   const snapchat = normalizeSocialProfile(formData.get("snapchat_url"), "snapchat");
+  const x = normalizeXProfile(formData.get("x_url"));
 
   return {
     owner_id: userId,
@@ -445,10 +448,11 @@ function buildBusinessPayload(formData, userId) {
     instagram_url: instagram.value,
     tiktok_url: tiktok.value,
     snapchat_url: snapchat.value,
+    x_url: x.value,
     fieldErrors: [
       ["phone", phone.error], ["email", email.error], ["website_url", website.error],
       ["facebook_url", facebook.error], ["instagram_url", instagram.error],
-      ["tiktok_url", tiktok.error], ["snapchat_url", snapchat.error],
+      ["tiktok_url", tiktok.error], ["snapchat_url", snapchat.error], ["x_url", x.error],
     ].filter(([, message]) => Boolean(message)).map(([field, message]) => ({ field, message })),
     selected_address: getNullableString(formData, "selected_address"),
     selected_country: getNullableString(formData, "selected_country"),
@@ -1310,7 +1314,7 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
           {hasLegacyCategory ? (
             <option value={selectedCategory}>{selectedCategory}</option>
           ) : null}
-          {BUSINESS_CATEGORY_LABELS.map((category) => (
+          {ALPHABETICAL_BUSINESS_CATEGORY_LABELS.map((category) => (
             <option key={category} value={category}>
               {category}
             </option>
@@ -1435,6 +1439,15 @@ function BusinessForm({ action, business, imageError, submitLabel }) {
               defaultValue={business?.snapchat_url ?? ""}
             />
             <BusinessCreateFieldError field="snapchat_url" />
+          </Field>
+          <Field label="X (Twitter)">
+            <TextInput
+              name="x_url"
+              maxLength={300}
+              placeholder="x.com/spotnera"
+              defaultValue={business?.x_url ?? ""}
+            />
+            <BusinessCreateFieldError field="x_url" />
           </Field>
         </div>
       </section>
